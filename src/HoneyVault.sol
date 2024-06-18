@@ -7,7 +7,9 @@ import {HoneyQueen} from "./HoneyQueen.sol";
 
 interface IStakingContract {
     function stake(uint256 amount) external;
+    function withdraw(uint256 amount) external;
     function getReward(address account) external;
+    function balanceOf(address account) external view returns (uint256);
 }
 
 contract HoneyVault is Ownable {
@@ -17,7 +19,7 @@ contract HoneyVault is Ownable {
     /*###############################################################
                             EVENTS
     ###############################################################*/
-    event DepsoitedAndLocked(address indexed token, uint256 amount);
+    event DepositedAndLocked(address indexed token, uint256 amount);
     /*###############################################################
                             ENUMS
     ###############################################################*/
@@ -36,18 +38,28 @@ contract HoneyVault is Ownable {
     /*###############################################################
                             OWNER LOGIC
     ###############################################################*/
-    // prettier-ignore
-    function depositAndLock(address _LPToken, uint256 _amount) external onlyOwner {
-        IStakingContract stakeContract = IStakingContract(HONEY_QUEEN.LPTokenToStakeContract(_LPToken));
-        require(address(stakeContract) != address(0), "HoneyQueen: LPToken not found");
-        // need approval ??
-        stakeContract.stake(_amount);
-        emit DepsoitedAndLocked(_LPToken, _amount);
-    }
-
     function burnBGTForBERA(uint256 _amount) external onlyOwner {
         HONEY_QUEEN.BGT().redeem(address(this), _amount);
     }
+
+    // issue is that new honey vault could be a fake and unlock tokens
+    // prettier-ignore
+    function migrateLPToken(address _LPToken, address _newHoneyVault) external onlyOwner {
+        // check migration is authorized based on codehashes
+        require(
+            HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash),
+            "HoneyQueen: Migration is not enabled"
+        );
+        IStakingContract stakeContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
+        uint256 balance = stakeContract.balanceOf(address(this));
+        // get rewards before migrating
+        stakeContract.getReward(address(this));
+        // withdraw
+        stakeContract.withdraw(balance);
+        // send to new vault and deposit and lock
+        HoneyVault(_newHoneyVault).depositAndLock(_LPToken, balance);
+    }
+
     /*###############################################################
                             VIEW LOGIC
     ###############################################################*/
@@ -55,13 +67,22 @@ contract HoneyVault is Ownable {
                             PUBLIC LOGIC
     ###############################################################*/
 
+    // prettier-ignore
+    function depositAndLock(address _LPToken, uint256 _amount) external {
+        IStakingContract stakeContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
+        require(address(stakeContract) != address(0), "HoneyQueen: LPToken not found");
+        // need approval ??
+        stakeContract.stake(_amount);
+        emit DepositedAndLocked(_LPToken, _amount);
+    }
+
     /*
         Claims rewards, BGT, from the staking contract.
         The reward goes into the HoneyVault.
     */
     function claimRewards(address _LPToken) external {
         // prettier-ignore
-        IStakingContract stakeContract = IStakingContract(HONEY_QUEEN.LPTokenToStakeContract(_LPToken));
+        IStakingContract stakeContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
         stakeContract.getReward(address(this));
     }
 

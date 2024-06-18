@@ -2,5 +2,7 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+# using thj dev address
+sender = "0x4A8c9a29b23c4eAC0D235729d5e0D035258CDFA7"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
