@@ -3,13 +3,16 @@ pragma solidity ^0.8.23;
 
 import {LibClone} from "solady/utils/LibClone.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
+import {ERC20} from "solady/tokens/ERC20.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 
 interface IStakingContract {
+    event Staked(address indexed staker, uint256 amount);
     function stake(uint256 amount) external;
     function withdraw(uint256 amount) external;
     function getReward(address account) external;
-    function balanceOf(address account) external view returns (uint256);
+    //function balanceOf(address account) external view returns (uint256);
+    function exit() external;
 }
 
 contract HoneyVault is Ownable {
@@ -26,6 +29,7 @@ contract HoneyVault is Ownable {
     /*###############################################################
                             STORAGE
     ###############################################################*/
+    mapping(address LPToken => uint256 balance) public balances;
     HoneyQueen internal HONEY_QUEEN;
     /*###############################################################
                             INITIALIZER
@@ -49,13 +53,13 @@ contract HoneyVault is Ownable {
         require(
             HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash),
             "HoneyQueen: Migration is not enabled"
-        );
-        IStakingContract stakeContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
-        uint256 balance = stakeContract.balanceOf(address(this));
-        // get rewards before migrating
-        stakeContract.getReward(address(this));
-        // withdraw
-        stakeContract.withdraw(balance);
+        );    
+        IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
+        uint256 balance = balances[_LPToken];
+        // empty balance
+        balances[_LPToken] = 0;
+        // get rewards and withdraw tokens at once
+        stakingContract.exit();
         // send to new vault and deposit and lock
         HoneyVault(_newHoneyVault).depositAndLock(_LPToken, balance);
     }
@@ -69,10 +73,14 @@ contract HoneyVault is Ownable {
 
     // prettier-ignore
     function depositAndLock(address _LPToken, uint256 _amount) external {
-        IStakingContract stakeContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
-        require(address(stakeContract) != address(0), "HoneyQueen: LPToken not found");
-        // need approval ??
-        stakeContract.stake(_amount);
+        IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
+        // update balance
+        balances[_LPToken] += _amount;
+
+        ERC20(_LPToken).transferFrom(msg.sender, address(this), _amount);
+        ERC20(_LPToken).approve(address(stakingContract), _amount);
+        stakingContract.stake(_amount);
+
         emit DepositedAndLocked(_LPToken, _amount);
     }
 
@@ -82,8 +90,8 @@ contract HoneyVault is Ownable {
     */
     function claimRewards(address _LPToken) external {
         // prettier-ignore
-        IStakingContract stakeContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
-        stakeContract.getReward(address(this));
+        IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
+        stakingContract.getReward(address(this));
     }
 
     function clone() external returns (address) {

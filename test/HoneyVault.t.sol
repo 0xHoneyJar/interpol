@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.23;
 
 import {Test, console} from "forge-std/Test.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
@@ -14,7 +14,7 @@ contract HoneyVaultTest is Test {
     // IMPORTANT
     // BARTIO ADDRESSES
     // prettier-ignore
-    ERC20 public HONEYBERA_LP = ERC20(0xd28d852cbcc68DCEC922f6d5C7a8185dBaa104B7);
+    ERC20 public constant HONEYBERA_LP = ERC20(0xd28d852cbcc68DCEC922f6d5C7a8185dBaa104B7);
     // prettier-ignore
     IStakingContract public HONEYBERA_STAKING = IStakingContract(0xAD57d7d39a487C04a44D3522b910421888Fb9C6d);
 
@@ -27,6 +27,8 @@ contract HoneyVaultTest is Test {
         vaultToBeCloned = new HoneyVault();
         honeyVault = HoneyVault(vaultToBeCloned.clone());
         honeyVault.initialize(msg.sender, address(honeyQueen));
+
+        vm.label(address(honeyVault), "HoneyVault");
     }
 
     modifier broadcastAsTHJ() {
@@ -48,7 +50,10 @@ contract HoneyVaultTest is Test {
 
     function test_depositAndLock() external broadcastAsTHJ {
         uint256 balance = HONEYBERA_LP.balanceOf(msg.sender);
+        HONEYBERA_LP.approve(address(honeyVault), balance);
 
+        vm.expectEmit(true, false, false, true, address(HONEYBERA_STAKING));
+        emit IStakingContract.Staked(address(honeyVault), balance);
         vm.expectEmit(true, true, false, false, address(honeyVault));
         emit HoneyVault.DepositedAndLocked(address(HONEYBERA_LP), balance);
 
