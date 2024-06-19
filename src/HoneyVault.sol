@@ -90,6 +90,11 @@ contract HoneyVault is Ownable {
     /*###############################################################
                             PUBLIC LOGIC
     ###############################################################*/
+
+    /*
+        So far this function and the reference in HoneyQueen expects the LP token
+        to be a BEX one, which goes into BGT Station Gauges.
+    */
     // prettier-ignore
     function depositAndLock(address _LPToken, uint256 _amount, uint256 _expiration) external {
         // only allow one deposit per lp token once!
