@@ -6,6 +6,8 @@ import {Ownable} from "solady/auth/Ownable.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 
+import {Test, console} from "forge-std/Test.sol";
+
 interface IStakingContract {
     event Staked(address indexed staker, uint256 amount);
     function stake(uint256 amount) external;
@@ -15,22 +17,39 @@ interface IStakingContract {
     function exit() external;
 }
 
+/*
+    The HoneyVault is designed in such a way that it's multiple LP tokens
+    but single deposit for each.
+    The rationale is that Berachain is cheap enough that you can deploy
+    multiple vaults if needed for multiple deposits of the same LP token.
+*/
 contract HoneyVault is Ownable {
     /*###############################################################
                             ERRORS
     ###############################################################*/
+    error MigrationNotEnabled();
+    error AlreadyDeposited(address LPToken);
     /*###############################################################
                             EVENTS
     ###############################################################*/
     event DepositedAndLocked(address indexed token, uint256 amount);
+    event Migrated(
+        address indexed token,
+        address indexed oldVault,
+        address indexed newVault
+    );
     /*###############################################################
-                            ENUMS
+                            STRUCTS
     ###############################################################*/
     /*###############################################################
                             STORAGE
     ###############################################################*/
     mapping(address LPToken => uint256 balance) public balances;
+    mapping(address LPToken => uint256 expiration) public expirations;
     HoneyQueen internal HONEY_QUEEN;
+    /*###############################################################
+                            MODIFIERS
+    ###############################################################*/
     /*###############################################################
                             INITIALIZER
     ###############################################################*/
@@ -50,10 +69,9 @@ contract HoneyVault is Ownable {
     // prettier-ignore
     function migrateLPToken(address _LPToken, address _newHoneyVault) external onlyOwner {
         // check migration is authorized based on codehashes
-        require(
-            HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash),
-            "HoneyQueen: Migration is not enabled"
-        );    
+        if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash)) {
+            revert MigrationNotEnabled();
+        }    
         IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
         uint256 balance = balances[_LPToken];
         // empty balance
@@ -61,21 +79,25 @@ contract HoneyVault is Ownable {
         // get rewards and withdraw tokens at once
         stakingContract.exit();
         // send to new vault and deposit and lock
-        HoneyVault(_newHoneyVault).depositAndLock(_LPToken, balance);
-    }
+        ERC20(_LPToken).approve(address(_newHoneyVault), balance);
+        HoneyVault(_newHoneyVault).depositAndLock(_LPToken, balance, expirations[_LPToken]);
 
+        emit Migrated(_LPToken, address(this), _newHoneyVault);
+    }
     /*###############################################################
                             VIEW LOGIC
     ###############################################################*/
     /*###############################################################
                             PUBLIC LOGIC
     ###############################################################*/
-
     // prettier-ignore
-    function depositAndLock(address _LPToken, uint256 _amount) external {
+    function depositAndLock(address _LPToken, uint256 _amount, uint256 _expiration) external {
+        // only allow one deposit per lp token once!
+        if (expirations[_LPToken] != 0) revert AlreadyDeposited(_LPToken);
         IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
         // update balance
         balances[_LPToken] += _amount;
+        expirations[_LPToken] = _expiration;
 
         ERC20(_LPToken).transferFrom(msg.sender, address(this), _amount);
         ERC20(_LPToken).approve(address(stakingContract), _amount);
@@ -83,7 +105,6 @@ contract HoneyVault is Ownable {
 
         emit DepositedAndLocked(_LPToken, _amount);
     }
-
     /*
         Claims rewards, BGT, from the staking contract.
         The reward goes into the HoneyVault.
