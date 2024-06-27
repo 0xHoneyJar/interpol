@@ -29,6 +29,7 @@ contract HoneyVault is Ownable {
     ###############################################################*/
     error MigrationNotEnabled();
     error AlreadyDeposited(address LPToken);
+    error NotExpiredYet();
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -65,9 +66,21 @@ contract HoneyVault is Ownable {
         HONEY_QUEEN.BGT().redeem(address(this), _amount);
     }
 
+    // prettier-ignore
+    function withdrawLPTokens(address _LPToken, uint256 _amount) external onlyOwner {
+        // only withdraw if expiration is OK
+        if (block.timestamp < expirations[_LPToken]) revert NotExpiredYet();
+        IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
+
+        stakingContract.withdraw(_amount);
+        stakingContract.getReward(address(this));
+
+        ERC20(_LPToken).transfer(msg.sender, _amount);
+    }
+
     // issue is that new honey vault could be a fake and unlock tokens
     // prettier-ignore
-    function migrateLPToken(address _LPToken, address _newHoneyVault) external onlyOwner {
+    function migrateLPToken(address _LPToken, address payable _newHoneyVault) external onlyOwner {
         // check migration is authorized based on codehashes
         if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash)) {
             revert MigrationNotEnabled();
@@ -126,8 +139,10 @@ contract HoneyVault is Ownable {
 
     // prettier-ignore
     function cloneAndInitialize(address _initialOwner, address _honeyQueen) external returns (address) {
-        address clone_ = LibClone.clone(address(this));
+        address payable clone_ = payable(LibClone.clone(address(this)));
         HoneyVault(clone_).initialize(_initialOwner, _honeyQueen);
         return clone_;
     }
+
+    receive() external payable {}
 }

@@ -9,6 +9,14 @@ import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {HoneyVaultV2} from "./mocks/HoneyVaultV2.sol";
 import {FakeVault} from "./mocks/FakeVault.sol";
 
+interface IBGT {
+    event Redeem(
+        address indexed from,
+        address indexed receiver,
+        uint256 amount
+    );
+}
+
 contract HoneyVaultTest is Test {
     HoneyVault public vaultToBeCloned;
     HoneyVault public honeyVault;
@@ -22,6 +30,8 @@ contract HoneyVaultTest is Test {
     // prettier-ignore
     ERC20 public constant HONEYBERA_LP = ERC20(0xd28d852cbcc68DCEC922f6d5C7a8185dBaa104B7);
     // prettier-ignore
+    ERC20 public constant BGT = ERC20(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
+    // prettier-ignore
     IStakingContract public HONEYBERA_STAKING = IStakingContract(0xAD57d7d39a487C04a44D3522b910421888Fb9C6d);
 
     function setUp() public {
@@ -34,7 +44,7 @@ contract HoneyVaultTest is Test {
         // prettier-ignore
         honeyQueen.setLPTokenToStakingContract(address(HONEYBERA_LP), address(HONEYBERA_STAKING));
         vaultToBeCloned = new HoneyVault();
-        honeyVault = HoneyVault(vaultToBeCloned.clone());
+        honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
         honeyVault.initialize(THJ, address(honeyQueen));
         vm.stopPrank();
 
@@ -56,7 +66,7 @@ contract HoneyVaultTest is Test {
         vaultToBeCloned.initialize(address(this), address(honeyQueen));
         assertEq(address(vaultToBeCloned.owner()), address(this));
         // now we clone the vault
-        honeyVault = HoneyVault(vaultToBeCloned.clone());
+        honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
         assertEq(address(honeyVault.owner()), address(0));
         // initialize clone
         honeyVault.initialize(address(this), address(honeyQueen));
@@ -76,6 +86,40 @@ contract HoneyVaultTest is Test {
         assertEq(honeyVault.balances(address(HONEYBERA_LP)), balance);
     }
 
+    function test_claimRewards() external prankAsTHJ {
+        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
+        HONEYBERA_LP.approve(address(honeyVault), balance);
+        honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+
+        uint256 bgtBalanceBefore = BGT.balanceOf(address(honeyVault));
+        // deal some BGT
+        StdCheats.deal(address(BGT), address(honeyVault), 1);
+        honeyVault.claimRewards(address(HONEYBERA_LP));
+        // balance should have increased!
+        uint256 bgtBalanceAfter = BGT.balanceOf(address(honeyVault));
+        // prettier-ignore
+        assertTrue(bgtBalanceAfter > bgtBalanceBefore, "BGT balance did not increase!");
+    }
+
+    function test_burnBGTForBERA() external prankAsTHJ {
+        // deposit, get some rewards
+        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
+        HONEYBERA_LP.approve(address(honeyVault), balance);
+        honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+        StdCheats.deal(address(BGT), address(honeyVault), 10e18);
+        honeyVault.claimRewards(address(HONEYBERA_LP));
+
+        // time to burn
+        uint256 beraBalanceBefore = address(honeyVault).balance;
+        uint256 bgtBalance = BGT.balanceOf(address(honeyVault));
+        vm.expectEmit(true, true, false, true, address(BGT));
+        emit IBGT.Redeem(address(honeyVault), address(honeyVault), bgtBalance);
+        honeyVault.burnBGTForBERA(bgtBalance);
+        uint256 beraBalanceAfter = address(honeyVault).balance;
+        // prettier-ignore
+        assertTrue(beraBalanceAfter > beraBalanceBefore, "BERA balance did not increase!");
+    }
+
     function test_migration() external prankAsTHJ {
         // deposit first some into contract
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
@@ -85,12 +129,15 @@ contract HoneyVaultTest is Test {
         // deploy base honeyvault v2
         HoneyVaultV2 baseVault = new HoneyVaultV2();
         // clone it
-        HoneyVaultV2 honeyVaultV2 = HoneyVaultV2(baseVault.clone());
+        HoneyVaultV2 honeyVaultV2 = HoneyVaultV2(payable(baseVault.clone()));
         honeyVaultV2.initialize(THJ, address(honeyQueen));
 
         // migration should fail because haven't set it in honey queen
         vm.expectRevert(HoneyVault.MigrationNotEnabled.selector);
-        honeyVault.migrateLPToken(address(HONEYBERA_LP), address(honeyVaultV2));
+        honeyVault.migrateLPToken(
+            address(HONEYBERA_LP),
+            payable(address(honeyVaultV2))
+        );
 
         // set hashcode in honeyqueen then attempt migration
         honeyQueen.setMigrationFlag(
@@ -108,7 +155,10 @@ contract HoneyVaultTest is Test {
             address(honeyVault),
             address(honeyVaultV2)
         );
-        honeyVault.migrateLPToken(address(HONEYBERA_LP), address(honeyVaultV2));
+        honeyVault.migrateLPToken(
+            address(HONEYBERA_LP),
+            payable(address(honeyVaultV2))
+        );
         // check balances is identical
         assertEq(honeyVaultV2.balances(address(HONEYBERA_LP)), balance);
     }
