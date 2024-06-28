@@ -34,6 +34,7 @@ contract HoneyVault is Ownable {
                             EVENTS
     ###############################################################*/
     event DepositedAndLocked(address indexed token, uint256 amount);
+    event Withdrawn(address indexed token, uint256 amount);
     event Migrated(
         address indexed token,
         address indexed oldVault,
@@ -76,6 +77,8 @@ contract HoneyVault is Ownable {
         stakingContract.getReward(address(this));
 
         ERC20(_LPToken).transfer(msg.sender, _amount);
+
+        emit Withdrawn(_LPToken, _amount);
     }
 
     // issue is that new honey vault could be a fake and unlock tokens

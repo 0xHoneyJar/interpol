@@ -120,6 +120,22 @@ contract HoneyVaultTest is Test {
         assertTrue(beraBalanceAfter > beraBalanceBefore, "BERA balance did not increase!");
     }
 
+    function test_withdrawLPToken() external prankAsTHJ {
+        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
+        HONEYBERA_LP.approve(address(honeyVault), balance);
+        honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+
+        // cannot withdraw too early
+        vm.expectRevert(HoneyVault.NotExpiredYet.selector);
+        honeyVault.withdrawLPTokens(address(HONEYBERA_LP), balance);
+        // move forward in time
+        vm.warp(expiration + 1);
+        // should be able to withdraw
+        vm.expectEmit(true, false, false, true, address(honeyVault));
+        emit HoneyVault.Withdrawn(address(HONEYBERA_LP), balance);
+        honeyVault.withdrawLPTokens(address(HONEYBERA_LP), balance);
+    }
+
     function test_migration() external prankAsTHJ {
         // deposit first some into contract
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
