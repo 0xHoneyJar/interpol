@@ -1,10 +1,13 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 import {LibClone} from "solady/utils/LibClone.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
+import {ERC721} from "solady/tokens/ERC721.sol";
+import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
+import {TokenReceiver} from "./TokenReceiver.sol";
 
 import {Test, console} from "forge-std/Test.sol";
 
@@ -23,7 +26,7 @@ interface IStakingContract {
     The rationale is that Berachain is cheap enough that you can deploy
     multiple vaults if needed for multiple deposits of the same LP token.
 */
-contract HoneyVault is Ownable {
+contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             ERRORS
     ###############################################################*/
@@ -99,6 +102,27 @@ contract HoneyVault is Ownable {
         HoneyVault(_newHoneyVault).depositAndLock(_LPToken, balance, expirations[_LPToken]);
 
         emit Migrated(_LPToken, address(this), _newHoneyVault);
+    }
+
+    function rescueERC20(address _token, uint256 _amount) external onlyOwner {
+        ERC20(_token).transfer(msg.sender, _amount);
+    }
+    function rescueERC721(address _token, uint256 _id) external onlyOwner {
+        ERC721(_token).transferFrom(address(this), msg.sender, _id);
+    }
+    function rescueERC1155(
+        address _token,
+        uint256 _id,
+        uint256 _amount,
+        bytes calldata data
+    ) external onlyOwner {
+        ERC1155(_token).safeTransferFrom(
+            address(this),
+            msg.sender,
+            _id,
+            _amount,
+            data
+        );
     }
     /*###############################################################
                             VIEW LOGIC
