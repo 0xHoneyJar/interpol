@@ -6,6 +6,7 @@ import {Ownable} from "solady/auth/Ownable.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
+import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {TokenReceiver} from "./TokenReceiver.sol";
 
@@ -102,6 +103,10 @@ contract HoneyVault is TokenReceiver, Ownable {
         HoneyVault(_newHoneyVault).depositAndLock(_LPToken, balance, expirations[_LPToken]);
 
         emit Migrated(_LPToken, address(this), _newHoneyVault);
+    }
+
+    function withdrawBERA(uint256 _amount) external onlyOwner {
+        STL.safeTransferETH(owner(), _amount);
     }
 
     function rescueERC20(address _token, uint256 _amount) external onlyOwner {
