@@ -8,7 +8,7 @@ import {ERC721} from "solady/tokens/ERC721.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
-import {TokenReceiver} from "./TokenReceiver.sol";
+import {TokenReceiver} from "./utils/TokenReceiver.sol";
 
 import {Test, console} from "forge-std/Test.sol";
 
@@ -44,6 +44,7 @@ contract HoneyVault is TokenReceiver, Ownable {
         address indexed oldVault,
         address indexed newVault
     );
+    event Fees(address indexed referral, address token, uint256 amount);
     /*###############################################################
                             STRUCTS
     ###############################################################*/
@@ -52,6 +53,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     ###############################################################*/
     mapping(address LPToken => uint256 balance) public balances;
     mapping(address LPToken => uint256 expiration) public expirations;
+    address public referral;
     HoneyQueen internal HONEY_QUEEN;
     /*###############################################################
                             MODIFIERS
@@ -59,10 +61,15 @@ contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             INITIALIZER
     ###############################################################*/
-    function initialize(address _owner, address _honeyQueen) external {
+    function initialize(
+        address _owner,
+        address _honeyQueen,
+        address _referral
+    ) external {
         require(owner() == address(0));
         _initializeOwner(_owner);
         HONEY_QUEEN = HoneyQueen(_honeyQueen);
+        referral = _referral;
     }
     /*###############################################################
                             OWNER LOGIC
@@ -106,16 +113,25 @@ contract HoneyVault is TokenReceiver, Ownable {
     }
 
     function withdrawBERA(uint256 _amount) external onlyOwner {
-        STL.safeTransferETH(owner(), _amount);
+        address treasury = HONEY_QUEEN.treasury();
+        uint256 fees = HONEY_QUEEN.computeFees(_amount);
+        STL.safeTransferETH(treasury, fees);
+        STL.safeTransferETH(msg.sender, _amount - fees);
+        /*!*/ emit Withdrawn(address(0), _amount - fees);
+        /*!*/ emit Fees(referral, address(0), fees);
     }
-
-    function rescueERC20(address _token, uint256 _amount) external onlyOwner {
-        ERC20(_token).transfer(msg.sender, _amount);
+    function withdrawERC20(address _token, uint256 _amount) external onlyOwner {
+        address treasury = HONEY_QUEEN.treasury();
+        uint256 fees = HONEY_QUEEN.computeFees(_amount);
+        ERC20(_token).transfer(treasury, fees);
+        ERC20(_token).transfer(msg.sender, _amount - fees);
+        /*!*/ emit Withdrawn(_token, _amount - fees);
+        /*!*/ emit Fees(referral, _token, fees);
     }
-    function rescueERC721(address _token, uint256 _id) external onlyOwner {
+    function withdrawERC721(address _token, uint256 _id) external onlyOwner {
         ERC721(_token).transferFrom(address(this), msg.sender, _id);
     }
-    function rescueERC1155(
+    function withdrawERC1155(
         address _token,
         uint256 _id,
         uint256 _amount,
@@ -169,10 +185,13 @@ contract HoneyVault is TokenReceiver, Ownable {
         return LibClone.clone(address(this));
     }
 
-    // prettier-ignore
-    function cloneAndInitialize(address _initialOwner, address _honeyQueen) external returns (address) {
+    function cloneAndInitialize(
+        address _initialOwner,
+        address _honeyQueen,
+        address _referral
+    ) external returns (address) {
         address payable clone_ = payable(LibClone.clone(address(this)));
-        HoneyVault(clone_).initialize(_initialOwner, _honeyQueen);
+        HoneyVault(clone_).initialize(_initialOwner, _honeyQueen, _referral);
         return clone_;
     }
 

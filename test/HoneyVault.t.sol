@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import {Test, console} from "forge-std/Test.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
+import {LibString} from "solady/utils/LibString.sol";
 import {HoneyVault, IStakingContract} from "../src/HoneyVault.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {HoneyVaultV2} from "./mocks/HoneyVaultV2.sol";
@@ -18,12 +19,16 @@ interface IBGT {
 }
 
 contract HoneyVaultTest is Test {
+    using LibString for uint256;
+
     HoneyVault public vaultToBeCloned;
     HoneyVault public honeyVault;
     HoneyQueen public honeyQueen;
 
     uint256 public expiration;
     address public constant THJ = 0x4A8c9a29b23c4eAC0D235729d5e0D035258CDFA7;
+    address public constant referral = address(0x5efe5a11);
+    address public constant treasury = address(0x80085);
 
     // IMPORTANT
     // BARTIO ADDRESSES
@@ -40,12 +45,12 @@ contract HoneyVaultTest is Test {
 
         vm.startPrank(THJ);
         // setup honeyqueen stuff
-        honeyQueen = new HoneyQueen();
+        honeyQueen = new HoneyQueen(treasury);
         // prettier-ignore
         honeyQueen.setLPTokenToStakingContract(address(HONEYBERA_LP), address(HONEYBERA_STAKING));
         vaultToBeCloned = new HoneyVault();
         honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
-        honeyVault.initialize(THJ, address(honeyQueen));
+        honeyVault.initialize(THJ, address(honeyQueen), referral);
         vm.stopPrank();
 
         vm.label(address(honeyVault), "HoneyVault");
@@ -63,13 +68,17 @@ contract HoneyVaultTest is Test {
     }
 
     function test_initializeOriginalHasNoImpact() external {
-        vaultToBeCloned.initialize(address(this), address(honeyQueen));
+        vaultToBeCloned.initialize(
+            address(this),
+            address(honeyQueen),
+            referral
+        );
         assertEq(address(vaultToBeCloned.owner()), address(this));
         // now we clone the vault
         honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
         assertEq(address(honeyVault.owner()), address(0));
         // initialize clone
-        honeyVault.initialize(address(this), address(honeyQueen));
+        honeyVault.initialize(address(this), address(honeyQueen), referral);
         assertEq(address(honeyVault.owner()), address(this));
     }
 
@@ -136,6 +145,37 @@ contract HoneyVaultTest is Test {
         honeyVault.withdrawLPTokens(address(HONEYBERA_LP), balance);
     }
 
+    function test_feesBERA() external prankAsTHJ {
+        // get the BERA from BGT !
+        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
+        HONEYBERA_LP.approve(address(honeyVault), balance);
+        honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+        StdCheats.deal(address(BGT), address(honeyVault), 10e18);
+        honeyVault.claimRewards(address(HONEYBERA_LP));
+        uint256 bgtBalance = BGT.balanceOf(address(honeyVault));
+        honeyVault.burnBGTForBERA(bgtBalance);
+
+        string[] memory inputs = new string[](6);
+        inputs[0] = "python3";
+        inputs[1] = "test/utils/fees.py";
+        inputs[2] = "--fees-bps";
+        inputs[3] = honeyQueen.fees().toString();
+        inputs[4] = "--amount";
+        inputs[5] = bgtBalance.toString();
+        bytes memory res = vm.ffi(inputs);
+        (uint256 pythonFees, uint256 pythonWithdrawn) = abi.decode(
+            res,
+            (uint256, uint256)
+        );
+
+        vm.expectEmit(true, false, false, true, address(honeyVault));
+        emit HoneyVault.Withdrawn(address(0), pythonWithdrawn);
+        vm.expectEmit(true, false, false, true, address(honeyVault));
+        emit HoneyVault.Fees(referral, address(0), pythonFees);
+
+        honeyVault.withdrawBERA(bgtBalance);
+    }
+
     function test_migration() external prankAsTHJ {
         // deposit first some into contract
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
@@ -146,7 +186,7 @@ contract HoneyVaultTest is Test {
         HoneyVaultV2 baseVault = new HoneyVaultV2();
         // clone it
         HoneyVaultV2 honeyVaultV2 = HoneyVaultV2(payable(baseVault.clone()));
-        honeyVaultV2.initialize(THJ, address(honeyQueen));
+        honeyVaultV2.initialize(THJ, address(honeyQueen), referral);
 
         // migration should fail because haven't set it in honey queen
         vm.expectRevert(HoneyVault.MigrationNotEnabled.selector);

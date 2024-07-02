@@ -26,16 +26,19 @@ contract HoneyQueen is Ownable {
     /*###############################################################
                             STORAGE
     ###############################################################*/
+    address public immutable treasury;
+    IBGT public constant BGT = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
+    uint256 public fees = 200; // in bps
     // prettier-ignore
     mapping(address LPToken => address stakingContract) public LPTokenToStakingContract;
-    IBGT public constant BGT = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
     // prettier-ignore
     mapping(bytes32 fromCodeHash => mapping(bytes32 toCodeHash => bool isEnabled)) public isMigrationEnabled;
 
     /*###############################################################
                             INITIALIZER
     ###############################################################*/
-    constructor() {
+    constructor(address _treasury) {
+        treasury = _treasury;
         _initializeOwner(msg.sender);
     }
     /*###############################################################
@@ -55,9 +58,16 @@ contract HoneyQueen is Ownable {
     ) external onlyOwner {
         isMigrationEnabled[_fromCodeHash][_toCodeHash] = _isMigrationEnabled;
     }
+
+    function updateFees(uint256 _fees) external onlyOwner {
+        fees = _fees;
+    }
     /*###############################################################
                             VIEW LOGIC
     ###############################################################*/
+    function computeFees(uint256 amount) public view returns (uint256) {
+        return (amount * fees) / 10000;
+    }
     /*###############################################################
                             PUBLIC LOGIC
     ###############################################################*/
