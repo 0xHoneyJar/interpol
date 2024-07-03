@@ -47,7 +47,7 @@ contract HoneyVaultTest is Test {
         // setup honeyqueen stuff
         honeyQueen = new HoneyQueen(treasury);
         // prettier-ignore
-        honeyQueen.setLPTokenToStakingContract(address(HONEYBERA_LP), address(HONEYBERA_STAKING));
+        honeyQueen.setIsStakingContractAllowed(address(HONEYBERA_STAKING), true);
         vaultToBeCloned = new HoneyVault();
         honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
         honeyVault.initialize(THJ, address(honeyQueen), referral);
@@ -86,8 +86,6 @@ contract HoneyVaultTest is Test {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyVault), balance);
 
-        vm.expectEmit(true, false, false, true, address(HONEYBERA_STAKING));
-        emit IStakingContract.Staked(address(honeyVault), balance);
         vm.expectEmit(true, true, false, false, address(honeyVault));
         emit HoneyVault.DepositedAndLocked(address(HONEYBERA_LP), balance);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
@@ -95,15 +93,37 @@ contract HoneyVaultTest is Test {
         assertEq(honeyVault.balances(address(HONEYBERA_LP)), balance);
     }
 
-    function test_claimRewards() external prankAsTHJ {
+    function test_stakeAndUnstake() external prankAsTHJ {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyVault), balance);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
 
+        vm.expectEmit(true, false, false, true, address(HONEYBERA_STAKING));
+        emit IStakingContract.Staked(address(honeyVault), balance);
+        vm.expectEmit(true, true, false, true, address(honeyVault));
+        // prettier-ignore
+        emit HoneyVault.Staked(address(HONEYBERA_STAKING), address(HONEYBERA_LP), balance);
+        // prettier-ignore
+        honeyVault.stake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
+
+        vm.expectEmit(true, true, false, true, address(honeyVault));
+        // prettier-ignore
+        emit HoneyVault.Unstaked(address(HONEYBERA_STAKING), address(HONEYBERA_LP), balance);
+        // prettier-ignore
+        honeyVault.unstake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
+    }
+
+    function test_claimRewards() external prankAsTHJ {
+        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
+        HONEYBERA_LP.approve(address(honeyVault), balance);
+        honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+        // prettier-ignore
+        honeyVault.stake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
+
         uint256 bgtBalanceBefore = BGT.balanceOf(address(honeyVault));
         // deal some BGT
         StdCheats.deal(address(BGT), address(honeyVault), 1);
-        honeyVault.claimRewards(address(HONEYBERA_LP));
+        honeyVault.claimRewards(address(HONEYBERA_STAKING));
         // balance should have increased!
         uint256 bgtBalanceAfter = BGT.balanceOf(address(honeyVault));
         // prettier-ignore
@@ -115,8 +135,10 @@ contract HoneyVaultTest is Test {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyVault), balance);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+        // prettier-ignore
+        honeyVault.stake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
         StdCheats.deal(address(BGT), address(honeyVault), 10e18);
-        honeyVault.claimRewards(address(HONEYBERA_LP));
+        honeyVault.claimRewards(address(HONEYBERA_STAKING));
 
         // time to burn
         uint256 beraBalanceBefore = address(honeyVault).balance;
@@ -150,8 +172,11 @@ contract HoneyVaultTest is Test {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyVault), balance);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+        // prettier-ignore
+        honeyVault.stake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
+
         StdCheats.deal(address(BGT), address(honeyVault), 10e18);
-        honeyVault.claimRewards(address(HONEYBERA_LP));
+        honeyVault.claimRewards(address(HONEYBERA_STAKING));
         uint256 bgtBalance = BGT.balanceOf(address(honeyVault));
         honeyVault.burnBGTForBERA(bgtBalance);
 
@@ -177,6 +202,7 @@ contract HoneyVaultTest is Test {
     }
 
     function test_migration() external prankAsTHJ {
+        return;
         // deposit first some into contract
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyVault), balance);

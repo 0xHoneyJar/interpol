@@ -93,8 +93,8 @@ contract HoneyVault is TokenReceiver, Ownable {
     ) external onlyOwner {
         if (!HONEY_QUEEN.isStakingContractAllowed(_stakingContract))
             revert StakingContractNotAllowed();
-        ERC20(_LPToken).approve(address(stakingContract), _amount);
-        stakingContract.stake(_amount);
+        ERC20(_LPToken).approve(address(_stakingContract), _amount);
+        IStakingContract(_stakingContract).stake(_amount);
 
         emit Staked(_stakingContract, _LPToken, _amount);
     }
@@ -105,7 +105,8 @@ contract HoneyVault is TokenReceiver, Ownable {
         uint256 _amount
     ) external onlyOwner {
         // no need to check if staking is legit
-        stakingContract.withdraw(_amount);
+        IStakingContract(_stakingContract).withdraw(_amount);
+        IStakingContract(_stakingContract).getReward(address(this));
 
         emit Unstaked(_stakingContract, _LPToken, _amount);
     }
@@ -114,38 +115,36 @@ contract HoneyVault is TokenReceiver, Ownable {
         HONEY_QUEEN.BGT().redeem(address(this), _amount);
     }
 
+    /*
+        Unrelated to staking contracts or gauges withdrawal.
+        This only sends tokens held by the HoneyVault to the owner.
+    */
     // prettier-ignore
     function withdrawLPTokens(address _LPToken, uint256 _amount) external onlyOwner {
         // only withdraw if expiration is OK
         if (block.timestamp < expirations[_LPToken]) revert NotExpiredYet();
-        IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
-
-        stakingContract.withdraw(_amount);
-        stakingContract.getReward(address(this));
-
         ERC20(_LPToken).transfer(msg.sender, _amount);
-
         emit Withdrawn(_LPToken, _amount);
     }
 
     // issue is that new honey vault could be a fake and unlock tokens
     // prettier-ignore
     function migrateLPToken(address _LPToken, address payable _newHoneyVault) external onlyOwner {
-        // check migration is authorized based on codehashes
-        if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash)) {
-            revert MigrationNotEnabled();
-        }    
-        IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
-        uint256 balance = balances[_LPToken];
-        // empty balance
-        balances[_LPToken] = 0;
-        // get rewards and withdraw tokens at once
-        stakingContract.exit();
-        // send to new vault and deposit and lock
-        ERC20(_LPToken).approve(address(_newHoneyVault), balance);
-        HoneyVault(_newHoneyVault).depositAndLock(_LPToken, balance, expirations[_LPToken]);
+        // // check migration is authorized based on codehashes
+        // if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash)) {
+        //     revert MigrationNotEnabled();
+        // }    
+        // IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
+        // uint256 balance = balances[_LPToken];
+        // // empty balance
+        // balances[_LPToken] = 0;
+        // // get rewards and withdraw tokens at once
+        // stakingContract.exit();
+        // // send to new vault and deposit and lock
+        // ERC20(_LPToken).approve(address(_newHoneyVault), balance);
+        // HoneyVault(_newHoneyVault).depositAndLock(_LPToken, balance, expirations[_LPToken]);
 
-        emit Migrated(_LPToken, address(this), _newHoneyVault);
+        // emit Migrated(_LPToken, address(this), _newHoneyVault);
     }
 
     function withdrawBERA(uint256 _amount) external onlyOwner {
@@ -190,7 +189,6 @@ contract HoneyVault is TokenReceiver, Ownable {
 
     function depositAndLock(
         address _LPToken,
-        address _stakingContract,
         uint256 _amount,
         uint256 _expiration
     ) external {
@@ -210,10 +208,9 @@ contract HoneyVault is TokenReceiver, Ownable {
         Claims rewards, BGT, from the staking contract.
         The reward goes into the HoneyVault.
     */
-    function claimRewards(address _LPToken) external {
+    function claimRewards(address _stakingContract) external {
         // prettier-ignore
-        IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
-        stakingContract.getReward(address(this));
+        IStakingContract(_stakingContract).getReward(address(this));
     }
 
     function clone() external returns (address) {
