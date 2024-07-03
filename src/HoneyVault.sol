@@ -32,12 +32,23 @@ contract HoneyVault is TokenReceiver, Ownable {
                             ERRORS
     ###############################################################*/
     error MigrationNotEnabled();
-    error AlreadyDeposited(address LPToken);
+    error ExpirationNotMatching();
+    error StakingContractNotAllowed();
     error NotExpiredYet();
     /*###############################################################
                             EVENTS
     ###############################################################*/
     event DepositedAndLocked(address indexed token, uint256 amount);
+    event Staked(
+        address indexed stakingContract,
+        address indexed token,
+        uint256 amount
+    );
+    event Unstaked(
+        address indexed stakingContract,
+        address indexed token,
+        uint256 amount
+    );
     event Withdrawn(address indexed token, uint256 amount);
     event Migrated(
         address indexed token,
@@ -74,6 +85,31 @@ contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             OWNER LOGIC
     ###############################################################*/
+
+    function stake(
+        address _LPToken,
+        address _stakingContract,
+        uint256 _amount
+    ) external onlyOwner {
+        if (!HONEY_QUEEN.isStakingContractAllowed(_stakingContract))
+            revert StakingContractNotAllowed();
+        ERC20(_LPToken).approve(address(stakingContract), _amount);
+        stakingContract.stake(_amount);
+
+        emit Staked(_stakingContract, _LPToken, _amount);
+    }
+
+    function unstake(
+        address _LPToken,
+        address _stakingContract,
+        uint256 _amount
+    ) external onlyOwner {
+        // no need to check if staking is legit
+        stakingContract.withdraw(_amount);
+
+        emit Unstaked(_stakingContract, _LPToken, _amount);
+    }
+
     function burnBGTForBERA(uint256 _amount) external onlyOwner {
         HONEY_QUEEN.BGT().redeem(address(this), _amount);
     }
@@ -152,22 +188,21 @@ contract HoneyVault is TokenReceiver, Ownable {
                             PUBLIC LOGIC
     ###############################################################*/
 
-    /*
-        So far this function and the reference in HoneyQueen expects the LP token
-        to be a BEX one, which goes into BGT Station Gauges.
-    */
-    // prettier-ignore
-    function depositAndLock(address _LPToken, uint256 _amount, uint256 _expiration) external {
-        // only allow one deposit per lp token once!
-        if (expirations[_LPToken] != 0) revert AlreadyDeposited(_LPToken);
-        IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
+    function depositAndLock(
+        address _LPToken,
+        address _stakingContract,
+        uint256 _amount,
+        uint256 _expiration
+    ) external {
+        // we only allow subsequent deposits of the same token IF the
+        // expiration is the same
+        if (expirations[_LPToken] != 0 && _expiration != expirations[_LPToken])
+            revert ExpirationNotMatching();
         // update balance
         balances[_LPToken] += _amount;
         expirations[_LPToken] = _expiration;
-
+        // tokens have to be transfered to have accurate balance tracking
         ERC20(_LPToken).transferFrom(msg.sender, address(this), _amount);
-        ERC20(_LPToken).approve(address(stakingContract), _amount);
-        stakingContract.stake(_amount);
 
         emit DepositedAndLocked(_LPToken, _amount);
     }

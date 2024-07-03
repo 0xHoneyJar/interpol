@@ -30,7 +30,7 @@ contract HoneyQueen is Ownable {
     uint256 public fees = 200; // in bps
     IBGT public constant BGT = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
     // prettier-ignore
-    mapping(address LPToken => address stakingContract) public LPTokenToStakingContract;
+    mapping(address stakingContract => bool allowed) public isStakingContractAllowed;
     // prettier-ignore
     mapping(bytes32 fromCodeHash => mapping(bytes32 toCodeHash => bool isEnabled)) public isMigrationEnabled;
 
@@ -44,11 +44,11 @@ contract HoneyQueen is Ownable {
     /*###############################################################
                             OWNER LOGIC
     ###############################################################*/
-    function setLPTokenToStakingContract(
-        address _LPToken,
-        address _stakingContract
+    function setIsStakingContractAllowed(
+        address _stakingContract,
+        bool _isAllowed
     ) external onlyOwner {
-        LPTokenToStakingContract[_LPToken] = _stakingContract;
+        isStakingContractAllowed[_stakingContract] = _isAllowed;
     }
     // prettier-ignore
     function setMigrationFlag(
