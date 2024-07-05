@@ -31,6 +31,8 @@ contract HoneyQueen is Ownable {
     IBGT public constant BGT = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
     // prettier-ignore
     mapping(address stakingContract => bool allowed) public isStakingContractAllowed;
+    // this is for cases where gauges give you a NFT to represent your staking position
+    mapping(address token => bool blocked) public isTokenBlocked;
     // prettier-ignore
     mapping(bytes32 fromCodeHash => mapping(bytes32 toCodeHash => bool isEnabled)) public isMigrationEnabled;
 
@@ -50,6 +52,14 @@ contract HoneyQueen is Ownable {
     ) external onlyOwner {
         isStakingContractAllowed[_stakingContract] = _isAllowed;
     }
+
+    function setIsTokenBlocked(
+        address _token,
+        bool _isBlocked
+    ) external onlyOwner {
+        isTokenBlocked[_token] = _isBlocked;
+    }
+
     // prettier-ignore
     function setMigrationFlag(
         bool _isMigrationEnabled,

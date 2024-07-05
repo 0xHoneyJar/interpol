@@ -25,6 +25,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     error ExpirationNotMatching();
     error StakingContractNotAllowed();
     error NotExpiredYet();
+    error TokenBlocked();
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -61,6 +62,10 @@ contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             MODIFIERS
     ###############################################################*/
+    modifier onlyUnblockedTokens(address _token) {
+        if (HONEY_QUEEN.isTokenBlocked(_token)) revert TokenBlocked();
+        _;
+    }
     /*###############################################################
                             INITIALIZER
     ###############################################################*/
@@ -96,7 +101,7 @@ contract HoneyVault is TokenReceiver, Ownable {
         address _LPToken,
         address _stakingContract,
         uint256 _amount
-    ) external onlyOwner {
+    ) public onlyOwner {
         // no need to check if staking is legit
         staked[_LPToken][_stakingContract] -= _amount;
         IStakingContract(_stakingContract).withdraw(_amount);
@@ -148,6 +153,7 @@ contract HoneyVault is TokenReceiver, Ownable {
         emit Migrated(_LPToken, address(this), _newHoneyVault);
     }
 
+    /*###############################################################*/
     function withdrawBERA(uint256 _amount) external onlyOwner {
         address treasury = HONEY_QUEEN.treasury();
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
@@ -156,7 +162,10 @@ contract HoneyVault is TokenReceiver, Ownable {
         /*!*/ emit Withdrawn(address(0), _amount - fees);
         /*!*/ emit Fees(referral, address(0), fees);
     }
-    function withdrawERC20(address _token, uint256 _amount) external onlyOwner {
+    function withdrawERC20(
+        address _token,
+        uint256 _amount
+    ) external onlyUnblockedTokens(_token) onlyOwner {
         address treasury = HONEY_QUEEN.treasury();
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
         ERC20(_token).transfer(treasury, fees);
@@ -164,15 +173,20 @@ contract HoneyVault is TokenReceiver, Ownable {
         /*!*/ emit Withdrawn(_token, _amount - fees);
         /*!*/ emit Fees(referral, _token, fees);
     }
-    function withdrawERC721(address _token, uint256 _id) external onlyOwner {
+
+    function withdrawERC721(
+        address _token,
+        uint256 _id
+    ) external onlyUnblockedTokens(_token) onlyOwner {
         ERC721(_token).transferFrom(address(this), msg.sender, _id);
     }
+
     function withdrawERC1155(
         address _token,
         uint256 _id,
         uint256 _amount,
         bytes calldata data
-    ) external onlyOwner {
+    ) external onlyUnblockedTokens(_token) onlyOwner {
         ERC1155(_token).safeTransferFrom(
             address(this),
             msg.sender,

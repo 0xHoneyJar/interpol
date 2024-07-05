@@ -10,6 +10,7 @@ import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {HoneyVaultV2} from "./mocks/HoneyVaultV2.sol";
 import {FakeVault} from "./mocks/FakeVault.sol";
 import {FakeGauge} from "./mocks/FakeGauge.sol";
+import {GaugeAsNFT} from "./mocks/GaugeAsNFT.sol";
 import {IStakingContract} from "../src/utils/IStakingContract.sol";
 
 interface IBGT {
@@ -219,6 +220,22 @@ contract HoneyVaultTest is Test {
         emit HoneyVault.Fees(referral, address(0), pythonFees);
 
         honeyVault.withdrawBERA(bgtBalance);
+    }
+
+    function test_cannotWithdrawNFT() external prankAsTHJ {
+        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
+        HONEYBERA_LP.approve(address(honeyVault), balance);
+        honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+
+        GaugeAsNFT gauge = new GaugeAsNFT(address(HONEYBERA_LP));
+        honeyQueen.setIsStakingContractAllowed(address(gauge), true);
+        honeyVault.stake(address(HONEYBERA_LP), address(gauge), balance);
+
+        // block the nft from being transfered
+        honeyQueen.setIsTokenBlocked(address(gauge), true);
+        // should fail
+        vm.expectRevert(HoneyVault.TokenBlocked.selector);
+        honeyVault.withdrawERC721(address(gauge), 0);
     }
 
     function test_migration() external prankAsTHJ {
