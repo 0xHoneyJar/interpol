@@ -9,17 +9,7 @@ import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
-
-import {Test, console} from "forge-std/Test.sol";
-
-interface IStakingContract {
-    event Staked(address indexed staker, uint256 amount);
-    function stake(uint256 amount) external;
-    function withdraw(uint256 amount) external;
-    function getReward(address account) external;
-    //function balanceOf(address account) external view returns (uint256);
-    function exit() external;
-}
+import {IStakingContract} from "./utils/IStakingContract.sol";
 
 /*
     The HoneyVault is designed in such a way that it's multiple LP tokens
@@ -62,7 +52,9 @@ contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    mapping(address LPToken => uint256 balance) public balances;
+    // prettier-ignore
+    // tracks amount of tokens staked per staking contract
+    mapping(address LPToken => mapping(address stakingContract => uint256 balance)) public staked;
     mapping(address LPToken => uint256 expiration) public expirations;
     address public referral;
     HoneyQueen internal HONEY_QUEEN;
@@ -93,6 +85,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     ) external onlyOwner {
         if (!HONEY_QUEEN.isStakingContractAllowed(_stakingContract))
             revert StakingContractNotAllowed();
+        staked[_LPToken][_stakingContract] += _amount;
         ERC20(_LPToken).approve(address(_stakingContract), _amount);
         IStakingContract(_stakingContract).stake(_amount);
 
@@ -105,10 +98,22 @@ contract HoneyVault is TokenReceiver, Ownable {
         uint256 _amount
     ) external onlyOwner {
         // no need to check if staking is legit
+        staked[_LPToken][_stakingContract] -= _amount;
         IStakingContract(_stakingContract).withdraw(_amount);
         IStakingContract(_stakingContract).getReward(address(this));
 
         emit Unstaked(_stakingContract, _LPToken, _amount);
+    }
+
+    function unstakeMultiple(
+        address[] calldata _LPTokens,
+        address[] calldata _stakingContracts,
+        uint256[] calldata _amounts
+    ) external onlyOwner {
+        uint256 length = _LPTokens.length;
+        for (uint256 i; i < length; i++) {
+            unstake(_LPTokens[i], _stakingContracts[i], _amounts[i]);
+        }
     }
 
     function burnBGTForBERA(uint256 _amount) external onlyOwner {
@@ -128,23 +133,19 @@ contract HoneyVault is TokenReceiver, Ownable {
     }
 
     // issue is that new honey vault could be a fake and unlock tokens
+    // assumption is that user unstaked before
     // prettier-ignore
     function migrateLPToken(address _LPToken, address payable _newHoneyVault) external onlyOwner {
-        // // check migration is authorized based on codehashes
-        // if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash)) {
-        //     revert MigrationNotEnabled();
-        // }    
-        // IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
-        // uint256 balance = balances[_LPToken];
-        // // empty balance
-        // balances[_LPToken] = 0;
-        // // get rewards and withdraw tokens at once
-        // stakingContract.exit();
-        // // send to new vault and deposit and lock
-        // ERC20(_LPToken).approve(address(_newHoneyVault), balance);
-        // HoneyVault(_newHoneyVault).depositAndLock(_LPToken, balance, expirations[_LPToken]);
+        // check migration is authorized based on codehashes
+        if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash)) {
+            revert MigrationNotEnabled();
+        }    
+        uint256 balance = ERC20(_LPToken).balanceOf(address(this));
+        // send to new vault and deposit and lock
+        ERC20(_LPToken).approve(address(_newHoneyVault), balance);
+        HoneyVault(_newHoneyVault).depositAndLock(_LPToken, balance, expirations[_LPToken]);
 
-        // emit Migrated(_LPToken, address(this), _newHoneyVault);
+        emit Migrated(_LPToken, address(this), _newHoneyVault);
     }
 
     function withdrawBERA(uint256 _amount) external onlyOwner {
@@ -196,8 +197,6 @@ contract HoneyVault is TokenReceiver, Ownable {
         // expiration is the same
         if (expirations[_LPToken] != 0 && _expiration != expirations[_LPToken])
             revert ExpirationNotMatching();
-        // update balance
-        balances[_LPToken] += _amount;
         expirations[_LPToken] = _expiration;
         // tokens have to be transfered to have accurate balance tracking
         ERC20(_LPToken).transferFrom(msg.sender, address(this), _amount);
