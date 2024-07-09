@@ -5,10 +5,13 @@ import {Test, console} from "forge-std/Test.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {LibString} from "solady/utils/LibString.sol";
-import {HoneyVault, IStakingContract} from "../src/HoneyVault.sol";
+import {HoneyVault} from "../src/HoneyVault.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {HoneyVaultV2} from "./mocks/HoneyVaultV2.sol";
 import {FakeVault} from "./mocks/FakeVault.sol";
+import {FakeGauge} from "./mocks/FakeGauge.sol";
+import {GaugeAsNFT} from "./mocks/GaugeAsNFT.sol";
+import {IStakingContract} from "../src/utils/IStakingContract.sol";
 
 interface IBGT {
     event Redeem(
@@ -47,7 +50,7 @@ contract HoneyVaultTest is Test {
         // setup honeyqueen stuff
         honeyQueen = new HoneyQueen(treasury);
         // prettier-ignore
-        honeyQueen.setLPTokenToStakingContract(address(HONEYBERA_LP), address(HONEYBERA_STAKING));
+        honeyQueen.setIsStakingContractAllowed(address(HONEYBERA_STAKING), true);
         vaultToBeCloned = new HoneyVault();
         honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
         honeyVault.initialize(THJ, address(honeyQueen), referral);
@@ -82,28 +85,66 @@ contract HoneyVaultTest is Test {
         assertEq(address(honeyVault.owner()), address(this));
     }
 
-    function test_depositAndLock() external prankAsTHJ {
+    function test_singleDepositAndLock() external prankAsTHJ {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyVault), balance);
 
-        vm.expectEmit(true, false, false, true, address(HONEYBERA_STAKING));
-        emit IStakingContract.Staked(address(honeyVault), balance);
         vm.expectEmit(true, true, false, false, address(honeyVault));
         emit HoneyVault.DepositedAndLocked(address(HONEYBERA_LP), balance);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
 
-        assertEq(honeyVault.balances(address(HONEYBERA_LP)), balance);
+        assertEq(HONEYBERA_LP.balanceOf(address(honeyVault)), balance);
+    }
+
+    function test_multipleDeposits() external prankAsTHJ {
+        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
+        HONEYBERA_LP.approve(address(honeyVault), balance);
+        // prettier-ignore
+        honeyVault.depositAndLock(address(HONEYBERA_LP), balance / 2, expiration);
+
+        // cannot deposit with a different expiration
+        vm.expectRevert(HoneyVault.ExpirationNotMatching.selector);
+        // prettier-ignore
+        honeyVault.depositAndLock(address(HONEYBERA_LP), balance / 2, expiration - 1);
+
+        // deposit
+        vm.expectEmit(true, false, false, true, address(honeyVault));
+        emit HoneyVault.DepositedAndLocked(address(HONEYBERA_LP), balance / 2);
+        // prettier-ignore
+        honeyVault.depositAndLock(address(HONEYBERA_LP), balance / 2, expiration);
+    }
+
+    function test_stakeAndUnstake() external prankAsTHJ {
+        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
+        HONEYBERA_LP.approve(address(honeyVault), balance);
+        honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+
+        vm.expectEmit(true, false, false, true, address(HONEYBERA_STAKING));
+        emit IStakingContract.Staked(address(honeyVault), balance);
+        vm.expectEmit(true, true, false, true, address(honeyVault));
+        // prettier-ignore
+        emit HoneyVault.Staked(address(HONEYBERA_STAKING), address(HONEYBERA_LP), balance);
+        // prettier-ignore
+        honeyVault.stake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
+
+        vm.expectEmit(true, true, false, true, address(honeyVault));
+        // prettier-ignore
+        emit HoneyVault.Unstaked(address(HONEYBERA_STAKING), address(HONEYBERA_LP), balance);
+        // prettier-ignore
+        honeyVault.unstake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
     }
 
     function test_claimRewards() external prankAsTHJ {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyVault), balance);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+        // prettier-ignore
+        honeyVault.stake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
 
         uint256 bgtBalanceBefore = BGT.balanceOf(address(honeyVault));
         // deal some BGT
         StdCheats.deal(address(BGT), address(honeyVault), 1);
-        honeyVault.claimRewards(address(HONEYBERA_LP));
+        honeyVault.claimRewards(address(HONEYBERA_STAKING));
         // balance should have increased!
         uint256 bgtBalanceAfter = BGT.balanceOf(address(honeyVault));
         // prettier-ignore
@@ -115,8 +156,10 @@ contract HoneyVaultTest is Test {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyVault), balance);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+        // prettier-ignore
+        honeyVault.stake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
         StdCheats.deal(address(BGT), address(honeyVault), 10e18);
-        honeyVault.claimRewards(address(HONEYBERA_LP));
+        honeyVault.claimRewards(address(HONEYBERA_STAKING));
 
         // time to burn
         uint256 beraBalanceBefore = address(honeyVault).balance;
@@ -150,8 +193,11 @@ contract HoneyVaultTest is Test {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyVault), balance);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+        // prettier-ignore
+        honeyVault.stake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
+
         StdCheats.deal(address(BGT), address(honeyVault), 10e18);
-        honeyVault.claimRewards(address(HONEYBERA_LP));
+        honeyVault.claimRewards(address(HONEYBERA_STAKING));
         uint256 bgtBalance = BGT.balanceOf(address(honeyVault));
         honeyVault.burnBGTForBERA(bgtBalance);
 
@@ -174,6 +220,22 @@ contract HoneyVaultTest is Test {
         emit HoneyVault.Fees(referral, address(0), pythonFees);
 
         honeyVault.withdrawBERA(bgtBalance);
+    }
+
+    function test_cannotWithdrawNFT() external prankAsTHJ {
+        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
+        HONEYBERA_LP.approve(address(honeyVault), balance);
+        honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+
+        GaugeAsNFT gauge = new GaugeAsNFT(address(HONEYBERA_LP));
+        honeyQueen.setIsStakingContractAllowed(address(gauge), true);
+        honeyVault.stake(address(HONEYBERA_LP), address(gauge), balance);
+
+        // block the nft from being transfered
+        honeyQueen.setIsTokenBlocked(address(gauge), true);
+        // should fail
+        vm.expectRevert(HoneyVault.TokenBlocked.selector);
+        honeyVault.withdrawERC721(address(gauge), 0);
     }
 
     function test_migration() external prankAsTHJ {
@@ -215,7 +277,6 @@ contract HoneyVaultTest is Test {
             address(HONEYBERA_LP),
             payable(address(honeyVaultV2))
         );
-        // check balances is identical
-        assertEq(honeyVaultV2.balances(address(HONEYBERA_LP)), balance);
+        assertEq(HONEYBERA_LP.balanceOf(address(honeyVaultV2)), balance);
     }
 }

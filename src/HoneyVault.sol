@@ -9,17 +9,7 @@ import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
-
-import {Test, console} from "forge-std/Test.sol";
-
-interface IStakingContract {
-    event Staked(address indexed staker, uint256 amount);
-    function stake(uint256 amount) external;
-    function withdraw(uint256 amount) external;
-    function getReward(address account) external;
-    //function balanceOf(address account) external view returns (uint256);
-    function exit() external;
-}
+import {IStakingContract} from "./utils/IStakingContract.sol";
 
 /*
     The HoneyVault is designed in such a way that it's multiple LP tokens
@@ -32,12 +22,24 @@ contract HoneyVault is TokenReceiver, Ownable {
                             ERRORS
     ###############################################################*/
     error MigrationNotEnabled();
-    error AlreadyDeposited(address LPToken);
+    error ExpirationNotMatching();
+    error StakingContractNotAllowed();
     error NotExpiredYet();
+    error TokenBlocked();
     /*###############################################################
                             EVENTS
     ###############################################################*/
     event DepositedAndLocked(address indexed token, uint256 amount);
+    event Staked(
+        address indexed stakingContract,
+        address indexed token,
+        uint256 amount
+    );
+    event Unstaked(
+        address indexed stakingContract,
+        address indexed token,
+        uint256 amount
+    );
     event Withdrawn(address indexed token, uint256 amount);
     event Migrated(
         address indexed token,
@@ -51,13 +53,19 @@ contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    mapping(address LPToken => uint256 balance) public balances;
+    // prettier-ignore
+    // tracks amount of tokens staked per staking contract
+    mapping(address LPToken => mapping(address stakingContract => uint256 balance)) public staked;
     mapping(address LPToken => uint256 expiration) public expirations;
     address public referral;
     HoneyQueen internal HONEY_QUEEN;
     /*###############################################################
                             MODIFIERS
     ###############################################################*/
+    modifier onlyUnblockedTokens(address _token) {
+        if (HONEY_QUEEN.isTokenBlocked(_token)) revert TokenBlocked();
+        _;
+    }
     /*###############################################################
                             INITIALIZER
     ###############################################################*/
@@ -74,37 +82,70 @@ contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             OWNER LOGIC
     ###############################################################*/
+
+    function stake(
+        address _LPToken,
+        address _stakingContract,
+        uint256 _amount
+    ) external onlyOwner {
+        if (!HONEY_QUEEN.isStakingContractAllowed(_stakingContract))
+            revert StakingContractNotAllowed();
+        staked[_LPToken][_stakingContract] += _amount;
+        ERC20(_LPToken).approve(address(_stakingContract), _amount);
+        IStakingContract(_stakingContract).stake(_amount);
+
+        emit Staked(_stakingContract, _LPToken, _amount);
+    }
+
+    function unstake(
+        address _LPToken,
+        address _stakingContract,
+        uint256 _amount
+    ) public onlyOwner {
+        // no need to check if staking is legit
+        staked[_LPToken][_stakingContract] -= _amount;
+        IStakingContract(_stakingContract).withdraw(_amount);
+        IStakingContract(_stakingContract).getReward(address(this));
+
+        emit Unstaked(_stakingContract, _LPToken, _amount);
+    }
+
+    function unstakeMultiple(
+        address[] calldata _LPTokens,
+        address[] calldata _stakingContracts,
+        uint256[] calldata _amounts
+    ) external onlyOwner {
+        uint256 length = _LPTokens.length;
+        for (uint256 i; i < length; i++) {
+            unstake(_LPTokens[i], _stakingContracts[i], _amounts[i]);
+        }
+    }
+
     function burnBGTForBERA(uint256 _amount) external onlyOwner {
         HONEY_QUEEN.BGT().redeem(address(this), _amount);
     }
 
+    /*
+        Unrelated to staking contracts or gauges withdrawal.
+        This only sends tokens held by the HoneyVault to the owner.
+    */
     // prettier-ignore
     function withdrawLPTokens(address _LPToken, uint256 _amount) external onlyOwner {
         // only withdraw if expiration is OK
         if (block.timestamp < expirations[_LPToken]) revert NotExpiredYet();
-        IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
-
-        stakingContract.withdraw(_amount);
-        stakingContract.getReward(address(this));
-
         ERC20(_LPToken).transfer(msg.sender, _amount);
-
         emit Withdrawn(_LPToken, _amount);
     }
 
     // issue is that new honey vault could be a fake and unlock tokens
+    // assumption is that user unstaked before
     // prettier-ignore
     function migrateLPToken(address _LPToken, address payable _newHoneyVault) external onlyOwner {
         // check migration is authorized based on codehashes
         if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash)) {
             revert MigrationNotEnabled();
         }    
-        IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
-        uint256 balance = balances[_LPToken];
-        // empty balance
-        balances[_LPToken] = 0;
-        // get rewards and withdraw tokens at once
-        stakingContract.exit();
+        uint256 balance = ERC20(_LPToken).balanceOf(address(this));
         // send to new vault and deposit and lock
         ERC20(_LPToken).approve(address(_newHoneyVault), balance);
         HoneyVault(_newHoneyVault).depositAndLock(_LPToken, balance, expirations[_LPToken]);
@@ -112,6 +153,7 @@ contract HoneyVault is TokenReceiver, Ownable {
         emit Migrated(_LPToken, address(this), _newHoneyVault);
     }
 
+    /*###############################################################*/
     function withdrawBERA(uint256 _amount) external onlyOwner {
         address treasury = HONEY_QUEEN.treasury();
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
@@ -120,7 +162,10 @@ contract HoneyVault is TokenReceiver, Ownable {
         /*!*/ emit Withdrawn(address(0), _amount - fees);
         /*!*/ emit Fees(referral, address(0), fees);
     }
-    function withdrawERC20(address _token, uint256 _amount) external onlyOwner {
+    function withdrawERC20(
+        address _token,
+        uint256 _amount
+    ) external onlyUnblockedTokens(_token) onlyOwner {
         address treasury = HONEY_QUEEN.treasury();
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
         ERC20(_token).transfer(treasury, fees);
@@ -128,15 +173,20 @@ contract HoneyVault is TokenReceiver, Ownable {
         /*!*/ emit Withdrawn(_token, _amount - fees);
         /*!*/ emit Fees(referral, _token, fees);
     }
-    function withdrawERC721(address _token, uint256 _id) external onlyOwner {
+
+    function withdrawERC721(
+        address _token,
+        uint256 _id
+    ) external onlyUnblockedTokens(_token) onlyOwner {
         ERC721(_token).transferFrom(address(this), msg.sender, _id);
     }
+
     function withdrawERC1155(
         address _token,
         uint256 _id,
         uint256 _amount,
         bytes calldata data
-    ) external onlyOwner {
+    ) external onlyUnblockedTokens(_token) onlyOwner {
         ERC1155(_token).safeTransferFrom(
             address(this),
             msg.sender,
@@ -152,22 +202,18 @@ contract HoneyVault is TokenReceiver, Ownable {
                             PUBLIC LOGIC
     ###############################################################*/
 
-    /*
-        So far this function and the reference in HoneyQueen expects the LP token
-        to be a BEX one, which goes into BGT Station Gauges.
-    */
-    // prettier-ignore
-    function depositAndLock(address _LPToken, uint256 _amount, uint256 _expiration) external {
-        // only allow one deposit per lp token once!
-        if (expirations[_LPToken] != 0) revert AlreadyDeposited(_LPToken);
-        IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
-        // update balance
-        balances[_LPToken] += _amount;
+    function depositAndLock(
+        address _LPToken,
+        uint256 _amount,
+        uint256 _expiration
+    ) external {
+        // we only allow subsequent deposits of the same token IF the
+        // expiration is the same
+        if (expirations[_LPToken] != 0 && _expiration != expirations[_LPToken])
+            revert ExpirationNotMatching();
         expirations[_LPToken] = _expiration;
-
+        // tokens have to be transfered to have accurate balance tracking
         ERC20(_LPToken).transferFrom(msg.sender, address(this), _amount);
-        ERC20(_LPToken).approve(address(stakingContract), _amount);
-        stakingContract.stake(_amount);
 
         emit DepositedAndLocked(_LPToken, _amount);
     }
@@ -175,10 +221,9 @@ contract HoneyVault is TokenReceiver, Ownable {
         Claims rewards, BGT, from the staking contract.
         The reward goes into the HoneyVault.
     */
-    function claimRewards(address _LPToken) external {
+    function claimRewards(address _stakingContract) external {
         // prettier-ignore
-        IStakingContract stakingContract = IStakingContract(HONEY_QUEEN.LPTokenToStakingContract(_LPToken));
-        stakingContract.getReward(address(this));
+        IStakingContract(_stakingContract).getReward(address(this));
     }
 
     function clone() external returns (address) {
