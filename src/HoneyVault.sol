@@ -26,6 +26,8 @@ contract HoneyVault is TokenReceiver, Ownable {
     error StakingContractNotAllowed();
     error NotExpiredYet();
     error TokenBlocked();
+    error CannotBeLPToken();
+    error HasToBeLPToken();
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -131,6 +133,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     */
     // prettier-ignore
     function withdrawLPTokens(address _LPToken, uint256 _amount) external onlyOwner {
+        if (expirations[_LPToken] == 0) revert HasToBeLPToken();
         // only withdraw if expiration is OK
         if (block.timestamp < expirations[_LPToken]) revert NotExpiredYet();
         ERC20(_LPToken).transfer(msg.sender, _amount);
@@ -162,10 +165,13 @@ contract HoneyVault is TokenReceiver, Ownable {
         /*!*/ emit Withdrawn(address(0), _amount - fees);
         /*!*/ emit Fees(referral, address(0), fees);
     }
+
     function withdrawERC20(
         address _token,
         uint256 _amount
     ) external onlyUnblockedTokens(_token) onlyOwner {
+        // cannot withdraw any lp token that has an expiration
+        if (expirations[_token] != 0) revert CannotBeLPToken();
         address treasury = HONEY_QUEEN.treasury();
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
         ERC20(_token).transfer(treasury, fees);
@@ -217,6 +223,7 @@ contract HoneyVault is TokenReceiver, Ownable {
 
         emit DepositedAndLocked(_LPToken, _amount);
     }
+
     /*
         Claims rewards, BGT, from the staking contract.
         The reward goes into the HoneyVault.
