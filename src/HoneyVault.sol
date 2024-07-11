@@ -143,17 +143,19 @@ contract HoneyVault is TokenReceiver, Ownable {
     // issue is that new honey vault could be a fake and unlock tokens
     // assumption is that user unstaked before
     // prettier-ignore
-    function migrateLPToken(address _LPToken, address payable _newHoneyVault) external onlyOwner {
+    function migrate(address[] calldata _LPTokens, address payable _newHoneyVault) external onlyOwner {
         // check migration is authorized based on codehashes
         if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash)) {
             revert MigrationNotEnabled();
-        }    
-        uint256 balance = ERC20(_LPToken).balanceOf(address(this));
-        // send to new vault and deposit and lock
-        ERC20(_LPToken).approve(address(_newHoneyVault), balance);
-        HoneyVault(_newHoneyVault).depositAndLock(_LPToken, balance, expirations[_LPToken]);
+        }
+        for (uint256 i; i < _LPTokens.length; i++) {
+            uint256 balance = ERC20(_LPTokens[i]).balanceOf(address(this));
+            // send to new vault and deposit and lock
+            ERC20(_LPTokens[i]).approve(address(_newHoneyVault), balance);
+            HoneyVault(_newHoneyVault).depositAndLock(_LPTokens[i], balance, expirations[_LPTokens[i]]);
 
-        emit Migrated(_LPToken, address(this), _newHoneyVault);
+            emit Migrated(_LPTokens[i], address(this), _newHoneyVault);
+        }
     }
 
     /*###############################################################*/

@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {LibString} from "solady/utils/LibString.sol";
+import {Solarray as SLA} from "solarray/Solarray.sol";
 import {HoneyVault} from "../src/HoneyVault.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {HoneyVaultV2} from "./mocks/HoneyVaultV2.sol";
@@ -252,8 +253,8 @@ contract HoneyVaultTest is Test {
 
         // migration should fail because haven't set it in honey queen
         vm.expectRevert(HoneyVault.MigrationNotEnabled.selector);
-        honeyVault.migrateLPToken(
-            address(HONEYBERA_LP),
+        honeyVault.migrate(
+            SLA.addresses(address(HONEYBERA_LP)),
             payable(address(honeyVaultV2))
         );
 
@@ -273,8 +274,8 @@ contract HoneyVaultTest is Test {
             address(honeyVault),
             address(honeyVaultV2)
         );
-        honeyVault.migrateLPToken(
-            address(HONEYBERA_LP),
+        honeyVault.migrate(
+            SLA.addresses(address(HONEYBERA_LP)),
             payable(address(honeyVaultV2))
         );
         assertEq(HONEYBERA_LP.balanceOf(address(honeyVaultV2)), balance);
