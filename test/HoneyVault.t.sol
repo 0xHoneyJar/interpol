@@ -52,6 +52,24 @@ contract HoneyVaultTest is Test {
         honeyQueen = new HoneyQueen(treasury);
         // prettier-ignore
         honeyQueen.setIsStakingContractAllowed(address(HONEYBERA_STAKING), true);
+        honeyQueen.setIsSelectorAllowed(
+            bytes4(keccak256("stake(uint256)")),
+            "stake",
+            address(HONEYBERA_STAKING),
+            true
+        );
+        honeyQueen.setIsSelectorAllowed(
+            bytes4(keccak256("withdraw(uint256)")),
+            "unstake",
+            address(HONEYBERA_STAKING),
+            true
+        );
+        honeyQueen.setIsSelectorAllowed(
+            bytes4(keccak256("getReward(address)")),
+            "rewards",
+            address(HONEYBERA_STAKING),
+            true
+        );
         vaultToBeCloned = new HoneyVault();
         honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
         honeyVault.initialize(THJ, address(honeyQueen), referral);
@@ -120,32 +138,58 @@ contract HoneyVaultTest is Test {
         HONEYBERA_LP.approve(address(honeyVault), balance);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
 
-        vm.expectEmit(true, false, false, true, address(HONEYBERA_STAKING));
-        emit IStakingContract.Staked(address(honeyVault), balance);
         vm.expectEmit(true, true, false, true, address(honeyVault));
         // prettier-ignore
         emit HoneyVault.Staked(address(HONEYBERA_STAKING), address(HONEYBERA_LP), balance);
-        // prettier-ignore
-        honeyVault.stake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
+        honeyVault.stake(
+            address(HONEYBERA_LP),
+            address(HONEYBERA_STAKING),
+            balance,
+            abi.encodeWithSignature("stake(uint256)", balance)
+        );
+        assertEq(
+            HONEYBERA_LP.balanceOf(THJ),
+            0,
+            "post-stake balance should be O"
+        );
 
         vm.expectEmit(true, true, false, true, address(honeyVault));
-        // prettier-ignore
-        emit HoneyVault.Unstaked(address(HONEYBERA_STAKING), address(HONEYBERA_LP), balance);
-        // prettier-ignore
-        honeyVault.unstake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
+        emit HoneyVault.Unstaked(
+            address(HONEYBERA_STAKING),
+            address(HONEYBERA_LP),
+            balance
+        );
+        honeyVault.unstake(
+            address(HONEYBERA_LP),
+            address(HONEYBERA_STAKING),
+            balance,
+            abi.encodeWithSignature("withdraw(uint256)", balance)
+        );
+        assertEq(
+            HONEYBERA_LP.balanceOf(address(honeyVault)),
+            balance,
+            "post-unstake balance should be equal to initial balance"
+        );
     }
 
     function test_claimRewards() external prankAsTHJ {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyVault), balance);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
-        // prettier-ignore
-        honeyVault.stake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
+        honeyVault.stake(
+            address(HONEYBERA_LP),
+            address(HONEYBERA_STAKING),
+            balance,
+            abi.encodeWithSignature("stake(uint256)", balance)
+        );
 
         uint256 bgtBalanceBefore = BGT.balanceOf(address(honeyVault));
         // deal some BGT
         StdCheats.deal(address(BGT), address(honeyVault), 1);
-        honeyVault.claimRewards(address(HONEYBERA_STAKING));
+        honeyVault.claimRewards(
+            address(HONEYBERA_STAKING),
+            abi.encodeWithSignature("getReward(address)", address(honeyVault))
+        );
         // balance should have increased!
         uint256 bgtBalanceAfter = BGT.balanceOf(address(honeyVault));
         // prettier-ignore
@@ -157,10 +201,17 @@ contract HoneyVaultTest is Test {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyVault), balance);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
-        // prettier-ignore
-        honeyVault.stake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
+        honeyVault.stake(
+            address(HONEYBERA_LP),
+            address(HONEYBERA_STAKING),
+            balance,
+            abi.encodeWithSignature("stake(uint256)", balance)
+        );
         StdCheats.deal(address(BGT), address(honeyVault), 10e18);
-        honeyVault.claimRewards(address(HONEYBERA_STAKING));
+        honeyVault.claimRewards(
+            address(HONEYBERA_STAKING),
+            abi.encodeWithSignature("getReward(address)", address(honeyVault))
+        );
 
         // time to burn
         uint256 beraBalanceBefore = address(honeyVault).balance;
@@ -194,11 +245,18 @@ contract HoneyVaultTest is Test {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyVault), balance);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
-        // prettier-ignore
-        honeyVault.stake(address(HONEYBERA_LP), address(HONEYBERA_STAKING), balance);
+        honeyVault.stake(
+            address(HONEYBERA_LP),
+            address(HONEYBERA_STAKING),
+            balance,
+            abi.encodeWithSignature("stake(uint256)", balance)
+        );
 
         StdCheats.deal(address(BGT), address(honeyVault), 10e18);
-        honeyVault.claimRewards(address(HONEYBERA_STAKING));
+        honeyVault.claimRewards(
+            address(HONEYBERA_STAKING),
+            abi.encodeWithSignature("getReward(address)", address(honeyVault))
+        );
         uint256 bgtBalance = BGT.balanceOf(address(honeyVault));
         honeyVault.burnBGTForBERA(bgtBalance);
 
@@ -230,8 +288,18 @@ contract HoneyVaultTest is Test {
 
         GaugeAsNFT gauge = new GaugeAsNFT(address(HONEYBERA_LP));
         honeyQueen.setIsStakingContractAllowed(address(gauge), true);
-        honeyVault.stake(address(HONEYBERA_LP), address(gauge), balance);
-
+        honeyQueen.setIsSelectorAllowed(
+            bytes4(keccak256("stake(uint256)")),
+            "stake",
+            address(gauge),
+            true
+        );
+        honeyVault.stake(
+            address(HONEYBERA_LP),
+            address(gauge),
+            balance,
+            abi.encodeWithSignature("stake(uint256)", balance)
+        );
         // block the nft from being transfered
         honeyQueen.setIsTokenBlocked(address(gauge), true);
         // should fail
