@@ -348,4 +348,26 @@ contract HoneyVaultTest is Test {
         );
         assertEq(HONEYBERA_LP.balanceOf(address(honeyVaultV2)), balance);
     }
+
+    function test_cannotCheatSelector() external prankAsTHJ {
+        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
+        HONEYBERA_LP.approve(address(honeyVault), balance);
+        honeyVault.depositAndLock(address(HONEYBERA_LP), balance, uint256(1));
+
+        honeyVault.stake(
+            address(HONEYBERA_LP),
+            address(HONEYBERA_STAKING),
+            balance,
+            abi.encodeWithSignature("stake(uint256)", balance)
+        );
+
+        // attacker tries to withdraw through claim function
+        vm.startPrank(address(0xaaaaa));
+        vm.expectRevert(HoneyVault.SelectorNotAllowed.selector);
+        honeyVault.claimRewards(
+            address(HONEYBERA_STAKING),
+            abi.encodeWithSignature("withdraw(uint256)", balance)
+        );
+        vm.stopPrank();
+    }
 }

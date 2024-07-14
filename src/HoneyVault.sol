@@ -139,8 +139,6 @@ contract HoneyVault is TokenReceiver, Ownable {
         onlyAllowedStakingContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "unstake", data)
     {
-        if (!HONEY_QUEEN.isStakingContractAllowed(_stakingContract))
-            revert StakingContractNotAllowed();
         staked[_LPToken][_stakingContract] -= _amount;
         (bool success, ) = _stakingContract.call(data);
         if (!success) revert UnstakeFailed();
