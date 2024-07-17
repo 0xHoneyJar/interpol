@@ -28,6 +28,10 @@ contract HoneyVault is TokenReceiver, Ownable {
     error TokenBlocked();
     error CannotBeLPToken();
     error HasToBeLPToken();
+    error StakeFailed();
+    error UnstakeFailed();
+    error SelectorNotAllowed();
+    error ClaimRewardsFailed();
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -68,6 +72,26 @@ contract HoneyVault is TokenReceiver, Ownable {
         if (HONEY_QUEEN.isTokenBlocked(_token)) revert TokenBlocked();
         _;
     }
+
+    modifier onlyAllowedSelector(
+        address _stakingContract,
+        string memory action,
+        bytes memory data
+    ) {
+        bytes4 selector;
+        assembly {
+            selector := mload(add(data, 32))
+        }
+        if (!HONEY_QUEEN.isSelectorAllowed(selector, action, _stakingContract))
+            revert SelectorNotAllowed();
+        _;
+    }
+
+    modifier onlyAllowedStakingContract(address _stakingContract) {
+        if (!HONEY_QUEEN.isStakingContractAllowed(_stakingContract))
+            revert StakingContractNotAllowed();
+        _;
+    }
     /*###############################################################
                             INITIALIZER
     ###############################################################*/
@@ -88,13 +112,18 @@ contract HoneyVault is TokenReceiver, Ownable {
     function stake(
         address _LPToken,
         address _stakingContract,
-        uint256 _amount
-    ) external onlyOwner {
-        if (!HONEY_QUEEN.isStakingContractAllowed(_stakingContract))
-            revert StakingContractNotAllowed();
+        uint256 _amount,
+        bytes memory data
+    )
+        external
+        onlyOwner
+        onlyAllowedStakingContract(_stakingContract)
+        onlyAllowedSelector(_stakingContract, "stake", data)
+    {
         staked[_LPToken][_stakingContract] += _amount;
         ERC20(_LPToken).approve(address(_stakingContract), _amount);
-        IStakingContract(_stakingContract).stake(_amount);
+        (bool success, ) = _stakingContract.call(data);
+        if (!success) revert StakeFailed();
 
         emit Staked(_stakingContract, _LPToken, _amount);
     }
@@ -102,26 +131,31 @@ contract HoneyVault is TokenReceiver, Ownable {
     function unstake(
         address _LPToken,
         address _stakingContract,
-        uint256 _amount
-    ) public onlyOwner {
-        // no need to check if staking is legit
+        uint256 _amount,
+        bytes memory data
+    )
+        public
+        onlyOwner
+        onlyAllowedStakingContract(_stakingContract)
+        onlyAllowedSelector(_stakingContract, "unstake", data)
+    {
         staked[_LPToken][_stakingContract] -= _amount;
-        IStakingContract(_stakingContract).withdraw(_amount);
-        IStakingContract(_stakingContract).getReward(address(this));
+        (bool success, ) = _stakingContract.call(data);
+        if (!success) revert UnstakeFailed();
 
         emit Unstaked(_stakingContract, _LPToken, _amount);
     }
 
-    function unstakeMultiple(
-        address[] calldata _LPTokens,
-        address[] calldata _stakingContracts,
-        uint256[] calldata _amounts
-    ) external onlyOwner {
-        uint256 length = _LPTokens.length;
-        for (uint256 i; i < length; i++) {
-            unstake(_LPTokens[i], _stakingContracts[i], _amounts[i]);
-        }
-    }
+    // function unstakeMultiple(
+    //     address[] calldata _LPTokens,
+    //     address[] calldata _stakingContracts,
+    //     uint256[] calldata _amounts
+    // ) external onlyOwner {
+    //     uint256 length = _LPTokens.length;
+    //     for (uint256 i; i < length; i++) {
+    //         unstake(_LPTokens[i], _stakingContracts[i], _amounts[i]);
+    //     }
+    // }
 
     function burnBGTForBERA(uint256 _amount) external onlyOwner {
         HONEY_QUEEN.BGT().redeem(address(this), _amount);
@@ -230,9 +264,16 @@ contract HoneyVault is TokenReceiver, Ownable {
         Claims rewards, BGT, from the staking contract.
         The reward goes into the HoneyVault.
     */
-    function claimRewards(address _stakingContract) external {
-        // prettier-ignore
-        IStakingContract(_stakingContract).getReward(address(this));
+    function claimRewards(
+        address _stakingContract,
+        bytes memory data
+    )
+        external
+        onlyAllowedStakingContract(_stakingContract)
+        onlyAllowedSelector(_stakingContract, "rewards", data)
+    {
+        (bool success, ) = _stakingContract.call(data);
+        if (!success) revert ClaimRewardsFailed();
     }
 
     function clone() external returns (address) {
