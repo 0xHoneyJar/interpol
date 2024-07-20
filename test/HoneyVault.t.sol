@@ -72,7 +72,7 @@ contract HoneyVaultTest is Test {
         );
         vaultToBeCloned = new HoneyVault();
         honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
-        honeyVault.initialize(THJ, address(honeyQueen), referral);
+        honeyVault.initialize(THJ, address(honeyQueen), referral, false);
         vm.stopPrank();
 
         vm.label(address(honeyVault), "HoneyVault");
@@ -93,14 +93,15 @@ contract HoneyVaultTest is Test {
         vaultToBeCloned.initialize(
             address(this),
             address(honeyQueen),
-            referral
+            referral,
+            false
         );
         assertEq(address(vaultToBeCloned.owner()), address(this));
         // now we clone the vault
         honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
         assertEq(address(honeyVault.owner()), address(0));
         // initialize clone
-        honeyVault.initialize(address(this), address(honeyQueen), referral);
+        honeyVault.initialize(address(this), address(honeyQueen), referral, false);
         assertEq(address(honeyVault.owner()), address(this));
     }
 
@@ -231,13 +232,13 @@ contract HoneyVaultTest is Test {
 
         // cannot withdraw too early
         vm.expectRevert(HoneyVault.NotExpiredYet.selector);
-        honeyVault.withdrawLPTokens(address(HONEYBERA_LP), balance);
+        honeyVault.withdrawLPToken(address(HONEYBERA_LP), balance);
         // move forward in time
         vm.warp(expiration + 1);
         // should be able to withdraw
         vm.expectEmit(true, false, false, true, address(honeyVault));
         emit HoneyVault.Withdrawn(address(HONEYBERA_LP), balance);
-        honeyVault.withdrawLPTokens(address(HONEYBERA_LP), balance);
+        honeyVault.withdrawLPToken(address(HONEYBERA_LP), balance);
     }
 
     function test_feesBERA() external prankAsTHJ {
@@ -317,7 +318,7 @@ contract HoneyVaultTest is Test {
         HoneyVaultV2 baseVault = new HoneyVaultV2();
         // clone it
         HoneyVaultV2 honeyVaultV2 = HoneyVaultV2(payable(baseVault.clone()));
-        honeyVaultV2.initialize(THJ, address(honeyQueen), referral);
+        honeyVaultV2.initialize(THJ, address(honeyQueen), referral, false);
 
         // migration should fail because haven't set it in honey queen
         vm.expectRevert(HoneyVault.MigrationNotEnabled.selector);

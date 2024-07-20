@@ -64,12 +64,13 @@ contract HoneyVault is TokenReceiver, Ownable {
     mapping(address LPToken => mapping(address stakingContract => uint256 balance)) public staked;
     mapping(address LPToken => uint256 expiration) public expirations;
     address public referral;
+    bool public unlocked; // whether contract should not or should enforce restrictions
     HoneyQueen internal HONEY_QUEEN;
     /*###############################################################
                             MODIFIERS
     ###############################################################*/
     modifier onlyUnblockedTokens(address _token) {
-        if (HONEY_QUEEN.isTokenBlocked(_token)) revert TokenBlocked();
+        if (!unlocked && HONEY_QUEEN.isTokenBlocked(_token)) revert TokenBlocked();
         _;
     }
 
@@ -98,12 +99,14 @@ contract HoneyVault is TokenReceiver, Ownable {
     function initialize(
         address _owner,
         address _honeyQueen,
-        address _referral
+        address _referral,
+        bool _unlocked
     ) external {
         require(owner() == address(0));
         _initializeOwner(_owner);
         HONEY_QUEEN = HoneyQueen(_honeyQueen);
         referral = _referral;
+        unlocked = _unlocked;
     }
     /*###############################################################
                             OWNER LOGIC
@@ -166,7 +169,7 @@ contract HoneyVault is TokenReceiver, Ownable {
         This only sends tokens held by the HoneyVault to the owner.
     */
     // prettier-ignore
-    function withdrawLPTokens(address _LPToken, uint256 _amount) external onlyOwner {
+    function withdrawLPToken(address _LPToken, uint256 _amount) external onlyOwner {
         if (expirations[_LPToken] == 0) revert HasToBeLPToken();
         // only withdraw if expiration is OK
         if (block.timestamp < expirations[_LPToken]) revert NotExpiredYet();
@@ -251,9 +254,10 @@ contract HoneyVault is TokenReceiver, Ownable {
     ) external {
         // we only allow subsequent deposits of the same token IF the
         // expiration is the same
-        if (expirations[_LPToken] != 0 && _expiration != expirations[_LPToken])
+        if (!unlocked && expirations[_LPToken] != 0 && _expiration != expirations[_LPToken])
             revert ExpirationNotMatching();
-        expirations[_LPToken] = _expiration;
+        // set expiration to 1 so token is marked as lp token
+        expirations[_LPToken] = unlocked ? 1 : _expiration;
         // tokens have to be transfered to have accurate balance tracking
         ERC20(_LPToken).transferFrom(msg.sender, address(this), _amount);
 
@@ -283,10 +287,11 @@ contract HoneyVault is TokenReceiver, Ownable {
     function cloneAndInitialize(
         address _initialOwner,
         address _honeyQueen,
-        address _referral
+        address _referral,
+        bool _unlocked
     ) external returns (address) {
         address payable clone_ = payable(LibClone.clone(address(this)));
-        HoneyVault(clone_).initialize(_initialOwner, _honeyQueen, _referral);
+        HoneyVault(clone_).initialize(_initialOwner, _honeyQueen, _referral, _unlocked);
         return clone_;
     }
 
