@@ -9,7 +9,6 @@ import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
-import {IStakingContract} from "./utils/IStakingContract.sol";
 
 /*
     The HoneyVault is designed in such a way that it's multiple LP tokens
@@ -160,8 +159,14 @@ contract HoneyVault is TokenReceiver, Ownable {
     //     }
     // }
 
+    /*
+        Bundle redeeming and withdrawinf together.
+        Reasoning is that no practical use case where user wants to
+        leave BERA into the vault after redeeming.
+    */
     function burnBGTForBERA(uint256 _amount) external onlyOwner {
         HONEY_QUEEN.BGT().redeem(address(this), _amount);
+        withdrawBERA(_amount);
     }
 
     /*
@@ -196,7 +201,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     }
 
     /*###############################################################*/
-    function withdrawBERA(uint256 _amount) external onlyOwner {
+    function withdrawBERA(uint256 _amount) public onlyOwner {
         address treasury = HONEY_QUEEN.treasury();
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
         STL.safeTransferETH(treasury, fees);

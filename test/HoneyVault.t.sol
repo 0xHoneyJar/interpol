@@ -215,12 +215,12 @@ contract HoneyVaultTest is Test {
         );
 
         // time to burn
-        uint256 beraBalanceBefore = address(honeyVault).balance;
+        uint256 beraBalanceBefore = address(THJ).balance;
         uint256 bgtBalance = BGT.balanceOf(address(honeyVault));
         vm.expectEmit(true, true, false, true, address(BGT));
         emit IBGT.Redeem(address(honeyVault), address(honeyVault), bgtBalance);
         honeyVault.burnBGTForBERA(bgtBalance);
-        uint256 beraBalanceAfter = address(honeyVault).balance;
+        uint256 beraBalanceAfter = address(THJ).balance;
         // prettier-ignore
         assertTrue(beraBalanceAfter > beraBalanceBefore, "BERA balance did not increase!");
     }
@@ -259,7 +259,6 @@ contract HoneyVaultTest is Test {
             abi.encodeWithSignature("getReward(address)", address(honeyVault))
         );
         uint256 bgtBalance = BGT.balanceOf(address(honeyVault));
-        honeyVault.burnBGTForBERA(bgtBalance);
 
         string[] memory inputs = new string[](6);
         inputs[0] = "python3";
@@ -278,8 +277,8 @@ contract HoneyVaultTest is Test {
         emit HoneyVault.Withdrawn(address(0), pythonWithdrawn);
         vm.expectEmit(true, false, false, true, address(honeyVault));
         emit HoneyVault.Fees(referral, address(0), pythonFees);
-
-        honeyVault.withdrawBERA(bgtBalance);
+        
+        honeyVault.burnBGTForBERA(bgtBalance);
     }
 
     function test_cannotWithdrawNFT() external prankAsTHJ {

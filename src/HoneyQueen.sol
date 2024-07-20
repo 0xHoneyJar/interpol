@@ -27,6 +27,7 @@ contract HoneyQueen is Ownable {
                             STORAGE
     ###############################################################*/
     address public treasury;
+    address public automaton; // address responsible for executing automated calls
     uint256 public fees = 200; // in bps
     IBGT public constant BGT = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
     // prettier-ignore
