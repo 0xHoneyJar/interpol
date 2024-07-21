@@ -9,6 +9,7 @@ import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
+import {IBGT} from "./utils/IBGT.sol";
 
 /*
     The HoneyVault is designed in such a way that it's multiple LP tokens
@@ -148,24 +149,19 @@ contract HoneyVault is TokenReceiver, Ownable {
         emit Unstaked(_stakingContract, _LPToken, _amount);
     }
 
-    // function unstakeMultiple(
-    //     address[] calldata _LPTokens,
-    //     address[] calldata _stakingContracts,
-    //     uint256[] calldata _amounts
-    // ) external onlyOwner {
-    //     uint256 length = _LPTokens.length;
-    //     for (uint256 i; i < length; i++) {
-    //         unstake(_LPTokens[i], _stakingContracts[i], _amounts[i]);
-    //     }
-    // }
-
     /*
-        Bundle redeeming and withdrawinf together.
+        Bundle redeeming and withdrawing together.
         Reasoning is that no practical use case where user wants to
         leave BERA into the vault after redeeming.
+
+        Since BGT rewards are automatically boosted, we have to
+        drop the boost for the amount we want to convert.
+        For simplicity, we don't try to cancel queued boosts.
     */
     function burnBGTForBERA(uint256 _amount) external onlyOwner {
-        HONEY_QUEEN.BGT().redeem(address(this), _amount);
+        IBGT BGT = HONEY_QUEEN.BGT();
+        BGT.dropBoost(HONEY_QUEEN.validator(), uint128(_amount));
+        BGT.redeem(address(this), _amount);
         withdrawBERA(_amount);
     }
 
@@ -283,6 +279,16 @@ contract HoneyVault is TokenReceiver, Ownable {
     {
         (bool success, ) = _stakingContract.call(data);
         if (!success) revert ClaimRewardsFailed();
+
+        // we optimistically use bgt rewards, if any, to boost validator
+        IBGT BGT = HONEY_QUEEN.BGT();
+        uint256 availableBGT = BGT.unboostedBalanceOf(address(this));
+        if (availableBGT > 0) {
+            BGT.queueBoost(HONEY_QUEEN.validator(), uint128(availableBGT));
+        }
+        // possible that not enough blocks passed by to activate
+        // no need to do anything, wait for next time
+        try BGT.activateBoost(HONEY_QUEEN.validator()) {} catch {}
     }
 
     function clone() external returns (address) {

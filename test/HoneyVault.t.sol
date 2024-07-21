@@ -20,6 +20,12 @@ interface IBGT {
         address indexed receiver,
         uint256 amount
     );
+    function minter() external view returns (address);
+    function mint(address distributor, uint256 amount) external;
+}
+
+interface IBGTStaker {
+    event Staked(address indexed staker, uint256 amount);
 }
 
 contract HoneyVaultTest is Test {
@@ -36,15 +42,14 @@ contract HoneyVaultTest is Test {
 
     // IMPORTANT
     // BARTIO ADDRESSES
-    // prettier-ignore
+    address public constant GOVERNANCE = 0xE3EDa03401Cf32010a9A9967DaBAEe47ed0E1a0b;
     ERC20 public constant HONEYBERA_LP = ERC20(0xd28d852cbcc68DCEC922f6d5C7a8185dBaa104B7);
-    // prettier-ignore
     ERC20 public constant BGT = ERC20(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
-    // prettier-ignore
+    IBGTStaker public constant BGT_STAKER = IBGTStaker(0x791fb53432eED7e2fbE4cf8526ab6feeA604Eb6d);
     IStakingContract public HONEYBERA_STAKING = IStakingContract(0xAD57d7d39a487C04a44D3522b910421888Fb9C6d);
 
     function setUp() public {
-        vm.createSelectFork("https://bartio.rpc.berachain.com/");
+        vm.createSelectFork("https://bartio.rpc.berachain.com/", uint256(1749904));
         expiration = block.timestamp + 30 days;
 
         vm.startPrank(THJ);
@@ -70,6 +75,7 @@ contract HoneyVaultTest is Test {
             address(HONEYBERA_STAKING),
             true
         );
+        honeyQueen.setValidator(THJ);
         vaultToBeCloned = new HoneyVault();
         honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
         honeyVault.initialize(THJ, address(honeyQueen), referral, false);
@@ -81,6 +87,13 @@ contract HoneyVaultTest is Test {
         vm.label(address(HONEYBERA_STAKING), "HONEYBERA_STAKING");
         vm.label(address(this), "Tests");
         vm.label(msg.sender, "THJ");
+    }
+
+    function mintBGT(address _to, uint256 _amount) public {
+        vm.startPrank(IBGT(address(BGT)).minter());
+        IBGT(address(BGT)).mint(_to, _amount);
+        vm.stopPrank();
+        vm.startPrank(THJ);
     }
 
     modifier prankAsTHJ() {
@@ -369,5 +382,37 @@ contract HoneyVaultTest is Test {
             abi.encodeWithSignature("withdraw(uint256)", balance)
         );
         vm.stopPrank();
+    }
+
+    function test_boosting() external prankAsTHJ {
+        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
+        HONEYBERA_LP.approve(address(honeyVault), balance);
+        honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+
+        uint256 bgtBalance = 10e18;
+        // mint some BGT aka rewards, claim them which triggers boost queue
+        mintBGT(address(honeyVault), bgtBalance);
+        // claiming rewards should trigger boost activation
+        honeyVault.claimRewards(
+            address(HONEYBERA_STAKING),
+            abi.encodeWithSignature("getReward(address)", address(honeyVault))
+        );
+
+        // move forward block wise enough for boost activation to be ok
+        vm.roll(vm.getBlockNumber() + 10000);
+
+        vm.expectEmit(true, false, false, true, address(BGT_STAKER));
+        emit IBGTStaker.Staked(address(honeyVault), bgtBalance);
+        honeyVault.claimRewards(
+            address(HONEYBERA_STAKING),
+            abi.encodeWithSignature("getReward(address)", address(honeyVault))
+        );
+
+        // now burn BGT for BERA
+        // just check for Redeem event, we expect fees etc to be correct
+        // based on the specific test for that
+        vm.expectEmit(true, false, false, true, address(BGT));
+        emit IBGT.Redeem(address(honeyVault), address(honeyVault), bgtBalance);
+        honeyVault.burnBGTForBERA(bgtBalance);
     }
 }

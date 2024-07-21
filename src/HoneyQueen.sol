@@ -2,10 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {Ownable} from "solady/auth/Ownable.sol";
-
-interface IBGT {
-    function redeem(address receiver, uint256 amount) external;
-}
+import {IBGT} from "./utils/IBGT.sol";
 
 /*
     HoneyQueen is the ground source of truth as to which contracts
@@ -28,6 +25,7 @@ contract HoneyQueen is Ownable {
     ###############################################################*/
     address public treasury;
     address public automaton; // address responsible for executing automated calls
+    address public validator;
     uint256 public fees = 200; // in bps
     IBGT public constant BGT = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
     // prettier-ignore
@@ -87,6 +85,10 @@ contract HoneyQueen is Ownable {
 
     function setFees(uint256 _fees) external onlyOwner {
         fees = _fees;
+    }
+
+    function setValidator(address _validator) external onlyOwner {
+        validator = _validator;
     }
     /*###############################################################
                             VIEW LOGIC
