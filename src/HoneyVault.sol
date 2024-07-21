@@ -9,7 +9,6 @@ import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
-import {IStakingContract} from "./utils/IStakingContract.sol";
 
 /*
     The HoneyVault is designed in such a way that it's multiple LP tokens
@@ -64,12 +63,13 @@ contract HoneyVault is TokenReceiver, Ownable {
     mapping(address LPToken => mapping(address stakingContract => uint256 balance)) public staked;
     mapping(address LPToken => uint256 expiration) public expirations;
     address public referral;
+    bool public unlocked; // whether contract should not or should enforce restrictions
     HoneyQueen internal HONEY_QUEEN;
     /*###############################################################
                             MODIFIERS
     ###############################################################*/
     modifier onlyUnblockedTokens(address _token) {
-        if (HONEY_QUEEN.isTokenBlocked(_token)) revert TokenBlocked();
+        if (!unlocked && HONEY_QUEEN.isTokenBlocked(_token)) revert TokenBlocked();
         _;
     }
 
@@ -98,12 +98,14 @@ contract HoneyVault is TokenReceiver, Ownable {
     function initialize(
         address _owner,
         address _honeyQueen,
-        address _referral
+        address _referral,
+        bool _unlocked
     ) external {
         require(owner() == address(0));
         _initializeOwner(_owner);
         HONEY_QUEEN = HoneyQueen(_honeyQueen);
         referral = _referral;
+        unlocked = _unlocked;
     }
     /*###############################################################
                             OWNER LOGIC
@@ -157,8 +159,14 @@ contract HoneyVault is TokenReceiver, Ownable {
     //     }
     // }
 
+    /*
+        Bundle redeeming and withdrawinf together.
+        Reasoning is that no practical use case where user wants to
+        leave BERA into the vault after redeeming.
+    */
     function burnBGTForBERA(uint256 _amount) external onlyOwner {
         HONEY_QUEEN.BGT().redeem(address(this), _amount);
+        withdrawBERA(_amount);
     }
 
     /*
@@ -166,7 +174,7 @@ contract HoneyVault is TokenReceiver, Ownable {
         This only sends tokens held by the HoneyVault to the owner.
     */
     // prettier-ignore
-    function withdrawLPTokens(address _LPToken, uint256 _amount) external onlyOwner {
+    function withdrawLPToken(address _LPToken, uint256 _amount) external onlyOwner {
         if (expirations[_LPToken] == 0) revert HasToBeLPToken();
         // only withdraw if expiration is OK
         if (block.timestamp < expirations[_LPToken]) revert NotExpiredYet();
@@ -193,7 +201,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     }
 
     /*###############################################################*/
-    function withdrawBERA(uint256 _amount) external onlyOwner {
+    function withdrawBERA(uint256 _amount) public onlyOwner {
         address treasury = HONEY_QUEEN.treasury();
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
         STL.safeTransferETH(treasury, fees);
@@ -251,9 +259,10 @@ contract HoneyVault is TokenReceiver, Ownable {
     ) external {
         // we only allow subsequent deposits of the same token IF the
         // expiration is the same
-        if (expirations[_LPToken] != 0 && _expiration != expirations[_LPToken])
+        if (!unlocked && expirations[_LPToken] != 0 && _expiration != expirations[_LPToken])
             revert ExpirationNotMatching();
-        expirations[_LPToken] = _expiration;
+        // set expiration to 1 so token is marked as lp token
+        expirations[_LPToken] = unlocked ? 1 : _expiration;
         // tokens have to be transfered to have accurate balance tracking
         ERC20(_LPToken).transferFrom(msg.sender, address(this), _amount);
 
@@ -283,10 +292,11 @@ contract HoneyVault is TokenReceiver, Ownable {
     function cloneAndInitialize(
         address _initialOwner,
         address _honeyQueen,
-        address _referral
+        address _referral,
+        bool _unlocked
     ) external returns (address) {
         address payable clone_ = payable(LibClone.clone(address(this)));
-        HoneyVault(clone_).initialize(_initialOwner, _honeyQueen, _referral);
+        HoneyVault(clone_).initialize(_initialOwner, _honeyQueen, _referral, _unlocked);
         return clone_;
     }
 

@@ -72,7 +72,7 @@ contract HoneyVaultTest is Test {
         );
         vaultToBeCloned = new HoneyVault();
         honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
-        honeyVault.initialize(THJ, address(honeyQueen), referral);
+        honeyVault.initialize(THJ, address(honeyQueen), referral, false);
         vm.stopPrank();
 
         vm.label(address(honeyVault), "HoneyVault");
@@ -93,14 +93,15 @@ contract HoneyVaultTest is Test {
         vaultToBeCloned.initialize(
             address(this),
             address(honeyQueen),
-            referral
+            referral,
+            false
         );
         assertEq(address(vaultToBeCloned.owner()), address(this));
         // now we clone the vault
         honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
         assertEq(address(honeyVault.owner()), address(0));
         // initialize clone
-        honeyVault.initialize(address(this), address(honeyQueen), referral);
+        honeyVault.initialize(address(this), address(honeyQueen), referral, false);
         assertEq(address(honeyVault.owner()), address(this));
     }
 
@@ -214,12 +215,12 @@ contract HoneyVaultTest is Test {
         );
 
         // time to burn
-        uint256 beraBalanceBefore = address(honeyVault).balance;
+        uint256 beraBalanceBefore = address(THJ).balance;
         uint256 bgtBalance = BGT.balanceOf(address(honeyVault));
         vm.expectEmit(true, true, false, true, address(BGT));
         emit IBGT.Redeem(address(honeyVault), address(honeyVault), bgtBalance);
         honeyVault.burnBGTForBERA(bgtBalance);
-        uint256 beraBalanceAfter = address(honeyVault).balance;
+        uint256 beraBalanceAfter = address(THJ).balance;
         // prettier-ignore
         assertTrue(beraBalanceAfter > beraBalanceBefore, "BERA balance did not increase!");
     }
@@ -231,13 +232,13 @@ contract HoneyVaultTest is Test {
 
         // cannot withdraw too early
         vm.expectRevert(HoneyVault.NotExpiredYet.selector);
-        honeyVault.withdrawLPTokens(address(HONEYBERA_LP), balance);
+        honeyVault.withdrawLPToken(address(HONEYBERA_LP), balance);
         // move forward in time
         vm.warp(expiration + 1);
         // should be able to withdraw
         vm.expectEmit(true, false, false, true, address(honeyVault));
         emit HoneyVault.Withdrawn(address(HONEYBERA_LP), balance);
-        honeyVault.withdrawLPTokens(address(HONEYBERA_LP), balance);
+        honeyVault.withdrawLPToken(address(HONEYBERA_LP), balance);
     }
 
     function test_feesBERA() external prankAsTHJ {
@@ -258,7 +259,6 @@ contract HoneyVaultTest is Test {
             abi.encodeWithSignature("getReward(address)", address(honeyVault))
         );
         uint256 bgtBalance = BGT.balanceOf(address(honeyVault));
-        honeyVault.burnBGTForBERA(bgtBalance);
 
         string[] memory inputs = new string[](6);
         inputs[0] = "python3";
@@ -277,8 +277,8 @@ contract HoneyVaultTest is Test {
         emit HoneyVault.Withdrawn(address(0), pythonWithdrawn);
         vm.expectEmit(true, false, false, true, address(honeyVault));
         emit HoneyVault.Fees(referral, address(0), pythonFees);
-
-        honeyVault.withdrawBERA(bgtBalance);
+        
+        honeyVault.burnBGTForBERA(bgtBalance);
     }
 
     function test_cannotWithdrawNFT() external prankAsTHJ {
@@ -317,7 +317,7 @@ contract HoneyVaultTest is Test {
         HoneyVaultV2 baseVault = new HoneyVaultV2();
         // clone it
         HoneyVaultV2 honeyVaultV2 = HoneyVaultV2(payable(baseVault.clone()));
-        honeyVaultV2.initialize(THJ, address(honeyQueen), referral);
+        honeyVaultV2.initialize(THJ, address(honeyQueen), referral, false);
 
         // migration should fail because haven't set it in honey queen
         vm.expectRevert(HoneyVault.MigrationNotEnabled.selector);
