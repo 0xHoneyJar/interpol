@@ -123,7 +123,9 @@ contract HoneyVaultTest is Test {
         HONEYBERA_LP.approve(address(honeyVault), balance);
 
         vm.expectEmit(true, true, false, false, address(honeyVault));
-        emit HoneyVault.DepositedAndLocked(address(HONEYBERA_LP), balance);
+        emit HoneyVault.Deposited(address(HONEYBERA_LP), balance);
+        vm.expectEmit(true, false, false, false, address(honeyVault));
+        emit HoneyVault.LockedUntil(address(HONEYBERA_LP), expiration);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
 
         assertEq(HONEYBERA_LP.balanceOf(address(honeyVault)), balance);
@@ -142,7 +144,8 @@ contract HoneyVaultTest is Test {
 
         // deposit
         vm.expectEmit(true, false, false, true, address(honeyVault));
-        emit HoneyVault.DepositedAndLocked(address(HONEYBERA_LP), balance / 2);
+        emit HoneyVault.Deposited(address(HONEYBERA_LP), balance / 2);
+        emit HoneyVault.LockedUntil(address(HONEYBERA_LP), expiration);
         // prettier-ignore
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance / 2, expiration);
     }
@@ -221,18 +224,24 @@ contract HoneyVaultTest is Test {
             balance,
             abi.encodeWithSignature("stake(uint256)", balance)
         );
-        StdCheats.deal(address(BGT), address(honeyVault), 10e18);
+
+        uint256 amountOfBGT = 10e18;
+        mintBGT(address(honeyVault), amountOfBGT);
+
         honeyVault.claimRewards(
             address(HONEYBERA_STAKING),
             abi.encodeWithSignature("getReward(address)", address(honeyVault))
         );
 
+        vm.roll(vm.getBlockNumber() + 10000);
+
+        honeyVault.activateBoost();
+
         // time to burn
         uint256 beraBalanceBefore = address(THJ).balance;
-        uint256 bgtBalance = BGT.balanceOf(address(honeyVault));
         vm.expectEmit(true, true, false, true, address(BGT));
-        emit IBGT.Redeem(address(honeyVault), address(honeyVault), bgtBalance);
-        honeyVault.burnBGTForBERA(bgtBalance);
+        emit IBGT.Redeem(address(honeyVault), address(honeyVault), amountOfBGT);
+        honeyVault.burnBGTForBERA(amountOfBGT);
         uint256 beraBalanceAfter = address(THJ).balance;
         // prettier-ignore
         assertTrue(beraBalanceAfter > beraBalanceBefore, "BERA balance did not increase!");
@@ -266,12 +275,15 @@ contract HoneyVaultTest is Test {
             abi.encodeWithSignature("stake(uint256)", balance)
         );
 
-        StdCheats.deal(address(BGT), address(honeyVault), 10e18);
+        uint256 amountOfBGT = 10e18;
+        mintBGT(address(honeyVault), amountOfBGT);
         honeyVault.claimRewards(
             address(HONEYBERA_STAKING),
             abi.encodeWithSignature("getReward(address)", address(honeyVault))
         );
-        uint256 bgtBalance = BGT.balanceOf(address(honeyVault));
+
+        vm.roll(vm.getBlockNumber() + 10000);
+        honeyVault.activateBoost();
 
         string[] memory inputs = new string[](6);
         inputs[0] = "python3";
@@ -279,7 +291,7 @@ contract HoneyVaultTest is Test {
         inputs[2] = "--fees-bps";
         inputs[3] = honeyQueen.fees().toString();
         inputs[4] = "--amount";
-        inputs[5] = bgtBalance.toString();
+        inputs[5] = amountOfBGT.toString();
         bytes memory res = vm.ffi(inputs);
         (uint256 pythonFees, uint256 pythonWithdrawn) = abi.decode(
             res,
@@ -291,7 +303,7 @@ contract HoneyVaultTest is Test {
         vm.expectEmit(true, false, false, true, address(honeyVault));
         emit HoneyVault.Fees(referral, address(0), pythonFees);
         
-        honeyVault.burnBGTForBERA(bgtBalance);
+        honeyVault.burnBGTForBERA(amountOfBGT);
     }
 
     function test_cannotWithdrawNFT() external prankAsTHJ {
@@ -348,7 +360,9 @@ contract HoneyVaultTest is Test {
         vm.expectEmit(true, false, false, false, address(honeyVaultV2));
         //using HoneyVault V1 to emit because for some reasons can't
         // access the event in V2
-        emit HoneyVault.DepositedAndLocked(address(HONEYBERA_LP), balance);
+        emit HoneyVault.Deposited(address(HONEYBERA_LP), balance);
+        vm.expectEmit(true, false, false, false, address(honeyVaultV2));
+        emit HoneyVault.LockedUntil(address(HONEYBERA_LP), expiration);
         vm.expectEmit(true, true, true, false, address(honeyVault));
         emit HoneyVault.Migrated(
             address(HONEYBERA_LP),

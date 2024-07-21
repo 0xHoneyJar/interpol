@@ -32,10 +32,12 @@ contract HoneyVault is TokenReceiver, Ownable {
     error UnstakeFailed();
     error SelectorNotAllowed();
     error ClaimRewardsFailed();
+    error NotEnoughBoostedToBurn();
     /*###############################################################
                             EVENTS
     ###############################################################*/
-    event DepositedAndLocked(address indexed token, uint256 amount);
+    event Deposited(address indexed token, uint256 amount);
+    event LockedUntil(address indexed token, uint256 expiration);
     event Staked(
         address indexed stakingContract,
         address indexed token,
@@ -160,6 +162,8 @@ contract HoneyVault is TokenReceiver, Ownable {
     */
     function burnBGTForBERA(uint256 _amount) external onlyOwner {
         IBGT BGT = HONEY_QUEEN.BGT();
+        if (BGT.boosted(address(this), HONEY_QUEEN.validator()) < _amount)
+            revert NotEnoughBoostedToBurn();
         BGT.dropBoost(HONEY_QUEEN.validator(), uint128(_amount));
         BGT.redeem(address(this), _amount);
         withdrawBERA(_amount);
@@ -262,7 +266,8 @@ contract HoneyVault is TokenReceiver, Ownable {
         // tokens have to be transfered to have accurate balance tracking
         ERC20(_LPToken).transferFrom(msg.sender, address(this), _amount);
 
-        emit DepositedAndLocked(_LPToken, _amount);
+        emit Deposited(_LPToken, _amount);
+        emit LockedUntil(_LPToken, _expiration);
     }
 
     /*
@@ -289,6 +294,10 @@ contract HoneyVault is TokenReceiver, Ownable {
         // possible that not enough blocks passed by to activate
         // no need to do anything, wait for next time
         try BGT.activateBoost(HONEY_QUEEN.validator()) {} catch {}
+    }
+
+    function activateBoost() external {
+        HONEY_QUEEN.BGT().activateBoost(HONEY_QUEEN.validator());
     }
 
     function clone() external returns (address) {

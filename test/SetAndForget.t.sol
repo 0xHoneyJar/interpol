@@ -93,8 +93,10 @@ contract HoneyVaultTest is Test {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyVault), balance);
 
-        vm.expectEmit(true, true, false, false, address(honeyVault));
-        emit HoneyVault.DepositedAndLocked(address(HONEYBERA_LP), balance);
+        vm.expectEmit(true, false, false, true, address(honeyVault));
+        emit HoneyVault.Deposited(address(HONEYBERA_LP), balance);
+        vm.expectEmit(true, false, false, true, address(honeyVault));
+        emit HoneyVault.LockedUntil(address(HONEYBERA_LP), expiration);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
 
         assertEq(HONEYBERA_LP.balanceOf(address(honeyVault)), balance);

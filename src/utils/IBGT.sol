@@ -6,4 +6,5 @@ interface IBGT {
     function activateBoost(address validator) external;
     function dropBoost(address validator, uint128 amount) external;
     function unboostedBalanceOf(address account) external view returns (uint256);
+    function boosted(address account, address validator) external view returns (uint128);
 }
