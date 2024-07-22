@@ -36,6 +36,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             EVENTS
     ###############################################################*/
+    event Initialized(address indexed owner);
     event Deposited(address indexed token, uint256 amount);
     event LockedUntil(address indexed token, uint256 expiration);
     event Staked(
@@ -109,6 +110,8 @@ contract HoneyVault is TokenReceiver, Ownable {
         HONEY_QUEEN = HoneyQueen(_honeyQueen);
         referral = _referral;
         unlocked = _unlocked;
+
+        emit Initialized(_owner);
     }
     /*###############################################################
                             OWNER LOGIC
