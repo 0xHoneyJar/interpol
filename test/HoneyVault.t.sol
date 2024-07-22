@@ -28,6 +28,10 @@ interface IBGTStaker {
     event Staked(address indexed staker, uint256 amount);
 }
 
+/*
+    This test file tests all the functionnalities of the vault
+    using the BEX LP Tokens on BGT Station only.
+*/
 contract HoneyVaultTest is Test {
     using LibString for uint256;
 
@@ -86,7 +90,7 @@ contract HoneyVaultTest is Test {
         vm.label(address(HONEYBERA_LP), "HONEYBERA_LP");
         vm.label(address(HONEYBERA_STAKING), "HONEYBERA_STAKING");
         vm.label(address(this), "Tests");
-        vm.label(msg.sender, "THJ");
+        vm.label(THJ, "THJ");
     }
 
     function mintBGT(address _to, uint256 _amount) public {
