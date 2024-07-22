@@ -62,7 +62,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    // prettier-ignore
+   
     // tracks amount of tokens staked per staking contract
     mapping(address LPToken => mapping(address stakingContract => uint256 balance)) public staked;
     mapping(address LPToken => uint256 expiration) public expirations;
@@ -176,7 +176,6 @@ contract HoneyVault is TokenReceiver, Ownable {
         Unrelated to staking contracts or gauges withdrawal.
         This only sends tokens held by the HoneyVault to the owner.
     */
-    // prettier-ignore
     function withdrawLPToken(address _LPToken, uint256 _amount) external onlyOwner {
         if (expirations[_LPToken] == 0) revert HasToBeLPToken();
         // only withdraw if expiration is OK
@@ -187,7 +186,6 @@ contract HoneyVault is TokenReceiver, Ownable {
 
     // issue is that new honey vault could be a fake and unlock tokens
     // assumption is that user unstaked before
-    // prettier-ignore
     function migrate(address[] calldata _LPTokens, address payable _newHoneyVault) external onlyOwner {
         // check migration is authorized based on codehashes
         if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash)) {

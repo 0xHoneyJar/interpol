@@ -19,7 +19,6 @@ contract HoneyQueen is Ownable {
     /*###############################################################
                             STRUCTS
     ###############################################################*/
-    // struct StakeData {}
     /*###############################################################
                             STORAGE
     ###############################################################*/
@@ -28,13 +27,11 @@ contract HoneyQueen is Ownable {
     address public validator;
     uint256 public fees = 200; // in bps
     IBGT public constant BGT = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
-    // prettier-ignore
     mapping(address stakingContract => bool allowed) public isStakingContractAllowed;
     mapping(bytes4 selector => mapping(string action => mapping(address stakingContract => bool allowed)))
         public isSelectorAllowed;
     // this is for cases where gauges give you a NFT to represent your staking position
     mapping(address token => bool blocked) public isTokenBlocked;
-    // prettier-ignore
     mapping(bytes32 fromCodeHash => mapping(bytes32 toCodeHash => bool isEnabled)) public isMigrationEnabled;
 
     /*###############################################################
@@ -70,7 +67,6 @@ contract HoneyQueen is Ownable {
         isTokenBlocked[_token] = _isBlocked;
     }
 
-    // prettier-ignore
     function setMigrationFlag(
         bool _isMigrationEnabled,
         bytes32 _fromCodeHash,
