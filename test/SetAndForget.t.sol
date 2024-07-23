@@ -51,7 +51,7 @@ contract HoneyVaultTest is Test {
         // setup honeyqueen stuff
         honeyQueen = new HoneyQueen(treasury);
         // prettier-ignore
-        honeyQueen.setIsStakingContractAllowed(address(HONEYBERA_STAKING), true);
+        honeyQueen.setIsTargetContractAllowed(address(HONEYBERA_STAKING), true);
         honeyQueen.setIsSelectorAllowed(
             bytes4(keccak256("stake(uint256)")),
             "stake",

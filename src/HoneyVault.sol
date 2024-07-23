@@ -23,7 +23,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     ###############################################################*/
     error MigrationNotEnabled();
     error ExpirationNotMatching();
-    error StakingContractNotAllowed();
+    error TargetContractNotAllowed();
     error NotExpiredYet();
     error TokenBlocked();
     error CannotBeLPToken();
@@ -33,6 +33,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     error SelectorNotAllowed();
     error ClaimRewardsFailed();
     error NotEnoughBoostedToBurn();
+    error WildcardFailed();
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -62,7 +63,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    // prettier-ignore
+   
     // tracks amount of tokens staked per staking contract
     mapping(address LPToken => mapping(address stakingContract => uint256 balance)) public staked;
     mapping(address LPToken => uint256 expiration) public expirations;
@@ -91,9 +92,9 @@ contract HoneyVault is TokenReceiver, Ownable {
         _;
     }
 
-    modifier onlyAllowedStakingContract(address _stakingContract) {
-        if (!HONEY_QUEEN.isStakingContractAllowed(_stakingContract))
-            revert StakingContractNotAllowed();
+    modifier onlyAllowedTargetContract(address _targetContract) {
+        if (!HONEY_QUEEN.isTargetContractAllowed(_targetContract))
+            revert TargetContractNotAllowed();
         _;
     }
     /*###############################################################
@@ -117,6 +118,19 @@ contract HoneyVault is TokenReceiver, Ownable {
                             OWNER LOGIC
     ###############################################################*/
 
+    function wildcard(
+        address _contract,
+        bytes calldata data
+    )
+        external
+        onlyOwner
+        onlyAllowedTargetContract(_contract)
+        onlyAllowedSelector(_contract, "wildcard", data)
+    {
+        (bool success, ) = _contract.call(data);
+        if (!success) revert WildcardFailed();
+    }
+
     function stake(
         address _LPToken,
         address _stakingContract,
@@ -125,7 +139,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     )
         external
         onlyOwner
-        onlyAllowedStakingContract(_stakingContract)
+        onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "stake", data)
     {
         staked[_LPToken][_stakingContract] += _amount;
@@ -144,7 +158,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     )
         public
         onlyOwner
-        onlyAllowedStakingContract(_stakingContract)
+        onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "unstake", data)
     {
         staked[_LPToken][_stakingContract] -= _amount;
@@ -176,7 +190,6 @@ contract HoneyVault is TokenReceiver, Ownable {
         Unrelated to staking contracts or gauges withdrawal.
         This only sends tokens held by the HoneyVault to the owner.
     */
-    // prettier-ignore
     function withdrawLPToken(address _LPToken, uint256 _amount) external onlyOwner {
         if (expirations[_LPToken] == 0) revert HasToBeLPToken();
         // only withdraw if expiration is OK
@@ -187,7 +200,6 @@ contract HoneyVault is TokenReceiver, Ownable {
 
     // issue is that new honey vault could be a fake and unlock tokens
     // assumption is that user unstaked before
-    // prettier-ignore
     function migrate(address[] calldata _LPTokens, address payable _newHoneyVault) external onlyOwner {
         // check migration is authorized based on codehashes
         if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash)) {
@@ -282,7 +294,7 @@ contract HoneyVault is TokenReceiver, Ownable {
         bytes memory data
     )
         external
-        onlyAllowedStakingContract(_stakingContract)
+        onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "rewards", data)
     {
         (bool success, ) = _stakingContract.call(data);

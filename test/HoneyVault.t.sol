@@ -28,6 +28,10 @@ interface IBGTStaker {
     event Staked(address indexed staker, uint256 amount);
 }
 
+/*
+    This test file tests all the functionnalities of the vault
+    using the BEX LP Tokens on BGT Station only.
+*/
 contract HoneyVaultTest is Test {
     using LibString for uint256;
 
@@ -56,7 +60,7 @@ contract HoneyVaultTest is Test {
         // setup honeyqueen stuff
         honeyQueen = new HoneyQueen(treasury);
         // prettier-ignore
-        honeyQueen.setIsStakingContractAllowed(address(HONEYBERA_STAKING), true);
+        honeyQueen.setIsTargetContractAllowed(address(HONEYBERA_STAKING), true);
         honeyQueen.setIsSelectorAllowed(
             bytes4(keccak256("stake(uint256)")),
             "stake",
@@ -86,7 +90,7 @@ contract HoneyVaultTest is Test {
         vm.label(address(HONEYBERA_LP), "HONEYBERA_LP");
         vm.label(address(HONEYBERA_STAKING), "HONEYBERA_STAKING");
         vm.label(address(this), "Tests");
-        vm.label(msg.sender, "THJ");
+        vm.label(THJ, "THJ");
     }
 
     function mintBGT(address _to, uint256 _amount) public {
@@ -312,7 +316,7 @@ contract HoneyVaultTest is Test {
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
 
         GaugeAsNFT gauge = new GaugeAsNFT(address(HONEYBERA_LP));
-        honeyQueen.setIsStakingContractAllowed(address(gauge), true);
+        honeyQueen.setIsTargetContractAllowed(address(gauge), true);
         honeyQueen.setIsSelectorAllowed(
             bytes4(keccak256("stake(uint256)")),
             "stake",
