@@ -60,7 +60,7 @@ contract HoneyVaultTest is Test {
         // setup honeyqueen stuff
         honeyQueen = new HoneyQueen(treasury);
         // prettier-ignore
-        honeyQueen.setIsStakingContractAllowed(address(HONEYBERA_STAKING), true);
+        honeyQueen.setIsTargetContractAllowed(address(HONEYBERA_STAKING), true);
         honeyQueen.setIsSelectorAllowed(
             bytes4(keccak256("stake(uint256)")),
             "stake",
@@ -316,7 +316,7 @@ contract HoneyVaultTest is Test {
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
 
         GaugeAsNFT gauge = new GaugeAsNFT(address(HONEYBERA_LP));
-        honeyQueen.setIsStakingContractAllowed(address(gauge), true);
+        honeyQueen.setIsTargetContractAllowed(address(gauge), true);
         honeyQueen.setIsSelectorAllowed(
             bytes4(keccak256("stake(uint256)")),
             "stake",

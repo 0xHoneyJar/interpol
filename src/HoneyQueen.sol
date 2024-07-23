@@ -27,8 +27,8 @@ contract HoneyQueen is Ownable {
     address public validator;
     uint256 public fees = 200; // in bps
     IBGT public constant BGT = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
-    mapping(address stakingContract => bool allowed) public isStakingContractAllowed;
-    mapping(bytes4 selector => mapping(string action => mapping(address stakingContract => bool allowed)))
+    mapping(address targetContract => bool allowed) public isTargetContractAllowed;
+    mapping(bytes4 selector => mapping(string action => mapping(address targetContract => bool allowed)))
         public isSelectorAllowed;
     // this is for cases where gauges give you a NFT to represent your staking position
     mapping(address token => bool blocked) public isTokenBlocked;
@@ -44,20 +44,20 @@ contract HoneyQueen is Ownable {
     /*###############################################################
                             OWNER LOGIC
     ###############################################################*/
-    function setIsStakingContractAllowed(
-        address _stakingContract,
+    function setIsTargetContractAllowed(
+        address _targetContract,
         bool _isAllowed
     ) external onlyOwner {
-        isStakingContractAllowed[_stakingContract] = _isAllowed;
+        isTargetContractAllowed[_targetContract] = _isAllowed;
     }
 
     function setIsSelectorAllowed(
         bytes4 _selector,
         string memory _action,
-        address _stakingContract,
+        address _targetContract,
         bool _isAllowed
     ) external onlyOwner {
-        isSelectorAllowed[_selector][_action][_stakingContract] = _isAllowed;
+        isSelectorAllowed[_selector][_action][_targetContract] = _isAllowed;
     }
 
     function setIsTokenBlocked(

@@ -43,7 +43,7 @@ contract KodiakTest is Test {
         // setup honeyqueen stuff
         honeyQueen = new HoneyQueen(treasury);
         // prettier-ignore
-        honeyQueen.setIsStakingContractAllowed(address(KODIAK_STAKING), true);
+        honeyQueen.setIsTargetContractAllowed(address(KODIAK_STAKING), true);
         honeyQueen.setIsSelectorAllowed(
             bytes4(keccak256("stakeLocked(uint256,uint256)")),
             "stake",

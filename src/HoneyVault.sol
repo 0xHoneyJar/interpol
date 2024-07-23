@@ -23,7 +23,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     ###############################################################*/
     error MigrationNotEnabled();
     error ExpirationNotMatching();
-    error StakingContractNotAllowed();
+    error TargetContractNotAllowed();
     error NotExpiredYet();
     error TokenBlocked();
     error CannotBeLPToken();
@@ -33,6 +33,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     error SelectorNotAllowed();
     error ClaimRewardsFailed();
     error NotEnoughBoostedToBurn();
+    error WildcardFailed();
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -91,9 +92,9 @@ contract HoneyVault is TokenReceiver, Ownable {
         _;
     }
 
-    modifier onlyAllowedStakingContract(address _stakingContract) {
-        if (!HONEY_QUEEN.isStakingContractAllowed(_stakingContract))
-            revert StakingContractNotAllowed();
+    modifier onlyAllowedTargetContract(address _targetContract) {
+        if (!HONEY_QUEEN.isTargetContractAllowed(_targetContract))
+            revert TargetContractNotAllowed();
         _;
     }
     /*###############################################################
@@ -117,6 +118,19 @@ contract HoneyVault is TokenReceiver, Ownable {
                             OWNER LOGIC
     ###############################################################*/
 
+    function wildcard(
+        address _contract,
+        bytes calldata data
+    )
+        external
+        onlyOwner
+        onlyAllowedTargetContract(_contract)
+        onlyAllowedSelector(_contract, "wildcard", data)
+    {
+        (bool success, ) = _contract.call(data);
+        if (!success) revert WildcardFailed();
+    }
+
     function stake(
         address _LPToken,
         address _stakingContract,
@@ -125,7 +139,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     )
         external
         onlyOwner
-        onlyAllowedStakingContract(_stakingContract)
+        onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "stake", data)
     {
         staked[_LPToken][_stakingContract] += _amount;
@@ -144,7 +158,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     )
         public
         onlyOwner
-        onlyAllowedStakingContract(_stakingContract)
+        onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "unstake", data)
     {
         staked[_LPToken][_stakingContract] -= _amount;
@@ -280,7 +294,7 @@ contract HoneyVault is TokenReceiver, Ownable {
         bytes memory data
     )
         external
-        onlyAllowedStakingContract(_stakingContract)
+        onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "rewards", data)
     {
         (bool success, ) = _stakingContract.call(data);
