@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {Test, console} from "forge-std/Test.sol";
+import {StdCheats} from "forge-std/StdCheats.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {HoneyVault} from "../src/HoneyVault.sol";
@@ -15,6 +16,11 @@ interface KodiakStaking {
     event StakeLocked(address indexed user, uint256 amount, uint256 secs, bytes32 kek_id, address source_address);
     event WithdrawLocked(address indexed user, uint256 amount, bytes32 kek_id, address destination_address);
     event RewardPaid(address indexed user, uint256 reward, address token_address, address destination_address);
+}
+
+interface XKDK {
+    function redeem(uint256 amount, uint256 duration) external;
+    function finalizeRedeem(uint256 redeemIndex) external;
 }
 
 contract KodiakTest is Test {
@@ -32,6 +38,7 @@ contract KodiakTest is Test {
     // IMPORTANT
     // BARTIO ADDRESSES
     ERC20 public constant KDK = ERC20(0xfd27998fa0eaB1A6372Db14Afd4bF7c4a58C5364);
+    XKDK public constant xKDK = XKDK(0x414B50157a5697F14e91417C5275A7496DcF429D);
     ERC20 public constant HONEYBERA_LP = ERC20(0x12C195768f65F282EA5F1B5C42755FBc910B0D8F);
     KodiakStaking public constant KODIAK_STAKING = KodiakStaking(0x1878eb1cA6Da5e2fC4B5213F7D170CA668A0E225);
 
@@ -259,5 +266,49 @@ contract KodiakTest is Test {
 
         // check LP balance of vault
         assertApproxEqRel(HONEYBERA_LP.balanceOf(address(honeyVault)), LPBalance, 1e14);
+    }
+
+    function test_xkdk() prankAsTHJ external {
+        // whitelist xkdk
+        honeyQueen.setIsTargetContractAllowed(address(xKDK), true);
+
+        // whitelist selectors
+        honeyQueen.setIsSelectorAllowed(
+            bytes4(keccak256("redeem(uint256,uint256)")),
+            "wildcard",
+            address(xKDK),
+            true
+        );
+        honeyQueen.setIsSelectorAllowed(
+            bytes4(keccak256("finalizeRedeem(uint256)")),
+            "wildcard",
+            address(xKDK),
+            true
+        );
+
+
+        ERC20 XKDK_ERC20 = ERC20(address(xKDK));
+        uint256 xkdkBalance = 1e18;
+        uint256 kdkBalance = KDK.balanceOf(address(honeyVault));
+        StdCheats.deal(address(XKDK_ERC20), address(honeyVault), xkdkBalance);
+        uint256 XKDK_balance = XKDK_ERC20.balanceOf(address(honeyVault));
+
+        // start the redeem for 15 days so 0.5x multiplier
+        honeyVault.wildcard(
+            address(xKDK),
+            abi.encodeWithSelector(bytes4(keccak256("redeem(uint256,uint256)")), xkdkBalance, 15 days)
+        );
+
+        // ff 15 days
+        vm.warp(block.timestamp + 15 days);
+        
+        // finalize the redeem
+        honeyVault.wildcard(
+            address(xKDK),
+            abi.encodeWithSelector(bytes4(keccak256("finalizeRedeem(uint256)")), 0)
+        );
+
+        uint256 expectedBalance = kdkBalance + (xkdkBalance / 2);
+        assertEq(KDK.balanceOf(address(honeyVault)), expectedBalance);
     }
 }
