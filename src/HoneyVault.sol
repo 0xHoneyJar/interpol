@@ -106,7 +106,7 @@ contract HoneyVault is TokenReceiver, Ownable {
         address _referral,
         bool _unlocked
     ) external {
-        require(owner() == address(0));
+        require(address(HONEY_QUEEN) == address(0));
         _initializeOwner(_owner);
         HONEY_QUEEN = HoneyQueen(_honeyQueen);
         referral = _referral;
@@ -313,21 +313,6 @@ contract HoneyVault is TokenReceiver, Ownable {
 
     function activateBoost() external {
         HONEY_QUEEN.BGT().activateBoost(HONEY_QUEEN.validator());
-    }
-
-    function clone() external returns (address) {
-        return LibClone.clone(address(this));
-    }
-
-    function cloneAndInitialize(
-        address _initialOwner,
-        address _honeyQueen,
-        address _referral,
-        bool _unlocked
-    ) external returns (address) {
-        address payable clone_ = payable(LibClone.clone(address(this)));
-        HoneyVault(clone_).initialize(_initialOwner, _honeyQueen, _referral, _unlocked);
-        return clone_;
     }
 
     receive() external payable {}

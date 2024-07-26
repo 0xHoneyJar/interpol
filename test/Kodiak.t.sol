@@ -7,6 +7,7 @@ import {ERC20} from "solady/tokens/ERC20.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {HoneyVault} from "../src/HoneyVault.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
+import {Factory} from "../src/Factory.sol";
 
 interface KodiakStaking {
     function stakeLocked(uint256 amount, uint256 secs) external;
@@ -26,7 +27,7 @@ interface XKDK {
 contract KodiakTest is Test {
     using LibString for uint256;
 
-    HoneyVault public vaultToBeCloned;
+    Factory public factory;
     HoneyVault public honeyVault;
     HoneyQueen public honeyQueen;
 
@@ -70,9 +71,12 @@ contract KodiakTest is Test {
             true
         );
         honeyQueen.setValidator(THJ);
-        vaultToBeCloned = new HoneyVault();
-        honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
-        honeyVault.initialize(THJ, address(honeyQueen), referral, false);
+
+        factory = new Factory(address(honeyQueen));
+
+        honeyVault = factory.clone(THJ, referral, false);
+
+
         vm.stopPrank();
 
         vm.label(address(honeyVault), "HoneyVault");

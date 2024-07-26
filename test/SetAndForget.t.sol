@@ -8,6 +8,7 @@ import {LibString} from "solady/utils/LibString.sol";
 import {Solarray as SLA} from "solarray/Solarray.sol";
 import {HoneyVault} from "../src/HoneyVault.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
+import {Factory} from "../src/Factory.sol";
 import {HoneyVaultV2} from "./mocks/HoneyVaultV2.sol";
 import {FakeVault} from "./mocks/FakeVault.sol";
 import {FakeGauge} from "./mocks/FakeGauge.sol";
@@ -25,7 +26,7 @@ interface IBGT {
 contract HoneyVaultTest is Test {
     using LibString for uint256;
 
-    HoneyVault public vaultToBeCloned;
+    Factory public factory;
     HoneyVault public honeyVault;
     HoneyQueen public honeyQueen;
 
@@ -44,7 +45,7 @@ contract HoneyVaultTest is Test {
     IStakingContract public HONEYBERA_STAKING = IStakingContract(0xAD57d7d39a487C04a44D3522b910421888Fb9C6d);
 
     function setUp() public {
-        vm.createSelectFork("https://bartio.rpc.berachain.com/");
+        vm.createSelectFork("https://bera-testnet.nodeinfra.com");
         expiration = block.timestamp + 30 days;
 
         vm.startPrank(THJ);
@@ -70,9 +71,8 @@ contract HoneyVaultTest is Test {
             address(HONEYBERA_STAKING),
             true
         );
-        vaultToBeCloned = new HoneyVault();
-        honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
-        honeyVault.initialize(THJ, address(honeyQueen), referral, true);
+        factory = new Factory(address(honeyQueen));
+        honeyVault = factory.clone(THJ, referral, true);
         vm.stopPrank();
 
         vm.label(address(honeyVault), "HoneyVault");

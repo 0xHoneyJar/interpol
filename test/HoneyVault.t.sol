@@ -8,6 +8,7 @@ import {LibString} from "solady/utils/LibString.sol";
 import {Solarray as SLA} from "solarray/Solarray.sol";
 import {HoneyVault} from "../src/HoneyVault.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
+import {Factory} from "../src/Factory.sol";
 import {HoneyVaultV2} from "./mocks/HoneyVaultV2.sol";
 import {FakeVault} from "./mocks/FakeVault.sol";
 import {FakeGauge} from "./mocks/FakeGauge.sol";
@@ -35,7 +36,7 @@ interface IBGTStaker {
 contract HoneyVaultTest is Test {
     using LibString for uint256;
 
-    HoneyVault public vaultToBeCloned;
+    Factory public factory;
     HoneyVault public honeyVault;
     HoneyQueen public honeyQueen;
 
@@ -80,9 +81,8 @@ contract HoneyVaultTest is Test {
             true
         );
         honeyQueen.setValidator(THJ);
-        vaultToBeCloned = new HoneyVault();
-        honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
-        honeyVault.initialize(THJ, address(honeyQueen), referral, false);
+        factory = new Factory(address(honeyQueen));
+        honeyVault = factory.clone(THJ, referral, false);
         vm.stopPrank();
 
         vm.label(address(honeyVault), "HoneyVault");
@@ -104,22 +104,6 @@ contract HoneyVaultTest is Test {
         vm.startPrank(THJ);
         _;
         vm.stopPrank();
-    }
-
-    function test_initializeOriginalHasNoImpact() external {
-        vaultToBeCloned.initialize(
-            address(this),
-            address(honeyQueen),
-            referral,
-            false
-        );
-        assertEq(address(vaultToBeCloned.owner()), address(this));
-        // now we clone the vault
-        honeyVault = HoneyVault(payable(vaultToBeCloned.clone()));
-        assertEq(address(honeyVault.owner()), address(0));
-        // initialize clone
-        honeyVault.initialize(address(this), address(honeyQueen), referral, false);
-        assertEq(address(honeyVault.owner()), address(this));
     }
 
     function test_singleDepositAndLock() external prankAsTHJ {
@@ -342,10 +326,9 @@ contract HoneyVaultTest is Test {
         HONEYBERA_LP.approve(address(honeyVault), balance);
         honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
 
-        // deploy base honeyvault v2
-        HoneyVaultV2 baseVault = new HoneyVaultV2();
+
         // clone it
-        HoneyVaultV2 honeyVaultV2 = HoneyVaultV2(payable(baseVault.clone()));
+        HoneyVaultV2 honeyVaultV2 = new HoneyVaultV2();
         honeyVaultV2.initialize(THJ, address(honeyQueen), referral, false);
 
         // migration should fail because haven't set it in honey queen
