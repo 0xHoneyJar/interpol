@@ -179,9 +179,19 @@ contract HoneyVault is TokenReceiver, Ownable {
     */
     function burnBGTForBERA(uint256 _amount) external onlyOwner {
         IBGT BGT = HONEY_QUEEN.BGT();
-        if (BGT.boosted(address(this), HONEY_QUEEN.validator()) < _amount)
+        uint256 boosted = BGT.boosted(address(this), HONEY_QUEEN.validator());
+        (,uint256 queued) = BGT.boostedQueue(address(this), HONEY_QUEEN.validator());
+
+        if (boosted + queued < _amount)
             revert NotEnoughBoostedToBurn();
-        BGT.dropBoost(HONEY_QUEEN.validator(), uint128(_amount));
+
+        uint256 amountToDrop = boosted >= _amount ? _amount : boosted;
+        uint256 amountToCancel = _amount - amountToDrop;
+
+        if (amountToDrop > 0) BGT.dropBoost(HONEY_QUEEN.validator(), uint128(amountToDrop));
+
+        if (amountToCancel > 0) BGT.cancelBoost(HONEY_QUEEN.validator(), uint128(amountToCancel));
+
         BGT.redeem(address(this), _amount);
         withdrawBERA(_amount);
     }
