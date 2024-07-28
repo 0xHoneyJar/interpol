@@ -34,6 +34,7 @@ contract HoneyVaultTest is Test {
     address public constant THJ = 0x4A8c9a29b23c4eAC0D235729d5e0D035258CDFA7;
     address public constant referral = address(0x5efe5a11);
     address public constant treasury = address(0x80085);
+    string public constant PROTOCOL = "BGTSTATION";
 
     // IMPORTANT
     // BARTIO ADDRESSES
@@ -52,23 +53,23 @@ contract HoneyVaultTest is Test {
         // setup honeyqueen stuff
         honeyQueen = new HoneyQueen(treasury, address(BGT));
         // prettier-ignore
-        honeyQueen.setIsTargetContractAllowed(address(HONEYBERA_STAKING), true);
-        honeyQueen.setIsSelectorAllowed(
+        honeyQueen.setProtocolOfTarget(address(HONEYBERA_STAKING), PROTOCOL);
+        honeyQueen.setIsSelectorAllowedForProtocol(
             bytes4(keccak256("stake(uint256)")),
             "stake",
-            address(HONEYBERA_STAKING),
+            PROTOCOL,
             true
         );
-        honeyQueen.setIsSelectorAllowed(
+        honeyQueen.setIsSelectorAllowedForProtocol(
             bytes4(keccak256("withdraw(uint256)")),
             "unstake",
-            address(HONEYBERA_STAKING),
+            PROTOCOL,
             true
         );
-        honeyQueen.setIsSelectorAllowed(
+        honeyQueen.setIsSelectorAllowedForProtocol(
             bytes4(keccak256("getReward(address)")),
             "rewards",
-            address(HONEYBERA_STAKING),
+            PROTOCOL,
             true
         );
         factory = new Factory(address(honeyQueen));

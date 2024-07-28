@@ -51,6 +51,7 @@ contract KodiakTest is Test {
     address public constant THJ = 0x4A8c9a29b23c4eAC0D235729d5e0D035258CDFA7;
     address public constant referral = address(0x5efe5a11);
     address public constant treasury = address(0x80085);
+    string public constant PROTOCOL = "KODIAK";
 
     // IMPORTANT
     // BARTIO ADDRESSES
@@ -68,23 +69,23 @@ contract KodiakTest is Test {
         // setup honeyqueen stuff
         honeyQueen = new HoneyQueen(treasury, address(BGT));
         // prettier-ignore
-        honeyQueen.setIsTargetContractAllowed(address(KODIAK_STAKING), true);
-        honeyQueen.setIsSelectorAllowed(
+        honeyQueen.setProtocolOfTarget(address(KODIAK_STAKING), PROTOCOL);
+        honeyQueen.setIsSelectorAllowedForProtocol(
             bytes4(keccak256("stakeLocked(uint256,uint256)")),
             "stake",
-            address(KODIAK_STAKING),
+            PROTOCOL,
             true
         );
-        honeyQueen.setIsSelectorAllowed(
+        honeyQueen.setIsSelectorAllowedForProtocol(
             bytes4(keccak256("withdrawLockedAll()")),
             "unstake",
-            address(KODIAK_STAKING),
+            PROTOCOL,
             true
         );
-        honeyQueen.setIsSelectorAllowed(
+        honeyQueen.setIsSelectorAllowedForProtocol(
             bytes4(keccak256("getReward()")),
             "rewards",
-            address(KODIAK_STAKING),
+            PROTOCOL,
             true
         );
         honeyQueen.setValidator(THJ);
@@ -290,20 +291,21 @@ contract KodiakTest is Test {
     }
 
     function test_xkdk() prankAsTHJ external {
+        string memory xkdkProtocol = "XKDK";
         // whitelist xkdk
-        honeyQueen.setIsTargetContractAllowed(address(xKDK), true);
+        honeyQueen.setProtocolOfTarget(address(xKDK), xkdkProtocol);
 
         // whitelist selectors
-        honeyQueen.setIsSelectorAllowed(
+        honeyQueen.setIsSelectorAllowedForProtocol(
             bytes4(keccak256("redeem(uint256,uint256)")),
             "wildcard",
-            address(xKDK),
+            xkdkProtocol,
             true
         );
-        honeyQueen.setIsSelectorAllowed(
+        honeyQueen.setIsSelectorAllowedForProtocol(
             bytes4(keccak256("finalizeRedeem(uint256)")),
             "wildcard",
-            address(xKDK),
+            xkdkProtocol,
             true
         );
 

@@ -17,6 +17,7 @@ import {IBGT} from "./utils/IBGT.sol";
     The rationale is that Berachain is cheap enough that you can deploy
     multiple vaults if needed for multiple deposits of the same LP token.
 */
+// prettier-ignore
 contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             ERRORS
@@ -87,7 +88,7 @@ contract HoneyVault is TokenReceiver, Ownable {
         assembly {
             selector := mload(add(data, 32))
         }
-        if (!HONEY_QUEEN.isSelectorAllowed(selector, action, _stakingContract))
+        if (!HONEY_QUEEN.isSelectorAllowedForTarget(selector, action, _stakingContract))
             revert SelectorNotAllowed();
         _;
     }

@@ -9,6 +9,7 @@ import {IBGT} from "./utils/IBGT.sol";
     are legit. It is used by HoneyVaults to know which contracts
     they can safely stake in.
 */
+// prettier-ignore
 contract HoneyQueen is Ownable {
     /*###############################################################
                             ERRORS
@@ -27,10 +28,9 @@ contract HoneyQueen is Ownable {
     address public validator;
     uint256 public fees = 200; // in bps
     IBGT public immutable BGT;
-    mapping(address targetContract => bool allowed)
-        public isTargetContractAllowed;
-    mapping(bytes4 selector => mapping(string action => mapping(address targetContract => bool allowed)))
-        public isSelectorAllowed;
+    mapping(address targetContract => string protocol) public protocolOfTarget;
+    mapping(bytes4 selector => mapping(string action => mapping(string protocol => bool allowed)))
+        public isSelectorAllowedForProtocol;
     // this is for cases where gauges give you a NFT to represent your staking position
     mapping(address token => bool blocked) public isTokenBlocked;
     mapping(bytes32 fromCodeHash => mapping(bytes32 toCodeHash => bool isEnabled))
@@ -47,20 +47,30 @@ contract HoneyQueen is Ownable {
     /*###############################################################
                             OWNER LOGIC
     ###############################################################*/
-    function setIsTargetContractAllowed(
+
+    /*
+        For more efficiency, we group contracts per "protocol"
+        such as BGT Station or Kodiak.
+    */
+    function setProtocolOfTarget(
         address _targetContract,
-        bool _isAllowed
+        string memory _protocol
     ) external onlyOwner {
-        isTargetContractAllowed[_targetContract] = _isAllowed;
+        protocolOfTarget[_targetContract] = _protocol;
     }
 
-    function setIsSelectorAllowed(
+    /*
+        The reasoning behind this is that every protocol's staking
+        contracts will follow the same ABI, so it makes sense to just
+        group the selectors by protocol.
+    */
+    function setIsSelectorAllowedForProtocol(
         bytes4 _selector,
         string memory _action,
-        address _targetContract,
+        string memory _protocol,
         bool _isAllowed
     ) external onlyOwner {
-        isSelectorAllowed[_selector][_action][_targetContract] = _isAllowed;
+        isSelectorAllowedForProtocol[_selector][_action][_protocol] = _isAllowed;
     }
 
     function setIsTokenBlocked(
@@ -94,6 +104,19 @@ contract HoneyQueen is Ownable {
     ###############################################################*/
     function computeFees(uint256 amount) public view returns (uint256) {
         return (amount * fees) / 10000;
+    }
+    function isTargetContractAllowed(address _target) public view returns (bool allowed) {
+        string memory protocol = protocolOfTarget[_target];
+        assembly {
+            allowed := not(iszero(protocol))
+        }
+    }
+    function isSelectorAllowedForTarget(
+        bytes4 _selector,
+        string calldata _action,
+        address _target
+    ) public view returns (bool) {
+        return isSelectorAllowedForProtocol[_selector][_action][protocolOfTarget[_target]];
     }
     /*###############################################################
                             PUBLIC LOGIC
