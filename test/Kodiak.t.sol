@@ -14,16 +14,32 @@ interface KodiakStaking {
     function withdrawLockedAll() external;
     function getReward() external view returns (uint256);
     function lockedLiquidityOf(address account) external view returns (uint256);
-    event StakeLocked(address indexed user, uint256 amount, uint256 secs, bytes32 kek_id, address source_address);
-    event WithdrawLocked(address indexed user, uint256 amount, bytes32 kek_id, address destination_address);
-    event RewardPaid(address indexed user, uint256 reward, address token_address, address destination_address);
+    event StakeLocked(
+        address indexed user,
+        uint256 amount,
+        uint256 secs,
+        bytes32 kek_id,
+        address source_address
+    );
+    event WithdrawLocked(
+        address indexed user,
+        uint256 amount,
+        bytes32 kek_id,
+        address destination_address
+    );
+    event RewardPaid(
+        address indexed user,
+        uint256 reward,
+        address token_address,
+        address destination_address
+    );
 }
 
 interface XKDK {
     function redeem(uint256 amount, uint256 duration) external;
     function finalizeRedeem(uint256 redeemIndex) external;
 }
-
+// prettier-ignore
 contract KodiakTest is Test {
     using LibString for uint256;
 
@@ -38,6 +54,7 @@ contract KodiakTest is Test {
 
     // IMPORTANT
     // BARTIO ADDRESSES
+    ERC20 public constant BGT = ERC20(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
     ERC20 public constant KDK = ERC20(0xfd27998fa0eaB1A6372Db14Afd4bF7c4a58C5364);
     XKDK public constant xKDK = XKDK(0x414B50157a5697F14e91417C5275A7496DcF429D);
     ERC20 public constant HONEYBERA_LP = ERC20(0x12C195768f65F282EA5F1B5C42755FBc910B0D8F);
@@ -49,7 +66,7 @@ contract KodiakTest is Test {
 
         vm.startPrank(THJ);
         // setup honeyqueen stuff
-        honeyQueen = new HoneyQueen(treasury);
+        honeyQueen = new HoneyQueen(treasury, address(BGT));
         // prettier-ignore
         honeyQueen.setIsTargetContractAllowed(address(KODIAK_STAKING), true);
         honeyQueen.setIsSelectorAllowed(

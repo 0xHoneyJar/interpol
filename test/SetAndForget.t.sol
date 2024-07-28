@@ -22,7 +22,7 @@ interface IBGT {
         uint256 amount
     );
 }
-
+// prettier-ignore
 contract HoneyVaultTest is Test {
     using LibString for uint256;
 
@@ -50,7 +50,7 @@ contract HoneyVaultTest is Test {
 
         vm.startPrank(THJ);
         // setup honeyqueen stuff
-        honeyQueen = new HoneyQueen(treasury);
+        honeyQueen = new HoneyQueen(treasury, address(BGT));
         // prettier-ignore
         honeyQueen.setIsTargetContractAllowed(address(HONEYBERA_STAKING), true);
         honeyQueen.setIsSelectorAllowed(

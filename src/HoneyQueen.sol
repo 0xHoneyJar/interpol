@@ -26,19 +26,22 @@ contract HoneyQueen is Ownable {
     address public automaton; // address responsible for executing automated calls
     address public validator;
     uint256 public fees = 200; // in bps
-    IBGT public constant BGT = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
-    mapping(address targetContract => bool allowed) public isTargetContractAllowed;
+    IBGT public immutable BGT;
+    mapping(address targetContract => bool allowed)
+        public isTargetContractAllowed;
     mapping(bytes4 selector => mapping(string action => mapping(address targetContract => bool allowed)))
         public isSelectorAllowed;
     // this is for cases where gauges give you a NFT to represent your staking position
     mapping(address token => bool blocked) public isTokenBlocked;
-    mapping(bytes32 fromCodeHash => mapping(bytes32 toCodeHash => bool isEnabled)) public isMigrationEnabled;
+    mapping(bytes32 fromCodeHash => mapping(bytes32 toCodeHash => bool isEnabled))
+        public isMigrationEnabled;
 
     /*###############################################################
                             INITIALIZER
     ###############################################################*/
-    constructor(address _treasury) {
+    constructor(address _treasury, address _BGT) {
         treasury = _treasury;
+        BGT = IBGT(_BGT);
         _initializeOwner(msg.sender);
     }
     /*###############################################################
