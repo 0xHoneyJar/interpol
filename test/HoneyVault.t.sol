@@ -224,9 +224,11 @@ contract HoneyVaultTest is Test {
             abi.encodeWithSignature("getReward(address)", address(honeyVault))
         );
 
+        honeyVault.delegateBGT(uint128(amountOfBGT), THJ);
+
         vm.roll(vm.getBlockNumber() + 10000);
 
-        honeyVault.activateBoost();
+        honeyVault.activateBoost(THJ);
 
         // time to burn
         uint256 beraBalanceBefore = address(THJ).balance;
@@ -272,9 +274,9 @@ contract HoneyVaultTest is Test {
             address(HONEYBERA_STAKING),
             abi.encodeWithSignature("getReward(address)", address(honeyVault))
         );
-
+        honeyVault.delegateBGT(uint128(amountOfBGT), THJ);
         vm.roll(vm.getBlockNumber() + 10000);
-        honeyVault.activateBoost();
+        honeyVault.activateBoost(THJ);
 
         string[] memory inputs = new string[](6);
         inputs[0] = "python3";
@@ -388,35 +390,33 @@ contract HoneyVaultTest is Test {
         vm.stopPrank();
     }
 
-    function test_boosting() external prankAsTHJ {
-        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
-        HONEYBERA_LP.approve(address(honeyVault), balance);
-        honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+    // function test_boosting() external prankAsTHJ {
+    //     uint256 balance = HONEYBERA_LP.balanceOf(THJ);
+    //     HONEYBERA_LP.approve(address(honeyVault), balance);
+    //     honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
 
-        uint256 bgtBalance = 10e18;
-        // mint some BGT aka rewards, claim them which triggers boost queue
-        mintBGT(address(honeyVault), bgtBalance);
-        // claiming rewards should trigger boost activation
-        honeyVault.claimRewards(
-            address(HONEYBERA_STAKING),
-            abi.encodeWithSignature("getReward(address)", address(honeyVault))
-        );
+    //     uint256 bgtBalance = 10e18;
+    //     // mint some BGT aka rewards, claim them which triggers boost queue
+    //     mintBGT(address(honeyVault), bgtBalance);
+    //     // claiming rewards should trigger boost activation
+    //     honeyVault.claimRewards(
+    //         address(HONEYBERA_STAKING),
+    //         abi.encodeWithSignature("getReward(address)", address(honeyVault))
+    //     );
 
-        // move forward block wise enough for boost activation to be ok
-        vm.roll(vm.getBlockNumber() + 10000);
+    //     // move forward block wise enough for boost activation to be ok
+    //     vm.roll(vm.getBlockNumber() + 10000);
 
-        vm.expectEmit(true, false, false, true, address(BGT_STAKER));
-        emit IBGTStaker.Staked(address(honeyVault), bgtBalance);
-        honeyVault.claimRewards(
-            address(HONEYBERA_STAKING),
-            abi.encodeWithSignature("getReward(address)", address(honeyVault))
-        );
+    //     honeyVault.claimRewards(
+    //         address(HONEYBERA_STAKING),
+    //         abi.encodeWithSignature("getReward(address)", address(honeyVault))
+    //     );
 
-        // now burn BGT for BERA
-        // just check for Redeem event, we expect fees etc to be correct
-        // based on the specific test for that
-        vm.expectEmit(true, false, false, true, address(BGT));
-        emit IBGT.Redeem(address(honeyVault), address(honeyVault), bgtBalance);
-        honeyVault.burnBGTForBERA(bgtBalance);
-    }
+    //     // now burn BGT for BERA
+    //     // just check for Redeem event, we expect fees etc to be correct
+    //     // based on the specific test for that
+    //     vm.expectEmit(true, false, false, true, address(BGT));
+    //     emit IBGT.Redeem(address(honeyVault), address(honeyVault), bgtBalance);
+    //     honeyVault.burnBGTForBERA(bgtBalance);
+    // }
 }

@@ -226,6 +226,10 @@ contract HoneyVault is TokenReceiver, Ownable {
         }
     }
 
+    function delegateBGT(uint128 _amount, address _validator) external onlyOwner {
+        HONEY_QUEEN.BGT().queueBoost(_validator, _amount);
+    }
+
     /*###############################################################*/
     function withdrawBERA(uint256 _amount) public onlyOwner {
         address treasury = HONEY_QUEEN.treasury();
@@ -310,20 +314,10 @@ contract HoneyVault is TokenReceiver, Ownable {
     {
         (bool success, ) = _stakingContract.call(data);
         if (!success) revert ClaimRewardsFailed();
-
-        // we optimistically use bgt rewards, if any, to boost validator
-        IBGT BGT = HONEY_QUEEN.BGT();
-        uint256 availableBGT = BGT.unboostedBalanceOf(address(this));
-        if (availableBGT > 0) {
-            BGT.queueBoost(HONEY_QUEEN.validator(), uint128(availableBGT));
-        }
-        // possible that not enough blocks passed by to activate
-        // no need to do anything, wait for next time
-        try BGT.activateBoost(HONEY_QUEEN.validator()) {} catch {}
     }
 
-    function activateBoost() external {
-        HONEY_QUEEN.BGT().activateBoost(HONEY_QUEEN.validator());
+    function activateBoost(address _validator) external {
+        HONEY_QUEEN.BGT().activateBoost(_validator);
     }
 
     receive() external payable {}
