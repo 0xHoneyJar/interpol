@@ -33,7 +33,6 @@ contract HoneyVault is TokenReceiver, Ownable {
     error UnstakeFailed();
     error SelectorNotAllowed();
     error ClaimRewardsFailed();
-    error NotEnoughBoostedToBurn();
     error WildcardFailed();
     /*###############################################################
                             EVENTS
