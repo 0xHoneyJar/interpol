@@ -173,27 +173,9 @@ contract HoneyVault is TokenReceiver, Ownable {
         Bundle redeeming and withdrawing together.
         Reasoning is that no practical use case where user wants to
         leave BERA into the vault after redeeming.
-
-        Since BGT rewards are automatically boosted, we have to
-        drop the boost for the amount we want to convert.
-        For simplicity, we don't try to cancel queued boosts.
     */
     function burnBGTForBERA(uint256 _amount) external onlyOwner {
-        IBGT BGT = HONEY_QUEEN.BGT();
-        uint256 boosted = BGT.boosted(address(this), HONEY_QUEEN.validator());
-        (,uint256 queued) = BGT.boostedQueue(address(this), HONEY_QUEEN.validator());
-
-        if (boosted + queued < _amount)
-            revert NotEnoughBoostedToBurn();
-
-        uint256 amountToDrop = boosted >= _amount ? _amount : boosted;
-        uint256 amountToCancel = _amount - amountToDrop;
-
-        if (amountToDrop > 0) BGT.dropBoost(HONEY_QUEEN.validator(), uint128(amountToDrop));
-
-        if (amountToCancel > 0) BGT.cancelBoost(HONEY_QUEEN.validator(), uint128(amountToCancel));
-
-        BGT.redeem(address(this), _amount);
+        HONEY_QUEEN.BGT().redeem(address(this), _amount);
         withdrawBERA(_amount);
     }
 
@@ -226,8 +208,17 @@ contract HoneyVault is TokenReceiver, Ownable {
         }
     }
 
+    /*######################### BGT MANAGEMENT #########################*/
     function delegateBGT(uint128 _amount, address _validator) external onlyOwner {
         HONEY_QUEEN.BGT().queueBoost(_validator, _amount);
+    }
+
+    function cancelQueuedBoost(uint128 _amount, address _validator) external onlyOwner {
+        HONEY_QUEEN.BGT().dropBoost(_validator, _amount);
+    }
+
+    function dropBoost(uint128 _amount, address _validator) external onlyOwner {
+        HONEY_QUEEN.BGT().dropBoost(_validator, _amount);
     }
 
     /*###############################################################*/
