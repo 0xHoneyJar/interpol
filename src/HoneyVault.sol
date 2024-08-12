@@ -207,6 +207,22 @@ contract HoneyVault is TokenReceiver, Ownable {
         }
     }
 
+    /*
+        Claims rewards, BGT, from the staking contract.
+        The reward goes into the HoneyVault.
+    */
+    function claimRewards(
+        address _stakingContract,
+        bytes memory data
+    )
+        external
+        onlyOwner
+        onlyAllowedTargetContract(_stakingContract)
+        onlyAllowedSelector(_stakingContract, "rewards", data)
+    {
+        (bool success, ) = _stakingContract.call(data);
+        if (!success) revert ClaimRewardsFailed();
+    }
     /*######################### BGT MANAGEMENT #########################*/
     function delegateBGT(uint128 _amount, address _validator) external onlyOwner {
         HONEY_QUEEN.BGT().queueBoost(_validator, _amount);
@@ -288,22 +304,6 @@ contract HoneyVault is TokenReceiver, Ownable {
 
         emit Deposited(_LPToken, _amount);
         emit LockedUntil(_LPToken, _expiration);
-    }
-
-    /*
-        Claims rewards, BGT, from the staking contract.
-        The reward goes into the HoneyVault.
-    */
-    function claimRewards(
-        address _stakingContract,
-        bytes memory data
-    )
-        external
-        onlyAllowedTargetContract(_stakingContract)
-        onlyAllowedSelector(_stakingContract, "rewards", data)
-    {
-        (bool success, ) = _stakingContract.call(data);
-        if (!success) revert ClaimRewardsFailed();
     }
 
     function activateBoost(address _validator) external {
