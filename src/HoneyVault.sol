@@ -57,6 +57,7 @@ contract HoneyVault is TokenReceiver, Ownable {
         address indexed newVault
     );
     event Fees(address indexed referral, address token, uint256 amount);
+    event RewardsClaimed(address stakingContract);
     /*###############################################################
                             STRUCTS
     ###############################################################*/
@@ -222,6 +223,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     {
         (bool success, ) = _stakingContract.call(data);
         if (!success) revert ClaimRewardsFailed();
+        emit RewardsClaimed(_stakingContract);
     }
     /*######################### BGT MANAGEMENT #########################*/
     function delegateBGT(uint128 _amount, address _validator) external onlyOwner {

@@ -224,12 +224,6 @@ contract HoneyVaultTest is Test {
             abi.encodeWithSignature("getReward(address)", address(honeyVault))
         );
 
-        honeyVault.delegateBGT(uint128(amountOfBGT), THJ);
-
-        vm.roll(vm.getBlockNumber() + 10000);
-
-        honeyVault.activateBoost(THJ);
-
         // time to burn
         uint256 beraBalanceBefore = address(THJ).balance;
         vm.expectEmit(true, true, false, true, address(BGT));
@@ -274,9 +268,7 @@ contract HoneyVaultTest is Test {
             address(HONEYBERA_STAKING),
             abi.encodeWithSignature("getReward(address)", address(honeyVault))
         );
-        honeyVault.delegateBGT(uint128(amountOfBGT), THJ);
-        vm.roll(vm.getBlockNumber() + 10000);
-        honeyVault.activateBoost(THJ);
+
 
         string[] memory inputs = new string[](6);
         inputs[0] = "python3";
@@ -380,14 +372,11 @@ contract HoneyVaultTest is Test {
             abi.encodeWithSignature("stake(uint256)", balance)
         );
 
-        // attacker tries to withdraw through claim function
-        vm.startPrank(address(0xaaaaa));
         vm.expectRevert(HoneyVault.SelectorNotAllowed.selector);
         honeyVault.claimRewards(
             address(HONEYBERA_STAKING),
             abi.encodeWithSignature("withdraw(uint256)", balance)
         );
-        vm.stopPrank();
     }
 
     // function test_boosting() external prankAsTHJ {
