@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-import {HoneyVault} from "../../src/HoneyVault.sol";
+import {HoneyLocker} from "../../src/HoneyLocker.sol";
 
-contract HoneyVaultV2 is HoneyVault {
+contract HoneyLockerV2 is HoneyLocker {
     event Fart();
     function fart() external {
         emit Fart();

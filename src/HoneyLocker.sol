@@ -12,13 +12,13 @@ import {TokenReceiver} from "./utils/TokenReceiver.sol";
 import {IBGT} from "./utils/IBGT.sol";
 
 /*
-    The HoneyVault is designed in such a way that it's multiple LP tokens
+    The HoneyLocker is designed in such a way that it's multiple LP tokens
     but single deposit for each.
     The rationale is that Berachain is cheap enough that you can deploy
-    multiple vaults if needed for multiple deposits of the same LP token.
+    multiple lockers if needed for multiple deposits of the same LP token.
 */
 // prettier-ignore
-contract HoneyVault is TokenReceiver, Ownable {
+contract HoneyLocker is TokenReceiver, Ownable {
     /*###############################################################
                             ERRORS
     ###############################################################*/
@@ -37,25 +37,14 @@ contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             EVENTS
     ###############################################################*/
+
     event Initialized(address indexed owner);
     event Deposited(address indexed token, uint256 amount);
     event LockedUntil(address indexed token, uint256 expiration);
-    event Staked(
-        address indexed stakingContract,
-        address indexed token,
-        uint256 amount
-    );
-    event Unstaked(
-        address indexed stakingContract,
-        address indexed token,
-        uint256 amount
-    );
+    event Staked(address indexed stakingContract, address indexed token, uint256 amount);
+    event Unstaked(address indexed stakingContract, address indexed token, uint256 amount);
     event Withdrawn(address indexed token, uint256 amount);
-    event Migrated(
-        address indexed token,
-        address indexed oldVault,
-        address indexed newVault
-    );
+    event Migrated(address indexed token, address indexed oldLocker, address indexed newLocker);
     event Fees(address indexed referral, address token, uint256 amount);
     event RewardsClaimed(address stakingContract);
     /*###############################################################
@@ -64,7 +53,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-   
+
     // tracks amount of tokens staked per staking contract
     mapping(address LPToken => mapping(address stakingContract => uint256 balance)) public staked;
     mapping(address LPToken => uint256 expiration) public expirations;
@@ -74,39 +63,34 @@ contract HoneyVault is TokenReceiver, Ownable {
     /*###############################################################
                             MODIFIERS
     ###############################################################*/
+
     modifier onlyUnblockedTokens(address _token) {
         if (!unlocked && HONEY_QUEEN.isTokenBlocked(_token)) revert TokenBlocked();
         _;
     }
 
-    modifier onlyAllowedSelector(
-        address _stakingContract,
-        string memory action,
-        bytes memory data
-    ) {
+    modifier onlyAllowedSelector(address _stakingContract, string memory action, bytes memory data) {
         bytes4 selector;
         assembly {
             selector := mload(add(data, 32))
         }
-        if (!HONEY_QUEEN.isSelectorAllowedForTarget(selector, action, _stakingContract))
+        if (!HONEY_QUEEN.isSelectorAllowedForTarget(selector, action, _stakingContract)) {
             revert SelectorNotAllowed();
+        }
         _;
     }
 
     modifier onlyAllowedTargetContract(address _targetContract) {
-        if (!HONEY_QUEEN.isTargetContractAllowed(_targetContract))
+        if (!HONEY_QUEEN.isTargetContractAllowed(_targetContract)) {
             revert TargetContractNotAllowed();
+        }
         _;
     }
     /*###############################################################
                             INITIALIZER
     ###############################################################*/
-    function initialize(
-        address _owner,
-        address _honeyQueen,
-        address _referral,
-        bool _unlocked
-    ) external {
+
+    function initialize(address _owner, address _honeyQueen, address _referral, bool _unlocked) external {
         require(address(HONEY_QUEEN) == address(0));
         _initializeOwner(_owner);
         HONEY_QUEEN = HoneyQueen(_honeyQueen);
@@ -119,25 +103,17 @@ contract HoneyVault is TokenReceiver, Ownable {
                             OWNER LOGIC
     ###############################################################*/
 
-    function wildcard(
-        address _contract,
-        bytes calldata data
-    )
+    function wildcard(address _contract, bytes calldata data)
         external
         onlyOwner
         onlyAllowedTargetContract(_contract)
         onlyAllowedSelector(_contract, "wildcard", data)
     {
-        (bool success, ) = _contract.call(data);
+        (bool success,) = _contract.call(data);
         if (!success) revert WildcardFailed();
     }
 
-    function stake(
-        address _LPToken,
-        address _stakingContract,
-        uint256 _amount,
-        bytes memory data
-    )
+    function stake(address _LPToken, address _stakingContract, uint256 _amount, bytes memory data)
         external
         onlyOwner
         onlyAllowedTargetContract(_stakingContract)
@@ -145,25 +121,20 @@ contract HoneyVault is TokenReceiver, Ownable {
     {
         staked[_LPToken][_stakingContract] += _amount;
         ERC20(_LPToken).approve(address(_stakingContract), _amount);
-        (bool success, ) = _stakingContract.call(data);
+        (bool success,) = _stakingContract.call(data);
         if (!success) revert StakeFailed();
 
         emit Staked(_stakingContract, _LPToken, _amount);
     }
 
-    function unstake(
-        address _LPToken,
-        address _stakingContract,
-        uint256 _amount,
-        bytes memory data
-    )
+    function unstake(address _LPToken, address _stakingContract, uint256 _amount, bytes memory data)
         public
         onlyOwner
         onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "unstake", data)
     {
         staked[_LPToken][_stakingContract] -= _amount;
-        (bool success, ) = _stakingContract.call(data);
+        (bool success,) = _stakingContract.call(data);
         if (!success) revert UnstakeFailed();
 
         emit Unstaked(_stakingContract, _LPToken, _amount);
@@ -172,7 +143,7 @@ contract HoneyVault is TokenReceiver, Ownable {
     /*
         Bundle redeeming and withdrawing together.
         Reasoning is that no practical use case where user wants to
-        leave BERA into the vault after redeeming.
+        leave BERA into the locker after redeeming.
     */
     function burnBGTForBERA(uint256 _amount) external onlyOwner {
         HONEY_QUEEN.BGT().redeem(address(this), _amount);
@@ -181,7 +152,7 @@ contract HoneyVault is TokenReceiver, Ownable {
 
     /*
         Unrelated to staking contracts or gauges withdrawal.
-        This only sends tokens held by the HoneyVault to the owner.
+        This only sends tokens held by the HoneyLocker to the owner.
     */
     function withdrawLPToken(address _LPToken, uint256 _amount) external onlyOwner {
         if (expirations[_LPToken] == 0) revert HasToBeLPToken();
@@ -191,41 +162,39 @@ contract HoneyVault is TokenReceiver, Ownable {
         emit Withdrawn(_LPToken, _amount);
     }
 
-    // issue is that new honey vault could be a fake and unlock tokens
+    // issue is that new honey locker could be a fake and unlock tokens
     // assumption is that user unstaked before
-    function migrate(address[] calldata _LPTokens, address payable _newHoneyVault) external onlyOwner {
+    function migrate(address[] calldata _LPTokens, address payable _newHoneyLocker) external onlyOwner {
         // check migration is authorized based on codehashes
-        if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyVault.codehash)) {
+        if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyLocker.codehash)) {
             revert MigrationNotEnabled();
         }
         for (uint256 i; i < _LPTokens.length; i++) {
             uint256 balance = ERC20(_LPTokens[i]).balanceOf(address(this));
-            // send to new vault and deposit and lock
-            ERC20(_LPTokens[i]).approve(address(_newHoneyVault), balance);
-            HoneyVault(_newHoneyVault).depositAndLock(_LPTokens[i], balance, expirations[_LPTokens[i]]);
+            // send to new locker and deposit and lock
+            ERC20(_LPTokens[i]).approve(address(_newHoneyLocker), balance);
+            HoneyLocker(_newHoneyLocker).depositAndLock(_LPTokens[i], balance, expirations[_LPTokens[i]]);
 
-            emit Migrated(_LPTokens[i], address(this), _newHoneyVault);
+            emit Migrated(_LPTokens[i], address(this), _newHoneyLocker);
         }
     }
 
     /*
         Claims rewards, BGT, from the staking contract.
-        The reward goes into the HoneyVault.
+        The reward goes into the HoneyLocker.
     */
-    function claimRewards(
-        address _stakingContract,
-        bytes memory data
-    )
+    function claimRewards(address _stakingContract, bytes memory data)
         external
         onlyOwner
         onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "rewards", data)
     {
-        (bool success, ) = _stakingContract.call(data);
+        (bool success,) = _stakingContract.call(data);
         if (!success) revert ClaimRewardsFailed();
         emit RewardsClaimed(_stakingContract);
     }
     /*######################### BGT MANAGEMENT #########################*/
+
     function delegateBGT(uint128 _amount, address _validator) external onlyOwner {
         HONEY_QUEEN.BGT().queueBoost(_validator, _amount);
     }
@@ -244,44 +213,35 @@ contract HoneyVault is TokenReceiver, Ownable {
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
         STL.safeTransferETH(treasury, fees);
         STL.safeTransferETH(msg.sender, _amount - fees);
-        /*!*/ emit Withdrawn(address(0), _amount - fees);
-        /*!*/ emit Fees(referral, address(0), fees);
+        /*!*/
+        emit Withdrawn(address(0), _amount - fees);
+        /*!*/
+        emit Fees(referral, address(0), fees);
     }
 
-    function withdrawERC20(
-        address _token,
-        uint256 _amount
-    ) external onlyUnblockedTokens(_token) onlyOwner {
+    function withdrawERC20(address _token, uint256 _amount) external onlyUnblockedTokens(_token) onlyOwner {
         // cannot withdraw any lp token that has an expiration
         if (expirations[_token] != 0) revert CannotBeLPToken();
         address treasury = HONEY_QUEEN.treasury();
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
         ERC20(_token).transfer(treasury, fees);
         ERC20(_token).transfer(msg.sender, _amount - fees);
-        /*!*/ emit Withdrawn(_token, _amount - fees);
-        /*!*/ emit Fees(referral, _token, fees);
+        /*!*/
+        emit Withdrawn(_token, _amount - fees);
+        /*!*/
+        emit Fees(referral, _token, fees);
     }
 
-    function withdrawERC721(
-        address _token,
-        uint256 _id
-    ) external onlyUnblockedTokens(_token) onlyOwner {
+    function withdrawERC721(address _token, uint256 _id) external onlyUnblockedTokens(_token) onlyOwner {
         ERC721(_token).transferFrom(address(this), msg.sender, _id);
     }
 
-    function withdrawERC1155(
-        address _token,
-        uint256 _id,
-        uint256 _amount,
-        bytes calldata data
-    ) external onlyUnblockedTokens(_token) onlyOwner {
-        ERC1155(_token).safeTransferFrom(
-            address(this),
-            msg.sender,
-            _id,
-            _amount,
-            data
-        );
+    function withdrawERC1155(address _token, uint256 _id, uint256 _amount, bytes calldata data)
+        external
+        onlyUnblockedTokens(_token)
+        onlyOwner
+    {
+        ERC1155(_token).safeTransferFrom(address(this), msg.sender, _id, _amount, data);
     }
     /*###############################################################
                             VIEW LOGIC
@@ -290,15 +250,12 @@ contract HoneyVault is TokenReceiver, Ownable {
                             PUBLIC LOGIC
     ###############################################################*/
 
-    function depositAndLock(
-        address _LPToken,
-        uint256 _amount,
-        uint256 _expiration
-    ) external {
+    function depositAndLock(address _LPToken, uint256 _amount, uint256 _expiration) external {
         // we only allow subsequent deposits of the same token IF the
         // expiration is the same
-        if (!unlocked && expirations[_LPToken] != 0 && _expiration != expirations[_LPToken])
+        if (!unlocked && expirations[_LPToken] != 0 && _expiration != expirations[_LPToken]) {
             revert ExpirationNotMatching();
+        }
         // set expiration to 1 so token is marked as lp token
         expirations[_LPToken] = unlocked ? 1 : _expiration;
         // tokens have to be transfered to have accurate balance tracking
