@@ -200,7 +200,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     }
 
     function cancelQueuedBoost(uint128 _amount, address _validator) external onlyOwner {
-        HONEY_QUEEN.BGT().dropBoost(_validator, _amount);
+        HONEY_QUEEN.BGT().cancelBoost(_validator, _amount);
     }
 
     function dropBoost(uint128 _amount, address _validator) external onlyOwner {
