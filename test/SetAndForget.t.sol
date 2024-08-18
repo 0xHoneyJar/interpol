@@ -6,28 +6,25 @@ import {StdCheats} from "forge-std/StdCheats.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {Solarray as SLA} from "solarray/Solarray.sol";
-import {HoneyVault} from "../src/HoneyVault.sol";
+import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {Factory} from "../src/Factory.sol";
-import {HoneyVaultV2} from "./mocks/HoneyVaultV2.sol";
-import {FakeVault} from "./mocks/FakeVault.sol";
+import {HoneyLockerV2} from "./mocks/HoneyLockerV2.sol";
+import {FakeLocker} from "./mocks/FakeLocker.sol";
 import {FakeGauge} from "./mocks/FakeGauge.sol";
 import {GaugeAsNFT} from "./mocks/GaugeAsNFT.sol";
 import {IStakingContract} from "../src/utils/IStakingContract.sol";
 
 interface IBGT {
-    event Redeem(
-        address indexed from,
-        address indexed receiver,
-        uint256 amount
-    );
+    event Redeem(address indexed from, address indexed receiver, uint256 amount);
 }
 // prettier-ignore
-contract HoneyVaultTest is Test {
+
+contract HoneyLockerTest is Test {
     using LibString for uint256;
 
     Factory public factory;
-    HoneyVault public honeyVault;
+    HoneyLocker public honeyLocker;
     HoneyQueen public honeyQueen;
 
     uint256 public expiration;
@@ -54,29 +51,14 @@ contract HoneyVaultTest is Test {
         honeyQueen = new HoneyQueen(treasury, address(BGT));
         // prettier-ignore
         honeyQueen.setProtocolOfTarget(address(HONEYBERA_STAKING), PROTOCOL);
-        honeyQueen.setIsSelectorAllowedForProtocol(
-            bytes4(keccak256("stake(uint256)")),
-            "stake",
-            PROTOCOL,
-            true
-        );
-        honeyQueen.setIsSelectorAllowedForProtocol(
-            bytes4(keccak256("withdraw(uint256)")),
-            "unstake",
-            PROTOCOL,
-            true
-        );
-        honeyQueen.setIsSelectorAllowedForProtocol(
-            bytes4(keccak256("getReward(address)")),
-            "rewards",
-            PROTOCOL,
-            true
-        );
+        honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("stake(uint256)")), "stake", PROTOCOL, true);
+        honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("withdraw(uint256)")), "unstake", PROTOCOL, true);
+        honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("getReward(address)")), "rewards", PROTOCOL, true);
         factory = new Factory(address(honeyQueen));
-        honeyVault = factory.clone(THJ, referral, true);
+        honeyLocker = factory.clone(THJ, referral, true);
         vm.stopPrank();
 
-        vm.label(address(honeyVault), "HoneyVault");
+        vm.label(address(honeyLocker), "HoneyLocker");
         vm.label(address(honeyQueen), "HoneyQueen");
         vm.label(address(HONEYBERA_LP), "HONEYBERA_LP");
         vm.label(address(HONEYBERA_STAKING), "HONEYBERA_STAKING");
@@ -92,19 +74,19 @@ contract HoneyVaultTest is Test {
 
     function test_singleDepositWithNoLock() external prankAsTHJ {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
-        HONEYBERA_LP.approve(address(honeyVault), balance);
+        HONEYBERA_LP.approve(address(honeyLocker), balance);
 
-        vm.expectEmit(true, false, false, true, address(honeyVault));
-        emit HoneyVault.Deposited(address(HONEYBERA_LP), balance);
-        vm.expectEmit(true, false, false, true, address(honeyVault));
-        emit HoneyVault.LockedUntil(address(HONEYBERA_LP), expiration);
-        honeyVault.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+        vm.expectEmit(true, false, false, true, address(honeyLocker));
+        emit HoneyLocker.Deposited(address(HONEYBERA_LP), balance);
+        vm.expectEmit(true, false, false, true, address(honeyLocker));
+        emit HoneyLocker.LockedUntil(address(HONEYBERA_LP), expiration);
+        honeyLocker.depositAndLock(address(HONEYBERA_LP), balance, expiration);
 
-        assertEq(HONEYBERA_LP.balanceOf(address(honeyVault)), balance);
+        assertEq(HONEYBERA_LP.balanceOf(address(honeyLocker)), balance);
 
         // withdraw lp tokens now
-        honeyVault.withdrawLPToken(address(HONEYBERA_LP), balance);
+        honeyLocker.withdrawLPToken(address(HONEYBERA_LP), balance);
         assertEq(HONEYBERA_LP.balanceOf(THJ), balance);
-        assertEq(HONEYBERA_LP.balanceOf(address(honeyVault)), 0);
+        assertEq(HONEYBERA_LP.balanceOf(address(honeyLocker)), 0);
     }
 }

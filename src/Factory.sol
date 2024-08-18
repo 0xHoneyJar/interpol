@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {HoneyVault} from "./HoneyVault.sol";
+import {HoneyLocker} from "./HoneyLocker.sol";
 
 contract Factory {
     /*###############################################################
                             EVENTS
     ###############################################################*/
-    event NewVault(address indexed owner, address vault);
+    event NewLocker(address indexed owner, address locker);
     /*###############################################################
                             STORAGE
     ###############################################################*/
@@ -25,10 +25,10 @@ contract Factory {
         address _owner,
         address _referral,
         bool _unlocked
-    ) external returns (HoneyVault) {
-        HoneyVault vault = new HoneyVault();
-        vault.initialize(_owner, HONEY_QUEEN, _referral, _unlocked);
-        emit NewVault(_owner, address(vault));
-        return vault;
+    ) external returns (HoneyLocker) {
+        HoneyLocker locker = new HoneyLocker();
+        locker.initialize(_owner, HONEY_QUEEN, _referral, _unlocked);
+        emit NewLocker(_owner, address(locker));
+        return locker;
     }
 }

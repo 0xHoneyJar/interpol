@@ -6,7 +6,7 @@ import {IBGT} from "./utils/IBGT.sol";
 
 /*
     HoneyQueen is the ground source of truth as to which contracts
-    are legit. It is used by HoneyVaults to know which contracts
+    are legit. It is used by HoneyLockers to know which contracts
     they can safely stake in.
 */
 // prettier-ignore
