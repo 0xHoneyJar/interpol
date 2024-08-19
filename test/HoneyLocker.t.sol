@@ -17,6 +17,10 @@ import {IStakingContract} from "../src/utils/IStakingContract.sol";
 
 interface IBGT {
     event Redeem(address indexed from, address indexed receiver, uint256 amount);
+    event QueueBoost(address indexed sender, address indexed validator, uint128 amount);
+    event CancelBoost(address indexed sender, address indexed validator, uint128 amount);
+    event ActivateBoost(address indexed sender, address indexed validator);
+    event DropBoost(address indexed sender, address indexed validator, uint128 amount);
 
     function minter() external view returns (address);
     function mint(address distributor, uint256 amount) external;
@@ -319,34 +323,4 @@ contract HoneyLockerTest is Test {
         vm.expectRevert(HoneyLocker.SelectorNotAllowed.selector);
         honeyLocker.claimRewards(address(HONEYBERA_STAKING), abi.encodeWithSignature("withdraw(uint256)", balance));
     }
-
-    // function test_boosting() external prankAsTHJ {
-    //     uint256 balance = HONEYBERA_LP.balanceOf(THJ);
-    //     HONEYBERA_LP.approve(address(honeyLocker), balance);
-    //     honeyLocker.depositAndLock(address(HONEYBERA_LP), balance, expiration);
-
-    //     uint256 bgtBalance = 10e18;
-    //     // mint some BGT aka rewards, claim them which triggers boost queue
-    //     mintBGT(address(honeyLocker), bgtBalance);
-    //     // claiming rewards should trigger boost activation
-    //     honeyLocker.claimRewards(
-    //         address(HONEYBERA_STAKING),
-    //         abi.encodeWithSignature("getReward(address)", address(honeyLocker))
-    //     );
-
-    //     // move forward block wise enough for boost activation to be ok
-    //     vm.roll(vm.getBlockNumber() + 10000);
-
-    //     honeyLocker.claimRewards(
-    //         address(HONEYBERA_STAKING),
-    //         abi.encodeWithSignature("getReward(address)", address(honeyLocker))
-    //     );
-
-    //     // now burn BGT for BERA
-    //     // just check for Redeem event, we expect fees etc to be correct
-    //     // based on the specific test for that
-    //     vm.expectEmit(true, false, false, true, address(BGT));
-    //     emit IBGT.Redeem(address(honeyLocker), address(honeyLocker), bgtBalance);
-    //     honeyLocker.burnBGTForBERA(bgtBalance);
-    // }
 }
