@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {LibString} from "solady/utils/LibString.sol";
@@ -10,8 +10,6 @@ import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {Factory} from "../src/Factory.sol";
 import {HoneyLockerV2} from "./mocks/HoneyLockerV2.sol";
-import {FakeLocker} from "./mocks/FakeLocker.sol";
-import {FakeGauge} from "./mocks/FakeGauge.sol";
 import {GaugeAsNFT} from "./mocks/GaugeAsNFT.sol";
 import {IStakingContract} from "../src/utils/IStakingContract.sol";
 
@@ -64,6 +62,7 @@ contract HoneyLockerTest is Test {
         vm.startPrank(THJ);
         // setup honeyqueen stuff
         honeyQueen = new HoneyQueen(treasury, address(BGT));
+        honeyQueen.setAutomaton(address(0xaaaa));
         // prettier-ignore
         honeyQueen.setProtocolOfTarget(address(HONEYBERA_STAKING), PROTOCOL);
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("stake(uint256)")), "stake", PROTOCOL, true);
@@ -175,6 +174,31 @@ contract HoneyLockerTest is Test {
         honeyLocker.claimRewards(
             address(HONEYBERA_STAKING), abi.encodeWithSignature("getReward(address)", address(honeyLocker))
         );
+        // balance should have increased!
+        uint256 bgtBalanceAfter = BGT.balanceOf(address(honeyLocker));
+        // prettier-ignore
+        assertTrue(bgtBalanceAfter > bgtBalanceBefore, "BGT balance did not increase!");
+    }
+
+    function test_claimRewardsWithAutomaton() external prankAsTHJ {
+        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
+        HONEYBERA_LP.approve(address(honeyLocker), balance);
+        honeyLocker.depositAndLock(address(HONEYBERA_LP), balance, expiration);
+        honeyLocker.stake(
+            address(HONEYBERA_LP),
+            address(HONEYBERA_STAKING),
+            balance,
+            abi.encodeWithSignature("stake(uint256)", balance)
+        );
+
+        uint256 bgtBalanceBefore = BGT.balanceOf(address(honeyLocker));
+        // deal some BGT
+        StdCheats.deal(address(BGT), address(honeyLocker), 1);
+        vm.startPrank(honeyQueen.automaton());
+        honeyLocker.claimRewards(
+            address(HONEYBERA_STAKING), abi.encodeWithSignature("getReward(address)", address(honeyLocker))
+        );
+        vm.stopPrank();
         // balance should have increased!
         uint256 bgtBalanceAfter = BGT.balanceOf(address(honeyLocker));
         // prettier-ignore

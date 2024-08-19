@@ -99,6 +99,10 @@ contract HoneyQueen is Ownable {
     function setValidator(address _validator) external onlyOwner {
         validator = _validator;
     }
+
+    function setAutomaton(address _automaton) external onlyOwner {
+        automaton = _automaton;
+    }
     /*###############################################################
                             VIEW LOGIC
     ###############################################################*/

@@ -64,6 +64,16 @@ contract HoneyLocker is TokenReceiver, Ownable {
                             MODIFIERS
     ###############################################################*/
 
+    modifier onlyOwnerOrMigratingVault() {
+        if (msg.sender != owner() && owner() != Ownable(msg.sender).owner()) revert Unauthorized();
+        _;
+    }
+
+    modifier onlyOwnerOrAutomaton() {
+        if (msg.sender != owner() && msg.sender != HONEY_QUEEN.automaton()) revert Unauthorized();
+        _;
+    }
+
     modifier onlyUnblockedTokens(address _token) {
         if (!unlocked && HONEY_QUEEN.isTokenBlocked(_token)) revert TokenBlocked();
         _;
@@ -169,6 +179,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
         if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyLocker.codehash)) {
             revert MigrationNotEnabled();
         }
+
         for (uint256 i; i < _LPTokens.length; i++) {
             uint256 balance = ERC20(_LPTokens[i]).balanceOf(address(this));
             // send to new locker and deposit and lock
@@ -185,13 +196,28 @@ contract HoneyLocker is TokenReceiver, Ownable {
     */
     function claimRewards(address _stakingContract, bytes memory data)
         external
-        onlyOwner
+        onlyOwnerOrAutomaton
         onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "rewards", data)
     {
         (bool success,) = _stakingContract.call(data);
         if (!success) revert ClaimRewardsFailed();
         emit RewardsClaimed(_stakingContract);
+    }
+
+    function depositAndLock(address _LPToken, uint256 _amount, uint256 _expiration) external onlyOwnerOrMigratingVault {
+        // we only allow subsequent deposits of the same token IF the
+        // expiration is the same or greater
+        if (!unlocked && expirations[_LPToken] != 0 && _expiration < expirations[_LPToken]) {
+            revert ExpirationNotMatching();
+        }
+        // set expiration to 1 so token is marked as lp token
+        expirations[_LPToken] = unlocked ? 1 : _expiration;
+        // tokens have to be transfered to have accurate balance tracking
+        ERC20(_LPToken).transferFrom(msg.sender, address(this), _amount);
+
+        emit Deposited(_LPToken, _amount);
+        emit LockedUntil(_LPToken, _expiration);
     }
     /*######################### BGT MANAGEMENT #########################*/
 
@@ -249,22 +275,6 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /*###############################################################
                             PUBLIC LOGIC
     ###############################################################*/
-
-    function depositAndLock(address _LPToken, uint256 _amount, uint256 _expiration) external {
-        // we only allow subsequent deposits of the same token IF the
-        // expiration is the same
-        if (!unlocked && expirations[_LPToken] != 0 && _expiration != expirations[_LPToken]) {
-            revert ExpirationNotMatching();
-        }
-        // set expiration to 1 so token is marked as lp token
-        expirations[_LPToken] = unlocked ? 1 : _expiration;
-        // tokens have to be transfered to have accurate balance tracking
-        ERC20(_LPToken).transferFrom(msg.sender, address(this), _amount);
-
-        emit Deposited(_LPToken, _amount);
-        emit LockedUntil(_LPToken, _expiration);
-    }
-
     function activateBoost(address _validator) external {
         HONEY_QUEEN.BGT().activateBoost(_validator);
     }
