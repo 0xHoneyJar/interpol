@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {LibClone} from "solady/utils/LibClone.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
@@ -9,7 +8,6 @@ import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
-import {IBGT} from "./utils/IBGT.sol";
 
 /*
     The HoneyLocker is designed in such a way that it's multiple LP tokens
@@ -174,17 +172,16 @@ contract HoneyLocker is TokenReceiver, Ownable {
 
     // issue is that new honey locker could be a fake and unlock tokens
     // assumption is that user unstaked before
-    function migrate(address[] calldata _LPTokens, address payable _newHoneyLocker) external onlyOwner {
+    function migrate(address[] calldata _LPTokens, uint256[] calldata _amountsOrIds ,address payable _newHoneyLocker) external onlyOwner {
         // check migration is authorized based on codehashes
         if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyLocker.codehash)) {
             revert MigrationNotEnabled();
         }
 
         for (uint256 i; i < _LPTokens.length; i++) {
-            uint256 balance = ERC20(_LPTokens[i]).balanceOf(address(this));
             // send to new locker and deposit and lock
-            ERC20(_LPTokens[i]).approve(address(_newHoneyLocker), balance);
-            HoneyLocker(_newHoneyLocker).depositAndLock(_LPTokens[i], balance, expirations[_LPTokens[i]]);
+            ERC20(_LPTokens[i]).approve(address(_newHoneyLocker), _amountsOrIds[i]);
+            HoneyLocker(_newHoneyLocker).depositAndLock(_LPTokens[i], _amountsOrIds[i], expirations[_LPTokens[i]]);
 
             emit Migrated(_LPTokens[i], address(this), _newHoneyLocker);
         }
@@ -205,7 +202,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
         emit RewardsClaimed(_stakingContract);
     }
 
-    function depositAndLock(address _LPToken, uint256 _amount, uint256 _expiration) external onlyOwnerOrMigratingVault {
+    function depositAndLock(address _LPToken, uint256 _amountOrId, uint256 _expiration) external onlyOwnerOrMigratingVault {
         // we only allow subsequent deposits of the same token IF the
         // expiration is the same or greater
         if (!unlocked && expirations[_LPToken] != 0 && _expiration < expirations[_LPToken]) {
@@ -213,10 +210,14 @@ contract HoneyLocker is TokenReceiver, Ownable {
         }
         // set expiration to 1 so token is marked as lp token
         expirations[_LPToken] = unlocked ? 1 : _expiration;
-        // tokens have to be transfered to have accurate balance tracking
-        ERC20(_LPToken).transferFrom(msg.sender, address(this), _amount);
+        // doesn't matter if it's an ERC721 or ERC20, both uses same transferFrom
+        if (isERC721(_LPToken)) {
+            ERC721(_LPToken).transferFrom(msg.sender, address(this), _amountOrId);
+        } else {
+            ERC20(_LPToken).transferFrom(msg.sender, address(this), _amountOrId);
+        }
 
-        emit Deposited(_LPToken, _amount);
+        emit Deposited(_LPToken, _amountOrId);
         emit LockedUntil(_LPToken, _expiration);
     }
     /*######################### BGT MANAGEMENT #########################*/
@@ -272,6 +273,9 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /*###############################################################
                             VIEW LOGIC
     ###############################################################*/
+    function isERC721(address _token) public view returns (bool) {
+        return ERC721(_token).supportsInterface(0x80ac58cd);
+    }
     /*###############################################################
                             PUBLIC LOGIC
     ###############################################################*/
