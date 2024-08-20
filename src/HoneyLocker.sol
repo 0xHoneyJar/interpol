@@ -9,6 +9,8 @@ import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
 
+import {console} from "forge-std/console.sol";
+
 /*
     The HoneyLocker is designed in such a way that it's multiple LP tokens
     but single deposit for each.
@@ -211,11 +213,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
         // set expiration to 1 so token is marked as lp token
         expirations[_LPToken] = unlocked ? 1 : _expiration;
         // doesn't matter if it's an ERC721 or ERC20, both uses same transferFrom
-        if (isERC721(_LPToken)) {
-            ERC721(_LPToken).transferFrom(msg.sender, address(this), _amountOrId);
-        } else {
-            ERC20(_LPToken).transferFrom(msg.sender, address(this), _amountOrId);
-        }
+        ERC721(_LPToken).transferFrom(msg.sender, address(this), _amountOrId);
 
         emit Deposited(_LPToken, _amountOrId);
         emit LockedUntil(_LPToken, _expiration);
@@ -274,7 +272,11 @@ contract HoneyLocker is TokenReceiver, Ownable {
                             VIEW LOGIC
     ###############################################################*/
     function isERC721(address _token) public view returns (bool) {
-        return ERC721(_token).supportsInterface(0x80ac58cd);
+        try ERC721(_token).supportsInterface(0x80ac58cd) returns (bool isSupported) {
+            return isSupported;
+        } catch {
+            return false;
+        }
     }
     /*###############################################################
                             PUBLIC LOGIC

@@ -78,6 +78,10 @@ contract KodiakTest is Test {
         vm.label(address(KODIAKV3), "KODIAK-V3");
         vm.label(address(this), "Tests");
         vm.label(THJ, "THJ");
+
+
+        // mint some LP tokens
+        StdCheats.deal(address(HONEYBERA_LP), THJ, 1e18);
     }
 
     modifier prankAsTHJ() {
