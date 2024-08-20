@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
+import {ERC721} from "solady/tokens/ERC721.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
@@ -46,9 +47,10 @@ contract KodiakTest is Test {
     XKDK public constant xKDK = XKDK(0x414B50157a5697F14e91417C5275A7496DcF429D);
     ERC20 public constant HONEYBERA_LP = ERC20(0x12C195768f65F282EA5F1B5C42755FBc910B0D8F);
     KodiakStaking public constant KODIAK_STAKING = KodiakStaking(0x1878eb1cA6Da5e2fC4B5213F7D170CA668A0E225);
+    ERC721 public constant KODIAKV3 = ERC721(0xC0568C6E9D5404124c8AA9EfD955F3f14C8e64A6);
 
     function setUp() public {
-        vm.createSelectFork("https://bartio.rpc.berachain.com/", uint256(1791773));
+        vm.createSelectFork("https://bartio.rpc.berachain.com/", uint256(3032962));
         expiration = block.timestamp + 30 days;
 
         vm.startPrank(THJ);
@@ -73,8 +75,13 @@ contract KodiakTest is Test {
         vm.label(address(honeyQueen), "HoneyQueen");
         vm.label(address(HONEYBERA_LP), "HONEYBERA_LP");
         vm.label(address(KODIAK_STAKING), "KODIAK_STAKING");
+        vm.label(address(KODIAKV3), "KODIAK-V3");
         vm.label(address(this), "Tests");
         vm.label(THJ, "THJ");
+
+
+        // mint some LP tokens
+        StdCheats.deal(address(HONEYBERA_LP), THJ, 1e18);
     }
 
     modifier prankAsTHJ() {
@@ -104,6 +111,21 @@ contract KodiakTest is Test {
             LPBalance,
             abi.encodeWithSelector(bytes4(keccak256("stakeLocked(uint256,uint256)")), LPBalance, 30 days)
         );
+    }
+
+    function test_depositV3() external prankAsTHJ {
+        uint256 nftId = 6658;
+
+        StdCheats.dealERC721(address(KODIAKV3), THJ, nftId);
+
+        KODIAKV3.approve(address(honeyLocker), nftId);
+
+
+        vm.expectEmit(true, false, false, true, address(honeyLocker));
+        emit HoneyLocker.Deposited(address(KODIAKV3), nftId);
+        vm.expectEmit(true, false, false, true, address(honeyLocker));
+        emit HoneyLocker.LockedUntil(address(KODIAKV3), expiration);
+        honeyLocker.depositAndLock(address(KODIAKV3), nftId, expiration);
     }
 
     function test_unstakeSingle() external prankAsTHJ {

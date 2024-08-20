@@ -316,7 +316,7 @@ contract HoneyLockerTest is Test {
 
         // migration should fail because haven't set it in honey queen
         vm.expectRevert(HoneyLocker.MigrationNotEnabled.selector);
-        honeyLocker.migrate(SLA.addresses(address(HONEYBERA_LP)), payable(address(honeyLockerV2)));
+        honeyLocker.migrate(SLA.addresses(address(HONEYBERA_LP)), SLA.uint256s(balance), payable(address(honeyLockerV2)));
 
         // set hashcode in honeyqueen then attempt migration
         honeyQueen.setMigrationFlag(true, address(honeyLocker).codehash, address(honeyLockerV2).codehash);
@@ -328,7 +328,7 @@ contract HoneyLockerTest is Test {
         emit HoneyLocker.LockedUntil(address(HONEYBERA_LP), expiration);
         vm.expectEmit(true, true, true, false, address(honeyLocker));
         emit HoneyLocker.Migrated(address(HONEYBERA_LP), address(honeyLocker), address(honeyLockerV2));
-        honeyLocker.migrate(SLA.addresses(address(HONEYBERA_LP)), payable(address(honeyLockerV2)));
+        honeyLocker.migrate(SLA.addresses(address(HONEYBERA_LP)), SLA.uint256s(balance), payable(address(honeyLockerV2)));
         assertEq(HONEYBERA_LP.balanceOf(address(honeyLockerV2)), balance);
     }
 
