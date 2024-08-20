@@ -212,7 +212,8 @@ contract HoneyLocker is TokenReceiver, Ownable {
         }
         // set expiration to 1 so token is marked as lp token
         expirations[_LPToken] = unlocked ? 1 : _expiration;
-        // doesn't matter if it's an ERC721 or ERC20, both uses same transferFrom
+        // using transferFrom from ERC721 because same signature for ERC20
+        // with the difference that ERC721 doesn't expect a return value
         ERC721(_LPToken).transferFrom(msg.sender, address(this), _amountOrId);
 
         emit Deposited(_LPToken, _amountOrId);
