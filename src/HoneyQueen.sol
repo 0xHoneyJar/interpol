@@ -17,6 +17,14 @@ contract HoneyQueen is Ownable {
     /*###############################################################
                             EVENTS
     ###############################################################*/
+    event ProtocolOfTargetSet(address targetContract, string protocol);
+    event SelectorAllowedForProtocol(bytes4 selector, string action, string protocol, bool allowed);
+    event TokenBlocked(address token, bool blocked);
+    event MigrationFlagSet(bytes32 fromCodeHash, bytes32 toCodeHash, bool isEnabled);
+    event TreasurySet(address oldTreasury, address newTreasury);
+    event AutomatonSet(address oldAutomaton, address newAutomaton);
+    event ValidatorSet(address oldValidator, address newValidator);
+    event FeesSet(uint256 oldFees, uint256 newFees);
     /*###############################################################
                             STRUCTS
     ###############################################################*/
@@ -57,6 +65,7 @@ contract HoneyQueen is Ownable {
         string memory _protocol
     ) external onlyOwner {
         protocolOfTarget[_targetContract] = _protocol;
+        emit ProtocolOfTargetSet(_targetContract, _protocol);
     }
 
     /*
@@ -71,6 +80,7 @@ contract HoneyQueen is Ownable {
         bool _isAllowed
     ) external onlyOwner {
         isSelectorAllowedForProtocol[_selector][_action][_protocol] = _isAllowed;
+        emit SelectorAllowedForProtocol(_selector, _action, _protocol, _isAllowed);
     }
 
     function setIsTokenBlocked(
@@ -78,6 +88,7 @@ contract HoneyQueen is Ownable {
         bool _isBlocked
     ) external onlyOwner {
         isTokenBlocked[_token] = _isBlocked;
+        emit TokenBlocked(_token, _isBlocked);
     }
 
     function setMigrationFlag(
@@ -86,22 +97,27 @@ contract HoneyQueen is Ownable {
         bytes32 _toCodeHash
     ) external onlyOwner {
         isMigrationEnabled[_fromCodeHash][_toCodeHash] = _isMigrationEnabled;
+        emit MigrationFlagSet(_fromCodeHash, _toCodeHash, _isMigrationEnabled);
     }
 
     function setTreasury(address _treasury) external onlyOwner {
         treasury = _treasury;
+        emit TreasurySet(treasury, _treasury);
     }
 
     function setFees(uint256 _fees) external onlyOwner {
         fees = _fees;
+        emit FeesSet(fees, _fees);
     }
 
     function setValidator(address _validator) external onlyOwner {
         validator = _validator;
+        emit ValidatorSet(validator, _validator);
     }
 
     function setAutomaton(address _automaton) external onlyOwner {
         automaton = _automaton;
+        emit AutomatonSet(automaton, _automaton);
     }
     /*###############################################################
                             VIEW LOGIC
