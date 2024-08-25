@@ -9,8 +9,6 @@ import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
 
-import {console} from "forge-std/console.sol";
-
 /*
     The HoneyLocker is designed in such a way that it's multiple LP tokens
     but single deposit for each.
@@ -237,11 +235,8 @@ contract HoneyLocker is TokenReceiver, Ownable {
     function withdrawBERA(uint256 _amount) public onlyOwner {
         address treasury = HONEY_QUEEN.treasury();
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
-        STL.safeTransferETH(treasury, fees);
-        STL.safeTransferETH(msg.sender, _amount - fees);
-        /*!*/
+        HONEY_QUEEN.beekeeper().distributeFees(referral, address(0), fees);
         emit Withdrawn(address(0), _amount - fees);
-        /*!*/
         emit Fees(referral, address(0), fees);
     }
 
@@ -250,11 +245,8 @@ contract HoneyLocker is TokenReceiver, Ownable {
         if (expirations[_token] != 0) revert CannotBeLPToken();
         address treasury = HONEY_QUEEN.treasury();
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
-        ERC20(_token).transfer(treasury, fees);
-        ERC20(_token).transfer(msg.sender, _amount - fees);
-        /*!*/
+        HONEY_QUEEN.beekeeper().distributeFees(referral, _token, fees);
         emit Withdrawn(_token, _amount - fees);
-        /*!*/
         emit Fees(referral, _token, fees);
     }
 
