@@ -7,6 +7,7 @@ import {ERC721} from "solady/tokens/ERC721.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
+import {Beekeeper} from "./Beekeeper.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
 
 /*
@@ -43,7 +44,6 @@ contract HoneyLocker is TokenReceiver, Ownable {
     event Unstaked(address indexed stakingContract, address indexed token, uint256 amount);
     event Withdrawn(address indexed token, uint256 amount);
     event Migrated(address indexed token, address indexed oldLocker, address indexed newLocker);
-    event Fees(address indexed referral, address token, uint256 amount);
     event RewardsClaimed(address stakingContract);
     /*###############################################################
                             STRUCTS
@@ -233,23 +233,21 @@ contract HoneyLocker is TokenReceiver, Ownable {
 
     /*###############################################################*/
     function withdrawBERA(uint256 _amount) public onlyOwner {
-        address treasury = HONEY_QUEEN.treasury();
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
         STL.safeTransferETH(msg.sender, _amount - fees);
         HONEY_QUEEN.beekeeper().distributeFees{value: fees}(referral, address(0), fees);
         emit Withdrawn(address(0), _amount - fees);
-        emit Fees(referral, address(0), fees);
     }
 
     function withdrawERC20(address _token, uint256 _amount) external onlyUnblockedTokens(_token) onlyOwner {
         // cannot withdraw any lp token that has an expiration
         if (expirations[_token] != 0) revert CannotBeLPToken();
-        address treasury = HONEY_QUEEN.treasury();
+        Beekeeper beekeeper = HONEY_QUEEN.beekeeper();
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
         ERC20(_token).transfer(msg.sender, _amount - fees);
-        HONEY_QUEEN.beekeeper().distributeFees(referral, _token, fees);
+        ERC20(_token).transfer(address(beekeeper), fees);
+        beekeeper.distributeFees(referral, _token, fees);
         emit Withdrawn(_token, _amount - fees);
-        emit Fees(referral, _token, fees);
     }
 
     function withdrawERC721(address _token, uint256 _id) external onlyUnblockedTokens(_token) onlyOwner {

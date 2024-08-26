@@ -2,7 +2,6 @@
 pragma solidity ^0.8.23;
 
 import {Ownable} from "solady/auth/Ownable.sol";
-import {ERC20} from "solady/tokens/ERC20.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 
 contract Beekeeper is Ownable {
@@ -18,7 +17,7 @@ contract Beekeeper is Ownable {
                             STORAGE
     ###############################################################*/
     address public treasury;
-    uint256 public standardReferrerFeeShare = 3000; // 30%
+    uint256 public standardReferrerFeeShare = 3000; // in bps 30%
     mapping(address referrer => bool authorized) public isReferrer;
     mapping(address referrer => address overridingReferrer) public referrerOverrides;
     mapping(address referrer => uint256 shareOfFeeInBps) public referrerFeeShare;
