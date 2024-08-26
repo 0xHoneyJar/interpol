@@ -60,7 +60,7 @@ contract Beekeeper is Ownable {
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
-    function distributeFees(address _referrer, address _token, uint256 _amount) external {
+    function distributeFees(address _referrer, address _token, uint256 _amount) external payable {
         bool isBera = _token == address(0);
         // if not an authorized referrer, send everything to treasury
         if (!isReferrer[_referrer]) {
