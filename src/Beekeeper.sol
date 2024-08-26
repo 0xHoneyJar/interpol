@@ -20,7 +20,7 @@ contract Beekeeper is Ownable {
     uint256 public standardReferrerFeeShare = 3000; // in bps 30%
     mapping(address referrer => bool authorized) public isReferrer;
     mapping(address referrer => address overridingReferrer) public referrerOverrides;
-    mapping(address referrer => uint256 shareOfFeeInBps) public referrerFeeShare;
+    mapping(address referrer => uint256 shareOfFeeInBps) internal _referrerFeeShare;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -51,11 +51,14 @@ contract Beekeeper is Ownable {
     }
     function setReferrerFeeShare(address _referrer, uint256 _shareOfFeeInBps) external onlyOwner {
         if (!isReferrer[_referrer]) revert NotAReferrer();
-        referrerFeeShare[_referrer] = _shareOfFeeInBps;
+        _referrerFeeShare[_referrer] = _shareOfFeeInBps;
     }
     /*###############################################################
-                            INTERNAL ONLY
+                            VIEW ONLY
     ###############################################################*/
+    function referrerFeeShare(address _referrer) public view returns (uint256) {
+        return _referrerFeeShare[_referrer] != 0 ? _referrerFeeShare[_referrer] : standardReferrerFeeShare;
+    }
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
@@ -69,7 +72,7 @@ contract Beekeeper is Ownable {
         }
         address referrer = referrerOverrides[_referrer] != address(0) ? referrerOverrides[_referrer] : _referrer;
         // if no specified referrer fee share, use the standard one
-        uint256 referrerFeeShareInBps = referrerFeeShare[referrer] != 0 ? referrerFeeShare[referrer] : standardReferrerFeeShare;
+        uint256 referrerFeeShareInBps = referrerFeeShare(referrer);
         uint256 referrerFee = (_amount * referrerFeeShareInBps) / 10000;
 
         isBera ? STL.safeTransferETH(referrer, referrerFee) : STL.safeTransfer(_token, referrer, referrerFee);

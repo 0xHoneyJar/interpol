@@ -131,4 +131,60 @@ contract BeekeeperTest is Test {
 
         honeyLocker.withdrawERC20(address(token), amountOfToken);
     }
+
+    function test_referrerOverride() external prankAsTHJ {
+        address newReferrer = address(0x1234);
+        beekeeper.setReferrerOverride(referral, newReferrer);
+
+        uint256 amountOfBera = 10e18;
+        vm.deal(address(honeyLocker), amountOfBera);
+
+        string[] memory inputs = new string[](8);
+        inputs[0] = "python3";
+        inputs[1] = "test/utils/fees.py";
+        inputs[2] = "--fees-bps";
+        inputs[3] = honeyQueen.fees().toString();
+        inputs[4] = "--referrer-fees-bps";
+        inputs[5] = beekeeper.standardReferrerFeeShare().toString();
+        inputs[6] = "--amount";
+        inputs[7] = amountOfBera.toString();
+        bytes memory res = vm.ffi(inputs);
+        (uint256 pythonTreasuryFees, uint256 pythonReferrerFees, uint256 pythonWithdrawn) = abi.decode(res, (uint256, uint256, uint256));
+
+        vm.expectEmit(true, true, false, true, address(beekeeper));
+        emit Beekeeper.FeesDistributed(newReferrer, address(0), pythonReferrerFees);
+
+        honeyLocker.withdrawBERA(amountOfBera);
+
+        // check balances
+        assertEq(newReferrer.balance, pythonReferrerFees);
+        assertEq(referral.balance, 0);
+    }
+
+    function test_referrerFeeShare() external prankAsTHJ {
+        beekeeper.setReferrerFeeShare(referral, 9000);
+
+        uint256 amountOfBera = 10e18;
+        vm.deal(address(honeyLocker), amountOfBera);
+
+        string[] memory inputs = new string[](8);
+        inputs[0] = "python3";
+        inputs[1] = "test/utils/fees.py";
+        inputs[2] = "--fees-bps";
+        inputs[3] = honeyQueen.fees().toString();
+        inputs[4] = "--referrer-fees-bps";
+        inputs[5] = beekeeper.referrerFeeShare(referral).toString();
+        inputs[6] = "--amount";
+        inputs[7] = amountOfBera.toString();
+        bytes memory res = vm.ffi(inputs);
+        (uint256 pythonTreasuryFees, uint256 pythonReferrerFees, uint256 pythonWithdrawn) = abi.decode(res, (uint256, uint256, uint256));
+
+        vm.expectEmit(true, true, false, true, address(beekeeper));
+        emit Beekeeper.FeesDistributed(referral, address(0), pythonReferrerFees);
+
+        honeyLocker.withdrawBERA(amountOfBera);
+
+        // check balances
+        assertEq(referral.balance, pythonReferrerFees);
+    }
 }
