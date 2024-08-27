@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {Ownable} from "solady/auth/Ownable.sol";
+import {Beekeeper} from "./Beekeeper.sol";
 import {IBGT} from "./utils/IBGT.sol";
 
 /*
@@ -35,6 +36,7 @@ contract HoneyQueen is Ownable {
     address public automaton; // address responsible for executing automated calls
     address public validator;
     uint256 public fees = 200; // in bps
+    Beekeeper public immutable beekeeper;
     IBGT public immutable BGT;
     mapping(address targetContract => string protocol) public protocolOfTarget;
     mapping(bytes4 selector => mapping(string action => mapping(string protocol => bool allowed)))
@@ -45,11 +47,12 @@ contract HoneyQueen is Ownable {
         public isMigrationEnabled;
 
     /*###############################################################
-                            INITIALIZER
+                            CONSTRUCTOR
     ###############################################################*/
-    constructor(address _treasury, address _BGT) {
+    constructor(address _treasury, address _BGT, address _beekeeper) {
         treasury = _treasury;
         BGT = IBGT(_BGT);
+        beekeeper = Beekeeper(_beekeeper);
         _initializeOwner(msg.sender);
     }
     /*###############################################################

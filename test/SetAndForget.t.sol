@@ -1,18 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {Test, console} from "forge-std/Test.sol";
-import {StdCheats} from "forge-std/StdCheats.sol";
+import {Test} from "forge-std/Test.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {LibString} from "solady/utils/LibString.sol";
-import {Solarray as SLA} from "solarray/Solarray.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
+import {Beekeeper} from "../src/Beekeeper.sol";
 import {Factory} from "../src/Factory.sol";
-import {HoneyLockerV2} from "./mocks/HoneyLockerV2.sol";
-import {FakeLocker} from "./mocks/FakeLocker.sol";
-import {FakeGauge} from "./mocks/FakeGauge.sol";
-import {GaugeAsNFT} from "./mocks/GaugeAsNFT.sol";
 import {IStakingContract} from "../src/utils/IStakingContract.sol";
 
 interface IBGT {
@@ -26,7 +21,7 @@ contract HoneyLockerTest is Test {
     Factory public factory;
     HoneyLocker public honeyLocker;
     HoneyQueen public honeyQueen;
-
+    Beekeeper public beekeeper;
     uint256 public expiration;
     address public constant THJ = 0x4A8c9a29b23c4eAC0D235729d5e0D035258CDFA7;
     address public constant referral = address(0x5efe5a11);
@@ -47,8 +42,10 @@ contract HoneyLockerTest is Test {
         expiration = block.timestamp + 30 days;
 
         vm.startPrank(THJ);
+        beekeeper = new Beekeeper(THJ, treasury);
+        beekeeper.setReferrer(referral, true);
         // setup honeyqueen stuff
-        honeyQueen = new HoneyQueen(treasury, address(BGT));
+        honeyQueen = new HoneyQueen(treasury, address(BGT), address(beekeeper));
         // prettier-ignore
         honeyQueen.setProtocolOfTarget(address(HONEYBERA_STAKING), PROTOCOL);
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("stake(uint256)")), "stake", PROTOCOL, true);

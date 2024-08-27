@@ -1,25 +1,35 @@
 import argparse
 
+
+# Returns the fees taken to treasury, the fees given to referrer, and the amount left to withdraw for the user
 def main(args):
     fees_bps = args.fees_bps
     amount = args.amount
-
-    if fees_bps is None or amount is None:
-        print("Both --fees-bps and --amount arguments are required.")
+    referrer_fees_bps = args.referrer_fees_bps
+    if fees_bps is None or amount is None or referrer_fees_bps is None:
+        print("All arguments are required.")
         return
 
     fees = int((amount * fees_bps) / 10000)
-    fees_hex = "0x{:064x}".format(fees)
-    amount_left_hex = "{:064x}".format(amount - fees)
-    print(f"{fees_hex}{amount_left_hex}")
+    referrer_fees = int((fees * referrer_fees_bps) / 10000)
+    treasury_fees = fees - referrer_fees
 
-def parse_args(): 
+    treasury_fees_hex = "{:064x}".format(treasury_fees)
+    referrer_fees_hex = "{:064x}".format(referrer_fees)
+    amount_left_hex = "{:064x}".format(amount - fees)
+    print(f"{treasury_fees_hex}{referrer_fees_hex}{amount_left_hex}")
+
+
+def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fees-bps", type=int)
-    parser.add_argument("--amount", type=int)
+    parser.add_argument(
+        "--fees-bps", type=int
+    )  # total fees in bps, to be split between treasury and referrer
+    parser.add_argument("--referrer-fees-bps", type=int)  # fees given to referrer
+    parser.add_argument("--amount", type=int)  # amount of tokens the user gets
     return parser.parse_args()
 
 
-if __name__ == '__main__':
-    args = parse_args() 
+if __name__ == "__main__":
+    args = parse_args()
     main(args)

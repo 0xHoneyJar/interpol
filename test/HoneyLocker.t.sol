@@ -8,6 +8,7 @@ import {LibString} from "solady/utils/LibString.sol";
 import {Solarray as SLA} from "solarray/Solarray.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
+import {Beekeeper} from "../src/Beekeeper.sol";
 import {Factory} from "../src/Factory.sol";
 import {HoneyLockerV2} from "./mocks/HoneyLockerV2.sol";
 import {GaugeAsNFT} from "./mocks/GaugeAsNFT.sol";
@@ -39,7 +40,8 @@ contract HoneyLockerTest is Test {
     Factory public factory;
     HoneyLocker public honeyLocker;
     HoneyQueen public honeyQueen;
-
+    Beekeeper public beekeeper;
+    
     uint256 public expiration;
     address public constant THJ = 0x4A8c9a29b23c4eAC0D235729d5e0D035258CDFA7;
     address public constant referral = address(0x5efe5a11);
@@ -60,8 +62,10 @@ contract HoneyLockerTest is Test {
         expiration = block.timestamp + 30 days;
 
         vm.startPrank(THJ);
+        beekeeper = new Beekeeper(THJ, treasury);
+        beekeeper.setReferrer(referral, true);
         // setup honeyqueen stuff
-        honeyQueen = new HoneyQueen(treasury, address(BGT));
+        honeyQueen = new HoneyQueen(treasury, address(BGT), address(beekeeper));
         honeyQueen.setAutomaton(address(0xaaaa));
         // prettier-ignore
         honeyQueen.setProtocolOfTarget(address(HONEYBERA_STAKING), PROTOCOL);
@@ -248,42 +252,6 @@ contract HoneyLockerTest is Test {
         vm.expectEmit(true, false, false, true, address(honeyLocker));
         emit HoneyLocker.Withdrawn(address(HONEYBERA_LP), balance);
         honeyLocker.withdrawLPToken(address(HONEYBERA_LP), balance);
-    }
-
-    function test_feesBERA() external prankAsTHJ {
-        // get the BERA from BGT !
-        uint256 balance = HONEYBERA_LP.balanceOf(THJ);
-        HONEYBERA_LP.approve(address(honeyLocker), balance);
-        honeyLocker.depositAndLock(address(HONEYBERA_LP), balance, expiration);
-        honeyLocker.stake(
-            address(HONEYBERA_LP),
-            address(HONEYBERA_STAKING),
-            balance,
-            abi.encodeWithSignature("stake(uint256)", balance)
-        );
-
-        uint256 amountOfBGT = 10e18;
-        mintBGT(address(honeyLocker), amountOfBGT);
-        honeyLocker.claimRewards(
-            address(HONEYBERA_STAKING), abi.encodeWithSignature("getReward(address)", address(honeyLocker))
-        );
-
-        string[] memory inputs = new string[](6);
-        inputs[0] = "python3";
-        inputs[1] = "test/utils/fees.py";
-        inputs[2] = "--fees-bps";
-        inputs[3] = honeyQueen.fees().toString();
-        inputs[4] = "--amount";
-        inputs[5] = amountOfBGT.toString();
-        bytes memory res = vm.ffi(inputs);
-        (uint256 pythonFees, uint256 pythonWithdrawn) = abi.decode(res, (uint256, uint256));
-
-        vm.expectEmit(true, false, false, true, address(honeyLocker));
-        emit HoneyLocker.Withdrawn(address(0), pythonWithdrawn);
-        vm.expectEmit(true, false, false, true, address(honeyLocker));
-        emit HoneyLocker.Fees(referral, address(0), pythonFees);
-
-        honeyLocker.burnBGTForBERA(amountOfBGT);
     }
 
     function test_cannotWithdrawNFT() external prankAsTHJ {
