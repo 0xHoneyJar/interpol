@@ -9,7 +9,7 @@ import {LibString} from "solady/utils/LibString.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {Beekeeper} from "../src/Beekeeper.sol";
-import {Factory} from "../src/Factory.sol";
+import {LockerFactory} from "../src/LockerFactory.sol";
 
 interface KodiakStaking {
     function stakeLocked(uint256 amount, uint256 secs) external;
@@ -17,9 +17,25 @@ interface KodiakStaking {
     function getReward() external view returns (uint256);
     function lockedLiquidityOf(address account) external view returns (uint256);
 
-    event StakeLocked(address indexed user, uint256 amount, uint256 secs, bytes32 kek_id, address source_address);
-    event WithdrawLocked(address indexed user, uint256 amount, bytes32 kek_id, address destination_address);
-    event RewardPaid(address indexed user, uint256 reward, address token_address, address destination_address);
+    event StakeLocked(
+        address indexed user,
+        uint256 amount,
+        uint256 secs,
+        bytes32 kek_id,
+        address source_address
+    );
+    event WithdrawLocked(
+        address indexed user,
+        uint256 amount,
+        bytes32 kek_id,
+        address destination_address
+    );
+    event RewardPaid(
+        address indexed user,
+        uint256 reward,
+        address token_address,
+        address destination_address
+    );
 }
 
 interface XKDK {
@@ -31,7 +47,7 @@ interface XKDK {
 contract KodiakTest is Test {
     using LibString for uint256;
 
-    Factory public factory;
+    LockerFactory public factory;
     HoneyLocker public honeyLocker;
     HoneyQueen public honeyQueen;
     Beekeeper public beekeeper;
@@ -68,9 +84,9 @@ contract KodiakTest is Test {
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("getReward()")), "rewards", PROTOCOL, true);
         honeyQueen.setValidator(THJ);
 
-        factory = new Factory(address(honeyQueen));
+        factory = new LockerFactory(address(honeyQueen));
 
-        honeyLocker = factory.clone(THJ, referral, false);
+        honeyLocker = factory.clone(THJ, referral);
 
         vm.stopPrank();
 

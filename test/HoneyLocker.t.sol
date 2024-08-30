@@ -9,17 +9,33 @@ import {Solarray as SLA} from "solarray/Solarray.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {Beekeeper} from "../src/Beekeeper.sol";
-import {Factory} from "../src/Factory.sol";
+import {LockerFactory} from "../src/LockerFactory.sol";
 import {HoneyLockerV2} from "./mocks/HoneyLockerV2.sol";
 import {GaugeAsNFT} from "./mocks/GaugeAsNFT.sol";
 import {IStakingContract} from "../src/utils/IStakingContract.sol";
 
 interface IBGT {
-    event Redeem(address indexed from, address indexed receiver, uint256 amount);
-    event QueueBoost(address indexed sender, address indexed validator, uint128 amount);
-    event CancelBoost(address indexed sender, address indexed validator, uint128 amount);
+    event Redeem(
+        address indexed from,
+        address indexed receiver,
+        uint256 amount
+    );
+    event QueueBoost(
+        address indexed sender,
+        address indexed validator,
+        uint128 amount
+    );
+    event CancelBoost(
+        address indexed sender,
+        address indexed validator,
+        uint128 amount
+    );
     event ActivateBoost(address indexed sender, address indexed validator);
-    event DropBoost(address indexed sender, address indexed validator, uint128 amount);
+    event DropBoost(
+        address indexed sender,
+        address indexed validator,
+        uint128 amount
+    );
 
     function minter() external view returns (address);
     function mint(address distributor, uint256 amount) external;
@@ -37,7 +53,7 @@ interface IBGTStaker {
 contract HoneyLockerTest is Test {
     using LibString for uint256;
 
-    Factory public factory;
+    LockerFactory public factory;
     HoneyLocker public honeyLocker;
     HoneyQueen public honeyQueen;
     Beekeeper public beekeeper;
@@ -73,8 +89,8 @@ contract HoneyLockerTest is Test {
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("withdraw(uint256)")), "unstake", PROTOCOL, true);
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("getReward(address)")), "rewards", PROTOCOL, true);
         honeyQueen.setValidator(THJ);
-        factory = new Factory(address(honeyQueen));
-        honeyLocker = factory.clone(THJ, referral, false);
+        factory = new LockerFactory(address(honeyQueen));
+        honeyLocker = factory.clone(THJ, referral);
         vm.stopPrank();
 
         vm.label(address(honeyLocker), "HoneyLocker");

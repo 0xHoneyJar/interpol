@@ -3,9 +3,9 @@ pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {Factory} from "../src/Factory.sol";
+import {LockerFactory} from "../src/LockerFactory.sol";
 
-contract FactoryDeploy is Script {
+contract LockerFactoryDeploy is Script {
     using stdJson for string;
     function setUp() public {}
 
@@ -15,9 +15,13 @@ contract FactoryDeploy is Script {
         uint256 pkey = vm.envUint("PRIVATE_KEY");
         address pubkey = vm.addr(pkey);
         vm.startBroadcast(pkey);
-        Factory factory = new Factory(honeyQueen);
+        LockerFactory factory = new LockerFactory(honeyQueen);
         vm.stopBroadcast();
 
-        vm.writeJson(vm.toString(address(factory)), "./script/config.json", ".factory");
+        vm.writeJson(
+            vm.toString(address(factory)),
+            "./script/config.json",
+            ".lockerFactory"
+        );
     }
 }
