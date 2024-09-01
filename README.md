@@ -20,26 +20,36 @@ This is your locker contract, the one that holds your LP tokens. You deposit, st
 
 ### Beekeepr
 
-For some reason, bundling the deployment and verification fails.
-
 ```
-source .env && forge script script/Beekeeper.s.sol:BeekeeperDeploy --broadcast --slow --legacy --rpc-url https://bartio.rpc.berachain.com/
-
-forge verify-contract >address< src/Beekeeper.sol:Beekeeper --verifier-url "https://api.routescan.io/v2/network/testnet/evm/80084/etherscan/api" --etherscan-api-key "verifyContract" --num-of-optimizations 200 --compiler-version 0.8.23 --watch
+source .env && forge script script/Beekeeper.s.sol:BeekeeperDeploy \
+--rpc-url https://bartio.rpc.berachain.com \
+--broadcast \
+--verify \
+--verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
+--etherscan-api-key verifyContract \
+--chain-id 80084 --legacy
 ```
 
 ### Honey Queen
 
 ```
-source .env && forge script script/HoneyQueen.s.sol:HoneyQueenDeploy --broadcast --slow --legacy --rpc-url https://bartio.rpc.berachain.com/
-
-forge verify-contract >address< src/HoneyQueen.sol:HoneyQueen --verifier-url "https://api.routescan.io/v2/network/testnet/evm/80084/etherscan/api" --etherscan-api-key "verifyContract" --num-of-optimizations 200 --compiler-version 0.8.23 --watch
+source .env && forge script script/HoneyQueen.s.sol:HoneyQueenDeploy \
+--rpc-url https://bartio.rpc.berachain.com \
+--broadcast \
+--verify \
+--verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
+--etherscan-api-key verifyContract \
+--chain-id 80084 --legacy
 ```
 
 ### Factory
 
 ```
-source .env && forge script script/Factory.s.sol:FactoryDeploy --broadcast --slow --legacy --rpc-url https://bartio.rpc.berachain.com/
-
-forge verify-contract >address< src/Factory.sol:Factory --verifier-url "https://api.routescan.io/v2/network/testnet/evm/80084/etherscan/api" --etherscan-api-key "verifyContract" --num-of-optimizations 200 --compiler-version 0.8.23 --watch
+source .env && forge script script/LockerFactory.s.sol:LockerFactoryDeploy \
+--rpc-url https://bartio.rpc.berachain.com \
+--broadcast \
+--verify \
+--verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
+--etherscan-api-key verifyContract \
+--chain-id 80084 --legacy
 ```
