@@ -1,13 +1,20 @@
-## HoneyVault
+## InterPol
 
-HoneyVault is a smart contract that allows users to deposit and lock LP tokens without renouncing to the rewards these tokens can yield.
+InterPol is a protocol allowing users to lock their liquidity, no matter the duration, without having to renounce to the rewards possible.
 
-### Supported Protocols
+Lock your LP tokens, stake in any of the protocols we support and start earning rewards!
 
-| Protocol    | Supported |
-| ----------- | --------- |
-| BGT Station | ✅        |
-| Kodiak      | ✅        |
+## How it works
+
+The protocol's two most important contracts are  `HoneyQueen` and `HoneyLocker`.
+
+### HoneyQueen
+
+This is the contract that acts as a registry for whitelisting protocols, their gauges/staking contracts and the functions associated to staking/unstaking/claiming rewards. This allows the maximum flexibility when it comes to integrating protocols.
+
+### HoneyLocker
+
+This is your locker contract, the one that holds your LP tokens. You deposit, stake, claim rewards and withdraw on this contract.
 
 ## Deployments
 
