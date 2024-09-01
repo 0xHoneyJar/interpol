@@ -75,10 +75,10 @@ contract HoneyLocker is TokenReceiver, Ownable {
         _;
     }
 
-    modifier onlyAllowedSelector(address _stakingContract, string memory action, bytes memory data) {
+    modifier onlyAllowedSelector(address _stakingContract, string memory action, bytes memory _data) {
         bytes4 selector;
         assembly {
-            selector := mload(add(data, 32))
+            selector := mload(add(_data, 32))
         }
         if (!HONEY_QUEEN.isSelectorAllowedForTarget(selector, action, _stakingContract)) {
             revert SelectorNotAllowed();
@@ -119,7 +119,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
         external
         onlyOwner
         onlyAllowedTargetContract(_contract)
-        onlyAllowedSelector(_contract, "wildcard", data)
+        onlyAllowedSelector(_contract, "wildcard", _data)
     {
         (bool success,) = _contract.call(_data);
         if (!success) revert WildcardFailed();
@@ -136,7 +136,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
         external
         onlyOwner
         onlyAllowedTargetContract(_stakingContract)
-        onlyAllowedSelector(_stakingContract, "stake", data)
+        onlyAllowedSelector(_stakingContract, "stake", _data)
     {
         staked[_LPToken][_stakingContract] += _amount;
         ERC20(_LPToken).approve(address(_stakingContract), _amount);
@@ -157,7 +157,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
         public
         onlyOwner
         onlyAllowedTargetContract(_stakingContract)
-        onlyAllowedSelector(_stakingContract, "unstake", data)
+        onlyAllowedSelector(_stakingContract, "unstake", _data)
     {
         staked[_LPToken][_stakingContract] -= _amount;
         (bool success,) = _stakingContract.call(_data);
@@ -220,7 +220,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
         external
         onlyOwnerOrAutomaton
         onlyAllowedTargetContract(_stakingContract)
-        onlyAllowedSelector(_stakingContract, "rewards", data)
+        onlyAllowedSelector(_stakingContract, "rewards", _data)
     {
         (bool success,) = _stakingContract.call(_data);
         if (!success) revert ClaimRewardsFailed();
@@ -291,12 +291,12 @@ contract HoneyLocker is TokenReceiver, Ownable {
         ERC721(_token).transferFrom(address(this), msg.sender, _id);
     }
 
-    function withdrawERC1155(address _token, uint256 _id, uint256 _amount, bytes calldata data)
+    function withdrawERC1155(address _token, uint256 _id, uint256 _amount, bytes calldata _data)
         external
         onlyUnblockedTokens(_token)
         onlyOwner
     {
-        ERC1155(_token).safeTransferFrom(address(this), msg.sender, _id, _amount, data);
+        ERC1155(_token).safeTransferFrom(address(this), msg.sender, _id, _amount, _data);
     }
     /*###############################################################
                             VIEW LOGIC
