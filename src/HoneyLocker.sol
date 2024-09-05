@@ -34,6 +34,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     error ClaimRewardsFailed();
     error WildcardFailed();
     error MigrationAlreadySet();
+    error WrongTargetVaultParameters();
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -56,7 +57,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     mapping(address LPToken => uint256 expiration) public expirations;
     address public referral;
     bool public unlocked; // whether contract should not or should enforce restrictions
-    HoneyQueen internal HONEY_QUEEN;
+    HoneyQueen public HONEY_QUEEN;
     address internal migratingVault; // can only be set once
     /*###############################################################
                             MODIFIERS
@@ -202,7 +203,13 @@ contract HoneyLocker is TokenReceiver, Ownable {
         if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyLocker.codehash)) {
             revert MigrationNotEnabled();
         }
-
+        if (
+            HoneyLocker(_newHoneyLocker).unlocked() != unlocked ||
+            address(HoneyLocker(_newHoneyLocker).HONEY_QUEEN()) != address(HONEY_QUEEN) ||
+            HoneyLocker(_newHoneyLocker).referral() != referral
+        ) {
+            revert WrongTargetVaultParameters();
+        }
         for (uint256 i; i < _LPTokens.length; i++) {
             // send to new locker and deposit and lock
             ERC20(_LPTokens[i]).approve(address(_newHoneyLocker), _amountsOrIds[i]);

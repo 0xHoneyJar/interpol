@@ -297,6 +297,7 @@ contract HoneyLockerTest is Test {
         // clone it
         HoneyLockerV2 honeyLockerV2 = new HoneyLockerV2();
         honeyLockerV2.initialize(THJ, address(honeyQueen), referral, false);
+        honeyLockerV2.setMigratingVault(address(honeyLocker));
 
         // migration should fail because haven't set it in honey queen
         vm.expectRevert(HoneyLocker.MigrationNotEnabled.selector);
