@@ -163,6 +163,8 @@ contract HoneyLocker is TokenReceiver, Ownable {
         onlyAllowedSelector(_stakingContract, "unstake", _data)
     {
         staked[_LPToken][_stakingContract] -= _amount;
+        
+        ERC20(_LPToken).approve(address(_stakingContract), 0);
         (bool success,) = _stakingContract.call(_data);
         if (!success) revert UnstakeFailed();
 
