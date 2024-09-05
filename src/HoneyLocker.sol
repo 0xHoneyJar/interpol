@@ -301,7 +301,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     }
 
     function withdrawERC721(address _token, uint256 _id) external onlyUnblockedTokens(_token) onlyOwner {
-        ERC721(_token).transferFrom(address(this), msg.sender, _id);
+        ERC721(_token).safeTransferFrom(address(this), msg.sender, _id);
     }
 
     function withdrawERC1155(address _token, uint256 _id, uint256 _amount, bytes calldata _data)
