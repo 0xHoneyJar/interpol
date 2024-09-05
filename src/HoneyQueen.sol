@@ -112,23 +112,23 @@ contract HoneyQueen is Ownable {
     }
 
     function setTreasury(address _treasury) external onlyOwner {
-        treasury = _treasury;
         emit TreasurySet(treasury, _treasury);
+        treasury = _treasury;
     }
 
     function setFees(uint256 _fees) external onlyOwner {
-        fees = _fees;
         emit FeesSet(fees, _fees);
+        fees = _fees;
     }
 
     function setValidator(address _validator) external onlyOwner {
-        validator = _validator;
         emit ValidatorSet(validator, _validator);
+        validator = _validator;
     }
 
     function setAutomaton(address _automaton) external onlyOwner {
-        automaton = _automaton;
         emit AutomatonSet(automaton, _automaton);
+        automaton = _automaton;
     }
     /*###############################################################
                             VIEW LOGIC
