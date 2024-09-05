@@ -191,7 +191,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
         if (expirations[_LPToken] == 0) revert HasToBeLPToken();
         // only withdraw if expiration is OK
         if (block.timestamp < expirations[_LPToken]) revert NotExpiredYet();
-        ERC20(_LPToken).transfer(msg.sender, _amount);
+        ERC721(_LPToken).transferFrom(msg.sender, _amount);
         emit Withdrawn(_LPToken, _amount);
     }
 
@@ -294,8 +294,8 @@ contract HoneyLocker is TokenReceiver, Ownable {
         if (expirations[_token] != 0) revert CannotBeLPToken();
         Beekeeper beekeeper = HONEY_QUEEN.beekeeper();
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
-        ERC20(_token).transfer(msg.sender, _amount - fees);
-        ERC20(_token).transfer(address(beekeeper), fees);
+        ERC721(_token).transferFrom(address(this), msg.sender, _amount - fees);
+        ERC721(_token).transferFrom(address(this), address(beekeeper), fees);
         beekeeper.distributeFees(referral, _token, fees);
         emit Withdrawn(_token, _amount - fees);
     }
