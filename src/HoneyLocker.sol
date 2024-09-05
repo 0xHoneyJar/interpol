@@ -35,6 +35,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     error WildcardFailed();
     error MigrationAlreadySet();
     error WrongTargetVaultParameters();
+    error EmptyCalldata();
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -79,6 +80,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     }
 
     modifier onlyAllowedSelector(address _stakingContract, string memory action, bytes memory _data) {
+        if (_data.length < 4) revert EmptyCalldata();
         bytes4 selector;
         assembly {
             selector := mload(add(_data, 32))
@@ -163,7 +165,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
         onlyAllowedSelector(_stakingContract, "unstake", _data)
     {
         staked[_LPToken][_stakingContract] -= _amount;
-        
+
         ERC20(_LPToken).approve(address(_stakingContract), 0);
         (bool success,) = _stakingContract.call(_data);
         if (!success) revert UnstakeFailed();
