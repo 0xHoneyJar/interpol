@@ -33,6 +33,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     error SelectorNotAllowed();
     error ClaimRewardsFailed();
     error WildcardFailed();
+    error MigrationAlreadySet();
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -56,12 +57,13 @@ contract HoneyLocker is TokenReceiver, Ownable {
     address public referral;
     bool public unlocked; // whether contract should not or should enforce restrictions
     HoneyQueen internal HONEY_QUEEN;
+    address internal migratingVault; // can only be set once
     /*###############################################################
                             MODIFIERS
     ###############################################################*/
 
     modifier onlyOwnerOrMigratingVault() {
-        if (msg.sender != owner() && owner() != Ownable(msg.sender).owner()) revert Unauthorized();
+        if (msg.sender != owner() && msg.sender != migratingVault) revert Unauthorized();
         _;
     }
 
@@ -297,6 +299,11 @@ contract HoneyLocker is TokenReceiver, Ownable {
         onlyOwner
     {
         ERC1155(_token).safeTransferFrom(address(this), msg.sender, _id, _amount, _data);
+    }
+
+    function setMigratingVault(address _migratingVault) external onlyOwner {
+        if (migratingVault != address(0)) revert MigrationAlreadySet();
+        migratingVault = _migratingVault;
     }
     /*###############################################################
                             VIEW LOGIC
