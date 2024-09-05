@@ -136,12 +136,10 @@ contract HoneyQueen is Ownable {
     function computeFees(uint256 amount) public view returns (uint256) {
         return FPML.mulDivUp(amount, fees, 10000);
     }
-    
-    function isTargetContractAllowed(address _target) public view returns (bool allowed) {
+
+    function isTargetContractAllowed(address _target) public view returns (bool) {
         string memory protocol = protocolOfTarget[_target];
-        assembly {
-            allowed := not(iszero(protocol))
-        }
+        return bytes(protocol).length > 0;
     }
     function isSelectorAllowedForTarget(
         bytes4 _selector,
