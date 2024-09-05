@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {Ownable} from "solady/auth/Ownable.sol";
+import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
 import {Beekeeper} from "./Beekeeper.sol";
 import {IBGT} from "./utils/IBGT.sol";
 
@@ -133,8 +134,9 @@ contract HoneyQueen is Ownable {
                             VIEW LOGIC
     ###############################################################*/
     function computeFees(uint256 amount) public view returns (uint256) {
-        return (amount * fees) / 10000;
+        return FPML.mulDivUp(amount, fees, 10000);
     }
+    
     function isTargetContractAllowed(address _target) public view returns (bool allowed) {
         string memory protocol = protocolOfTarget[_target];
         assembly {
