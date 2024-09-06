@@ -19,7 +19,7 @@ interface IBGT {
 }
 // prettier-ignore
 
-contract HoneyLockerTest is Test {
+contract SetAndForgetTest is Test {
     using LibString for uint256;
 
     SetAndForgetFactory public factory;
