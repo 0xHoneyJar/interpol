@@ -53,8 +53,6 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    // tracks amount of tokens staked per staking contract
-    mapping(address LPToken => mapping(address stakingContract => uint256 balance)) public staked;
     mapping(address LPToken => uint256 expiration) public expirations;
     address public referral;
     bool public unlocked; // whether contract should not or should enforce restrictions
@@ -143,7 +141,6 @@ contract HoneyLocker is TokenReceiver, Ownable {
         onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "stake", _data)
     {
-        staked[_LPToken][_stakingContract] += _amount;
         ERC20(_LPToken).approve(address(_stakingContract), _amount);
         (bool success,) = _stakingContract.call(_data);
         if (!success) revert StakeFailed();
@@ -164,8 +161,6 @@ contract HoneyLocker is TokenReceiver, Ownable {
         onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "unstake", _data)
     {
-        staked[_LPToken][_stakingContract] -= _amount;
-
         ERC20(_LPToken).approve(address(_stakingContract), 0);
         (bool success,) = _stakingContract.call(_data);
         if (!success) revert UnstakeFailed();
