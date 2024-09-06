@@ -77,8 +77,8 @@ contract Beekeeper is Ownable {
     /// @param _amount The total amount of fees to be distributed
     /// @custom:emits FeesDistributed emitted for each recipient (referrer and treasury) with their respective amounts
     function distributeFees(address _referrer, address _token, uint256 _amount) external payable {
-        if (_token.code.length == 0) revert NoCodeForToken();
         bool isBera = _token == address(0);
+        if (!isBera && _token.code.length == 0) revert NoCodeForToken();
         // if not an authorized referrer, send everything to treasury
         if (!isReferrer[_referrer]) {
             isBera ? STL.safeTransferETH(treasury, _amount) : STL.safeTransfer(_token, treasury, _amount);
