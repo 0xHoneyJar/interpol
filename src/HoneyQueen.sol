@@ -27,6 +27,7 @@ contract HoneyQueen is Ownable {
     event AutomatonSet(address oldAutomaton, address newAutomaton);
     event ValidatorSet(address oldValidator, address newValidator);
     event FeesSet(uint256 oldFees, uint256 newFees);
+    event RewardTokenSet(address indexed token, bool isRewardToken);
     /*###############################################################
                             STRUCTS
     ###############################################################*/
@@ -46,7 +47,7 @@ contract HoneyQueen is Ownable {
     mapping(address token => bool blocked) public isTokenBlocked;
     mapping(bytes32 fromCodeHash => mapping(bytes32 toCodeHash => bool isEnabled))
         public isMigrationEnabled;
-
+    mapping(address token => bool isRewardToken) public isRewardToken;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -129,6 +130,11 @@ contract HoneyQueen is Ownable {
     function setAutomaton(address _automaton) external onlyOwner {
         emit AutomatonSet(automaton, _automaton);
         automaton = _automaton;
+    }
+
+    function setIsRewardToken(address _token, bool _isRewardToken) external onlyOwner {
+        isRewardToken[_token] = _isRewardToken;
+        emit RewardTokenSet(_token, _isRewardToken);
     }
     /*###############################################################
                             VIEW LOGIC
