@@ -182,7 +182,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /// @custom:throws HasToBeLPToken if the token is not an LP token
     /// @custom:throws NotExpiredYet if the expiration time has not passed
     /// @custom:emits Withdrawn event with the LP token address and amount withdrawn
-    function withdrawLPToken(address _LPToken, uint256 _amount) external onlyOwner {
+    function withdrawLPToken(address _LPToken, uint256 _amount) external onlyUnblockedTokens(_LPToken) onlyOwner {
         if (!HONEY_QUEEN.isRewardToken(_LPToken)) revert HasToBeLPToken();
         if (expirations[_LPToken] == 0) revert HasToBeLPToken();
         // only withdraw if expiration is OK
