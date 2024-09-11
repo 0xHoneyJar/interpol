@@ -27,7 +27,7 @@ source .env && forge script script/Beekeeper.s.sol:BeekeeperDeploy \
 --verify \
 --verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
 --etherscan-api-key verifyContract \
---chain-id 80084 --legacy
+--chain-id 80084 --legacy --slow
 ```
 
 ### Honey Queen
@@ -39,7 +39,7 @@ source .env && forge script script/HoneyQueen.s.sol:HoneyQueenDeploy \
 --verify \
 --verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
 --etherscan-api-key verifyContract \
---chain-id 80084 --legacy
+--chain-id 80084 --legacy --slow
 ```
 
 ### Factory
@@ -51,5 +51,5 @@ source .env && forge script script/LockerFactory.s.sol:LockerFactoryDeploy \
 --verify \
 --verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
 --etherscan-api-key verifyContract \
---chain-id 80084 --legacy
+--chain-id 80084 --legacy --slow
 ```
