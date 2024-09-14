@@ -67,7 +67,7 @@ contract KodiakTest is Test {
     ERC721 public constant KODIAKV3 = ERC721(0xC0568C6E9D5404124c8AA9EfD955F3f14C8e64A6);
 
     function setUp() public {
-        vm.createSelectFork("https://bartio.rpc.berachain.com/", uint256(3032962));
+        vm.createSelectFork("https://bartio.rpc.berachain.com/", uint256(4153762));
         expiration = block.timestamp + 30 days;
 
         vm.startPrank(THJ);
@@ -101,6 +101,8 @@ contract KodiakTest is Test {
 
         // mint some LP tokens
         StdCheats.deal(address(HONEYBERA_LP), THJ, 1e18);
+        vm.prank(0xDe81B20B6801d99EFEaEcEd48a11ba025180b8cc);
+        KODIAKV3.transferFrom(address(0xDe81B20B6801d99EFEaEcEd48a11ba025180b8cc), THJ, 6658);
     }
 
     modifier prankAsTHJ() {
@@ -308,5 +310,23 @@ contract KodiakTest is Test {
 
         uint256 expectedBalance = kdkBalance + (xkdkBalance / 2);
         assertEq(KDK.balanceOf(address(honeyLocker)), expectedBalance);
+    }
+
+    function test_depositKodiakV3() external prankAsTHJ(){
+        KODIAKV3.approve(address(honeyLocker), 6658);
+        vm.expectEmit(true, false, false, true, address(honeyLocker));
+        emit HoneyLocker.Deposited(address(KODIAKV3), 6658);
+        vm.expectEmit(true, false, false, true, address(honeyLocker));
+        emit HoneyLocker.LockedUntil(address(KODIAKV3), expiration);
+        honeyLocker.depositAndLock(address(KODIAKV3), 6658, expiration);
+    }
+
+    function test_withdrawKodiakV3() external prankAsTHJ(){
+        KODIAKV3.approve(address(honeyLocker), 6658);
+        honeyLocker.depositAndLock(address(KODIAKV3), 6658, 1);
+
+        vm.expectEmit(true, false, false, true, address(honeyLocker));
+        emit HoneyLocker.Withdrawn(address(KODIAKV3), 6658);
+        honeyLocker.withdrawLPToken(address(KODIAKV3), 6658);
     }
 }

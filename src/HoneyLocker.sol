@@ -40,7 +40,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
                             EVENTS
     ###############################################################*/
     event Initialized(address indexed owner);
-    event Deposited(address indexed token, uint256 amount);
+    event Deposited(address indexed token, uint256 amount); // amount can also be a tokenId
     event LockedUntil(address indexed token, uint256 expiration);
     event Staked(address indexed stakingContract, address indexed token, uint256 amount);
     event Unstaked(address indexed stakingContract, address indexed token, uint256 amount);
@@ -187,7 +187,8 @@ contract HoneyLocker is TokenReceiver, Ownable {
         if (expirations[_LPToken] == 0) revert HasToBeLPToken();
         // only withdraw if expiration is OK
         if (block.timestamp < expirations[_LPToken]) revert NotExpiredYet();
-        ERC721(_LPToken).approve(address(this), _amount);
+        // self approval only needed for ERC20, try/catch in case it's an ERC721
+        try ERC721(_LPToken).approve(address(this), _amount) {} catch {}
         ERC721(_LPToken).transferFrom(address(this), msg.sender, _amount);
         emit Withdrawn(_LPToken, _amount);
     }

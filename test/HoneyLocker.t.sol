@@ -114,6 +114,11 @@ contract HoneyLockerTest is Test {
         vm.stopPrank();
     }
 
+    function test_initializeOnlyOnce() external prankAsTHJ {
+        vm.expectRevert();
+        honeyLocker.initialize(THJ, address(honeyQueen), referral, false);
+    }
+
     function test_singleDepositAndLock() external prankAsTHJ {
         uint256 balance = HONEYBERA_LP.balanceOf(THJ);
         HONEYBERA_LP.approve(address(honeyLocker), balance);

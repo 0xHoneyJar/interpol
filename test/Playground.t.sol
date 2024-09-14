@@ -120,8 +120,8 @@ contract HoneyLockerTest is Test {
     function test_playground_depositKodiakV3() external {
         vm.startPrank(0xDe81B20B6801d99EFEaEcEd48a11ba025180b8cc);
         // new locker
-        //honeyLocker = factory.clone(0xDe81B20B6801d99EFEaEcEd48a11ba025180b8cc, address(0));
-        honeyLocker = HoneyLocker(payable(0x7435c4B7CaE9670dDc8cCd1d7193081E6f3A6807));
+        honeyLocker = factory.clone(0xDe81B20B6801d99EFEaEcEd48a11ba025180b8cc, address(0));
+        //honeyLocker = HoneyLocker(payable(0xe74f043aA47eFb38306f6B9629B5DaE9C8ae853D));
         // approve KodiakV3
         KODIAK_V3.approve(address(honeyLocker), 6658);
         // deposit
