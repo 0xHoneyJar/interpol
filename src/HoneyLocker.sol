@@ -57,6 +57,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     address public referral;
     bool public unlocked; // whether contract should not or should enforce restrictions
     HoneyQueen public HONEY_QUEEN;
+    address internal treasury; // personnal treasury of the locker
     address internal migratingVault; // can only be set once
     /*###############################################################
                             MODIFIERS
@@ -189,7 +190,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
         if (block.timestamp < expirations[_LPToken]) revert NotExpiredYet();
         // self approval only needed for ERC20, try/catch in case it's an ERC721
         try ERC721(_LPToken).approve(address(this), _amount) {} catch {}
-        ERC721(_LPToken).transferFrom(address(this), msg.sender, _amount);
+        ERC721(_LPToken).transferFrom(address(this), recipient(), _amount);
         emit Withdrawn(_LPToken, _amount);
     }
 
@@ -282,7 +283,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /*###############################################################*/
     function withdrawBERA(uint256 _amount) public onlyOwner {
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
-        STL.safeTransferETH(msg.sender, _amount - fees);
+        STL.safeTransferETH(recipient(), _amount - fees);
         HONEY_QUEEN.beekeeper().distributeFees{value: fees}(referral, address(0), fees);
         emit Withdrawn(address(0), _amount - fees);
     }
@@ -295,14 +296,14 @@ contract HoneyLocker is TokenReceiver, Ownable {
         // self approval to be compliant with ERC20 transferFrom
         ERC20(_token).approve(address(this), _amount);
         // use ERC721 transferFrom because same signature for ERC20 and doesn't expect a return value
-        ERC721(_token).transferFrom(address(this), msg.sender, _amount - fees);
+        ERC721(_token).transferFrom(address(this), recipient(), _amount - fees);
         ERC721(_token).transferFrom(address(this), address(beekeeper), fees);
         beekeeper.distributeFees(referral, _token, fees);
         emit Withdrawn(_token, _amount - fees);
     }
 
     function withdrawERC721(address _token, uint256 _id) external onlyUnblockedTokens(_token) onlyOwner {
-        ERC721(_token).safeTransferFrom(address(this), msg.sender, _id);
+        ERC721(_token).safeTransferFrom(address(this), recipient(), _id);
     }
 
     function withdrawERC1155(address _token, uint256 _id, uint256 _amount, bytes calldata _data)
@@ -310,16 +311,31 @@ contract HoneyLocker is TokenReceiver, Ownable {
         onlyUnblockedTokens(_token)
         onlyOwner
     {
-        ERC1155(_token).safeTransferFrom(address(this), msg.sender, _id, _amount, _data);
+        ERC1155(_token).safeTransferFrom(address(this), recipient(), _id, _amount, _data);
     }
-
+    /*###############################################################*/
     function setMigratingVault(address _migratingVault) external onlyOwner {
         if (migratingVault != address(0)) revert MigrationAlreadySet();
         migratingVault = _migratingVault;
     }
+
+    /// @notice Sets the treasury address for the HoneyLocker
+    /// @dev Can only be called by the owner and only once
+    /// @dev It's the responsability of the owner to ensure the treasury can handle any type of fund
+    /// @param _treasury The address to set as the treasury
+    function setTreasury(address _treasury) external onlyOwner {
+        require(treasury == address(0));
+        treasury = _treasury;
+    }
     /*###############################################################
                             VIEW LOGIC
     ###############################################################*/
+    /// @notice Returns the recipient address for rewards and LP tokens withdrawals
+    /// @dev If treasury is set, returns treasury address. Otherwise, returns owner address.
+    /// @return The address of the recipient (either treasury or owner)
+    function recipient() public view returns (address) {
+        return treasury == address(0) ? owner() : treasury;
+    }
     /*###############################################################
                             PUBLIC LOGIC
     ###############################################################*/
