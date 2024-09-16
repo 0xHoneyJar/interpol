@@ -162,7 +162,9 @@ contract HoneyLocker is TokenReceiver, Ownable {
         onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "unstake", _data)
     {
-        ERC721(_LPToken).approve(address(_stakingContract), 0);
+        // it should fail for an ERC721 in most cases, except if owning token #0
+        // which is an edge case and shouldn't change anything
+        try ERC721(_LPToken).approve(address(_stakingContract), 0) {} catch {}
         (bool success,) = _stakingContract.call(_data);
         if (!success) revert UnstakeFailed();
 

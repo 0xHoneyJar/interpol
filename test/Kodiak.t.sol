@@ -100,7 +100,9 @@ contract KodiakTest is Test {
         );
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("withdrawLockedAll()")), "unstake", PROTOCOL, true);
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("getReward()")), "rewards", PROTOCOL, true);
+
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("stake(uint256)")), "stake", PROTOCOL, true);
+        honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("unstake(uint256)")), "unstake", PROTOCOL, true);
 
         honeyQueen.setValidator(THJ);
 
@@ -360,6 +362,26 @@ contract KodiakTest is Test {
             address(kodiakV3Gauge),
             6658,
             abi.encodeWithSelector(bytes4(keccak256("stake(uint256)")), 6658)
+        );
+    }
+
+    function test_unstakingKodiakV3() external prankAsTHJ() {
+        KODIAKV3.approve(address(honeyLocker), 6658);
+        honeyLocker.depositAndLock(address(KODIAKV3), 6658, expiration);
+
+        honeyLocker.stake(
+            address(KODIAKV3),
+            address(kodiakV3Gauge),
+            6658,
+            abi.encodeWithSelector(bytes4(keccak256("stake(uint256)")), 6658)
+        );
+
+        vm.warp(block.timestamp + 1 days);
+        honeyLocker.unstake(
+            address(KODIAKV3),
+            address(kodiakV3Gauge),
+            6658,
+            abi.encodeWithSelector(bytes4(keccak256("unstake(uint256)")), 6658)
         );
     }
 }
