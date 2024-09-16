@@ -42,8 +42,22 @@ interface XKDK {
     function redeem(uint256 amount, uint256 duration) external;
     function finalizeRedeem(uint256 redeemIndex) external;
 }
-// prettier-ignore
 
+contract KodiakV3Gauge {
+    ERC721 kodiakv3;
+    constructor(address _kodiakV3) {
+        kodiakv3 = ERC721(_kodiakV3);
+    }
+    function stake(uint256 _tokenId) external {
+        console.log("here");
+        kodiakv3.transferFrom(msg.sender, address(this), _tokenId);
+    }
+    function unstake(uint _tokenId) external {
+        kodiakv3.transferFrom(address(this), msg.sender, _tokenId);
+    }
+}
+
+// prettier-ignore
 contract KodiakTest is Test {
     using LibString for uint256;
 
@@ -65,10 +79,13 @@ contract KodiakTest is Test {
     ERC20 public constant HONEYBERA_LP = ERC20(0x12C195768f65F282EA5F1B5C42755FBc910B0D8F);
     KodiakStaking public constant KODIAK_STAKING = KodiakStaking(0x1878eb1cA6Da5e2fC4B5213F7D170CA668A0E225);
     ERC721 public constant KODIAKV3 = ERC721(0xC0568C6E9D5404124c8AA9EfD955F3f14C8e64A6);
+    KodiakV3Gauge public kodiakV3Gauge;
 
     function setUp() public {
         vm.createSelectFork("https://bartio.rpc.berachain.com/", uint256(4153762));
         expiration = block.timestamp + 30 days;
+
+        kodiakV3Gauge = new KodiakV3Gauge(address(KODIAKV3));
 
         vm.startPrank(THJ);
         beekeeper = new Beekeeper(THJ, treasury);
@@ -77,11 +94,14 @@ contract KodiakTest is Test {
         honeyQueen = new HoneyQueen(treasury, address(BGT), address(beekeeper));
         // prettier-ignore
         honeyQueen.setProtocolOfTarget(address(KODIAK_STAKING), PROTOCOL);
+        honeyQueen.setProtocolOfTarget(address(kodiakV3Gauge), PROTOCOL);
         honeyQueen.setIsSelectorAllowedForProtocol(
             bytes4(keccak256("stakeLocked(uint256,uint256)")), "stake", PROTOCOL, true
         );
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("withdrawLockedAll()")), "unstake", PROTOCOL, true);
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("getReward()")), "rewards", PROTOCOL, true);
+        honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("stake(uint256)")), "stake", PROTOCOL, true);
+
         honeyQueen.setValidator(THJ);
 
         factory = new LockerFactory(address(honeyQueen));
@@ -97,6 +117,7 @@ contract KodiakTest is Test {
         vm.label(address(KODIAKV3), "KODIAK-V3");
         vm.label(address(this), "Tests");
         vm.label(THJ, "THJ");
+        vm.label(address(kodiakV3Gauge), "KodiakV3Gauge");
 
 
         // mint some LP tokens
@@ -328,5 +349,17 @@ contract KodiakTest is Test {
         vm.expectEmit(true, false, false, true, address(honeyLocker));
         emit HoneyLocker.Withdrawn(address(KODIAKV3), 6658);
         honeyLocker.withdrawLPToken(address(KODIAKV3), 6658);
+    }
+
+    function test_stakingKodiakV3() external prankAsTHJ() {
+        KODIAKV3.approve(address(honeyLocker), 6658);
+        honeyLocker.depositAndLock(address(KODIAKV3), 6658, expiration);
+
+        honeyLocker.stake(
+            address(KODIAKV3),
+            address(kodiakV3Gauge),
+            6658,
+            abi.encodeWithSelector(bytes4(keccak256("stake(uint256)")), 6658)
+        );
     }
 }
