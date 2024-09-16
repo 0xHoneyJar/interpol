@@ -55,21 +55,21 @@ contract HoneyLocker is TokenReceiver, Ownable {
     ###############################################################*/
     mapping(address LPToken => uint256 expiration) public expirations;
     address public referral;
+    address public treasury; // personnal treasury of the locker
+    address public operator; // operator of the locker
     bool public unlocked; // whether contract should not or should enforce restrictions
     HoneyQueen public HONEY_QUEEN;
-    address internal treasury; // personnal treasury of the locker
     address internal migratingVault; // can only be set once
     /*###############################################################
                             MODIFIERS
     ###############################################################*/
-
-    modifier onlyOwnerOrMigratingVault() {
-        if (msg.sender != owner() && msg.sender != migratingVault) revert Unauthorized();
+    modifier onlyOwnerOrOperatorOrMigratingVault() {
+        if (msg.sender != owner() && msg.sender != operator && msg.sender != migratingVault) revert Unauthorized();
         _;
     }
 
-    modifier onlyOwnerOrAutomaton() {
-        if (msg.sender != owner() && msg.sender != HONEY_QUEEN.automaton()) revert Unauthorized();
+    modifier onlyOwnerOrOperator() {
+        if (msg.sender != owner() && msg.sender != operator) revert Unauthorized();
         _;
     }
 
@@ -121,7 +121,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /// @custom:throws WildcardFailed if the call to the target contract fails
     function wildcard(address _contract, bytes calldata _data)
         external
-        onlyOwner
+        onlyOwnerOrOperator
         onlyAllowedTargetContract(_contract)
         onlyAllowedSelector(_contract, "wildcard", _data)
     {
@@ -138,7 +138,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /// @custom:emits Staked event with the staking contract, LP token, and amount staked
     function stake(address _LPToken, address _stakingContract, uint256 _amount, bytes memory _data)
         external
-        onlyOwner
+        onlyOwnerOrOperator
         onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "stake", _data)
     {
@@ -158,7 +158,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /// @custom:emits Unstaked event with the staking contract, LP token, and amount unstaked
     function unstake(address _LPToken, address _stakingContract, uint256 _amount, bytes memory _data)
         public
-        onlyOwner
+        onlyOwnerOrOperator
         onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "unstake", _data)
     {
@@ -171,7 +171,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
 
     /// @notice Burns BGT tokens for BERA and withdraws the BERA
     /// @param _amount The amount of BGT to burn and BERA to withdraw
-    function burnBGTForBERA(uint256 _amount) external onlyOwner {
+    function burnBGTForBERA(uint256 _amount) external onlyOwnerOrOperator {
         HONEY_QUEEN.BGT().redeem(address(this), _amount);
         withdrawBERA(_amount);
     }
@@ -183,7 +183,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /// @custom:throws HasToBeLPToken if the token is not an LP token
     /// @custom:throws NotExpiredYet if the expiration time has not passed
     /// @custom:emits Withdrawn event with the LP token address and amount withdrawn
-    function withdrawLPToken(address _LPToken, uint256 _amount) external onlyUnblockedTokens(_LPToken) onlyOwner {
+    function withdrawLPToken(address _LPToken, uint256 _amount) external onlyUnblockedTokens(_LPToken) onlyOwnerOrOperator {
         if (HONEY_QUEEN.isRewardToken(_LPToken)) revert HasToBeLPToken();
         if (expirations[_LPToken] == 0) revert HasToBeLPToken();
         // only withdraw if expiration is OK
@@ -230,7 +230,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /// @custom:emits RewardsClaimed event with the staking contract address
     function claimRewards(address _stakingContract, bytes memory _data)
         external
-        onlyOwnerOrAutomaton
+        onlyOwnerOrOperator
         onlyAllowedTargetContract(_stakingContract)
         onlyAllowedSelector(_stakingContract, "rewards", _data)
     {
@@ -247,7 +247,10 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /// @custom:throws ExpirationNotMatching if the new expiration is less than the existing one for non-unlocked tokens
     /// @custom:emits Deposited event with the LP token address and amount or ID deposited
     /// @custom:emits LockedUntil event with the LP token address and expiration timestamp
-    function depositAndLock(address _LPToken, uint256 _amountOrId, uint256 _expiration) external onlyOwnerOrMigratingVault {
+    function depositAndLock(address _LPToken, uint256 _amountOrId, uint256 _expiration) 
+    external
+    onlyOwnerOrOperatorOrMigratingVault 
+    {
         // we only allow subsequent deposits of the same token IF the
         // expiration is the same or greater
         if (!unlocked && expirations[_LPToken] != 0 && _expiration < expirations[_LPToken]) {
@@ -264,31 +267,31 @@ contract HoneyLocker is TokenReceiver, Ownable {
     }
     /*######################### BGT MANAGEMENT #########################*/
 
-    function delegateBGT(uint128 _amount, address _validator) external onlyOwner {
+    function delegateBGT(uint128 _amount, address _validator) external onlyOwnerOrOperator {
         HONEY_QUEEN.BGT().queueBoost(_validator, _amount);
     }
 
-    function activateBoost(address _validator) external onlyOwner {
+    function activateBoost(address _validator) external onlyOwnerOrOperator {
         HONEY_QUEEN.BGT().activateBoost(_validator);
     }
 
-    function cancelQueuedBoost(uint128 _amount, address _validator) external onlyOwner {
+    function cancelQueuedBoost(uint128 _amount, address _validator) external onlyOwnerOrOperator {
         HONEY_QUEEN.BGT().cancelBoost(_validator, _amount);
     }
 
-    function dropBoost(uint128 _amount, address _validator) external onlyOwner {
+    function dropBoost(uint128 _amount, address _validator) external onlyOwnerOrOperator {
         HONEY_QUEEN.BGT().dropBoost(_validator, _amount);
     }
 
     /*###############################################################*/
-    function withdrawBERA(uint256 _amount) public onlyOwner {
+    function withdrawBERA(uint256 _amount) public onlyOwnerOrOperator {
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
         STL.safeTransferETH(recipient(), _amount - fees);
         HONEY_QUEEN.beekeeper().distributeFees{value: fees}(referral, address(0), fees);
         emit Withdrawn(address(0), _amount - fees);
     }
 
-    function withdrawERC20(address _token, uint256 _amount) external onlyUnblockedTokens(_token) onlyOwner {
+    function withdrawERC20(address _token, uint256 _amount) external onlyUnblockedTokens(_token) onlyOwnerOrOperator {
         // cannot withdraw any lp token that has an expiration
         if (expirations[_token] != 0) revert CannotBeLPToken();
         Beekeeper beekeeper = HONEY_QUEEN.beekeeper();
@@ -302,14 +305,14 @@ contract HoneyLocker is TokenReceiver, Ownable {
         emit Withdrawn(_token, _amount - fees);
     }
 
-    function withdrawERC721(address _token, uint256 _id) external onlyUnblockedTokens(_token) onlyOwner {
+    function withdrawERC721(address _token, uint256 _id) external onlyUnblockedTokens(_token) onlyOwnerOrOperator {
         ERC721(_token).safeTransferFrom(address(this), recipient(), _id);
     }
 
     function withdrawERC1155(address _token, uint256 _id, uint256 _amount, bytes calldata _data)
         external
         onlyUnblockedTokens(_token)
-        onlyOwner
+        onlyOwnerOrOperator
     {
         ERC1155(_token).safeTransferFrom(address(this), recipient(), _id, _amount, _data);
     }
@@ -320,12 +323,18 @@ contract HoneyLocker is TokenReceiver, Ownable {
     }
 
     /// @notice Sets the treasury address for the HoneyLocker
-    /// @dev Can only be called by the owner and only once
     /// @dev It's the responsability of the owner to ensure the treasury can handle any type of fund
     /// @param _treasury The address to set as the treasury
     function setTreasury(address _treasury) external onlyOwner {
-        require(treasury == address(0));
         treasury = _treasury;
+    }
+
+    /// @notice Sets the operator address for the HoneyLocker
+    /// @dev Only the owner can call this function
+    /// @dev The only operator cannot call migration or treasury related functions
+    /// @param _operator The address to set as the new operator
+    function setOperator(address _operator) external onlyOwner {
+        operator = _operator;
     }
     /*###############################################################
                             VIEW LOGIC

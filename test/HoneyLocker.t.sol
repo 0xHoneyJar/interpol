@@ -219,6 +219,7 @@ contract HoneyLockerTest is Test {
         uint256 bgtBalanceBefore = BGT.balanceOf(address(honeyLocker));
         // deal some BGT
         StdCheats.deal(address(BGT), address(honeyLocker), 1);
+        honeyLocker.setOperator(address(honeyQueen.automaton()));
         vm.startPrank(honeyQueen.automaton());
         honeyLocker.claimRewards(
             address(HONEYBERA_STAKING), abi.encodeWithSignature("getReward(address)", address(honeyLocker))
