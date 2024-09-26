@@ -376,7 +376,6 @@ contract KodiakTest is Test {
             abi.encodeWithSelector(bytes4(keccak256("stake(uint256)")), 6658)
         );
 
-        vm.warp(block.timestamp + 1 days);
         honeyLocker.unstake(
             address(KODIAKV3),
             address(kodiakV3Gauge),
