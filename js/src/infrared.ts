@@ -33,7 +33,7 @@ export async function whitelistInfraredGauges() {
   const data = await response.json();
   const vaults: InfraredVault[] = data;
 
-  console.log(`Processing ${vaults.length} vaults`);
+  console.log(`Processing ${vaults.length} Infrared vaults`);
 
   for (const vault of vaults) {
     const vaultAddress = getAddress(vault.address);

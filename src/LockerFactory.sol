@@ -30,10 +30,10 @@ contract LockerFactory {
     function clone(
         address _owner,
         address _referral
-    ) external returns (HoneyLocker) {
+    ) external returns (address) {
         HoneyLocker locker = new HoneyLocker();
         locker.initialize(_owner, HONEY_QUEEN, _referral, false);
         emit NewLocker(_owner, address(locker));
-        return locker;
+        return address(locker);
     }
 }

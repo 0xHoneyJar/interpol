@@ -34,7 +34,7 @@ export async function whitelistBGTGauges() {
   const data = await response.json();
   const vaults: BGTVault[] = data.vaults;
 
-  console.log(`Processing ${vaults.length} vaults`);
+  console.log(`Processing ${vaults.length} BGT vaults`);
 
   for (const vault of vaults) {
     const vaultAddress = getAddress(vault.vaultAddress);
