@@ -108,7 +108,7 @@ contract KodiakTest is Test {
 
         factory = new LockerFactory(address(honeyQueen));
 
-        honeyLocker = factory.clone(THJ, referral);
+        honeyLocker = HoneyLocker(payable(factory.clone(THJ, referral)));
 
         vm.stopPrank();
 

@@ -84,7 +84,7 @@ contract DelegationTest is Test {
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("getReward(address)")), "rewards", PROTOCOL, true);
         honeyQueen.setValidator(THJ);
         factory = new LockerFactory(address(honeyQueen));
-        honeyLocker = factory.clone(THJ, referral);
+        honeyLocker = HoneyLocker(payable(factory.clone(THJ, referral)));
         vm.stopPrank();
 
         vm.label(address(honeyLocker), "HoneyLocker");

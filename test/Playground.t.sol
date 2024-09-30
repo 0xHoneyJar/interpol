@@ -93,7 +93,7 @@ contract HoneyLockerTest is Test {
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("getReward(address)")), "rewards", PROTOCOL, true);
         honeyQueen.setValidator(THJ);
         factory = new LockerFactory(address(honeyQueen));
-        honeyLocker = factory.clone(THJ, referral);
+        honeyLocker = HoneyLocker(payable(factory.clone(THJ, referral)));
         vm.stopPrank();
 
         vm.label(address(honeyLocker), "HoneyLocker");
@@ -120,7 +120,7 @@ contract HoneyLockerTest is Test {
     function test_playground_depositKodiakV3() external {
         vm.startPrank(0xDe81B20B6801d99EFEaEcEd48a11ba025180b8cc);
         // new locker
-        honeyLocker = factory.clone(0xDe81B20B6801d99EFEaEcEd48a11ba025180b8cc, address(0));
+        honeyLocker = HoneyLocker(payable(factory.clone(0xDe81B20B6801d99EFEaEcEd48a11ba025180b8cc, address(0))));
         //honeyLocker = HoneyLocker(payable(0xe74f043aA47eFb38306f6B9629B5DaE9C8ae853D));
         // approve KodiakV3
         KODIAK_V3.approve(address(honeyLocker), 6658);
