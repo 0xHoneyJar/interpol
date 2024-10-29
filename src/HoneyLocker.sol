@@ -47,6 +47,9 @@ contract HoneyLocker is TokenReceiver, Ownable {
     event Withdrawn(address indexed token, uint256 amount);
     event Migrated(address indexed token, address indexed oldLocker, address indexed newLocker);
     event RewardsClaimed(address stakingContract);
+    event TreasurySet(address treasury);
+    event OperatorSet(address operator);
+    event MigrationSet(address migratingVault);
     /*###############################################################
                             STRUCTS
     ###############################################################*/
@@ -322,6 +325,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     function setMigratingVault(address _migratingVault) external onlyOwner {
         if (migratingVault != address(0)) revert MigrationAlreadySet();
         migratingVault = _migratingVault;
+        emit MigrationSet(_migratingVault);
     }
 
     /// @notice Sets the treasury address for the HoneyLocker
@@ -329,6 +333,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /// @param _treasury The address to set as the treasury
     function setTreasury(address _treasury) external onlyOwner {
         treasury = _treasury;
+        emit TreasurySet(_treasury);
     }
 
     /// @notice Sets the operator address for the HoneyLocker
@@ -337,6 +342,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /// @param _operator The address to set as the new operator
     function setOperator(address _operator) external onlyOwner {
         operator = _operator;
+        emit OperatorSet(_operator);
     }
     /*###############################################################
                             VIEW LOGIC

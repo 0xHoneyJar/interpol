@@ -77,7 +77,7 @@ contract HoneyLockerTest is Test {
     ERC721 public constant KODIAK_V3 = ERC721(0xC0568C6E9D5404124c8AA9EfD955F3f14C8e64A6);
 
     function setUp() public {
-        vm.createSelectFork("https://bartio.rpc.berachain.com/", uint256(4153762));
+        vm.createSelectFork("https://bartio.rpc.berachain.com/", uint256(4961049));
         expiration = block.timestamp + 30 days;
 
         vm.startPrank(THJ);
@@ -117,15 +117,12 @@ contract HoneyLockerTest is Test {
         vm.stopPrank();
     }
 
-    function test_playground_depositKodiakV3() external {
-        vm.startPrank(0xDe81B20B6801d99EFEaEcEd48a11ba025180b8cc);
-        // new locker
-        honeyLocker = HoneyLocker(payable(factory.clone(0xDe81B20B6801d99EFEaEcEd48a11ba025180b8cc, address(0))));
-        //honeyLocker = HoneyLocker(payable(0xe74f043aA47eFb38306f6B9629B5DaE9C8ae853D));
-        // approve KodiakV3
-        KODIAK_V3.approve(address(honeyLocker), 6658);
-        // deposit
-        honeyLocker.depositAndLock(address(KODIAK_V3), 6658, expiration);
+    function test_playground() external {
+        factory = LockerFactory(0x0b34d4e3F4399d5F4EA9B7a59deB3375209e7Fd1);
+        vm.startPrank(0x7EF57230D902242f4B8Dd1679C3A1718FD3779e4);
+        bytes memory data = abi.encodeWithSignature("concludeProject()");
+        (bool success, bytes memory returnData) = 0xAE2e3373deb5db2b6Ed031D2482Fc765549810D6.call(data);
+        require(success, "Call failed");
         vm.stopPrank();
     }
 
