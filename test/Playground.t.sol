@@ -85,7 +85,6 @@ contract HoneyLockerTest is Test {
         beekeeper.setReferrer(referral, true);
         // setup honeyqueen stuff
         honeyQueen = new HoneyQueen(treasury, address(BGT), address(beekeeper));
-        honeyQueen.setAutomaton(address(0xaaaa));
         // prettier-ignore
         honeyQueen.setProtocolOfTarget(address(HONEYBERA_STAKING), PROTOCOL);
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("stake(uint256)")), "stake", PROTOCOL, true);

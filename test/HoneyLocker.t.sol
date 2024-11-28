@@ -62,6 +62,7 @@ contract HoneyLockerTest is Test {
     address public constant THJ = 0x4A8c9a29b23c4eAC0D235729d5e0D035258CDFA7;
     address public constant referral = address(0x5efe5a11);
     address public constant treasury = address(0x80085);
+    address public constant operator = address(0xaaaa);
 
     string public constant PROTOCOL = "BGTSTATION";
 
@@ -82,7 +83,6 @@ contract HoneyLockerTest is Test {
         beekeeper.setReferrer(referral, true);
         // setup honeyqueen stuff
         honeyQueen = new HoneyQueen(treasury, address(BGT), address(beekeeper));
-        honeyQueen.setAutomaton(address(0xaaaa));
         // prettier-ignore
         honeyQueen.setProtocolOfTarget(address(HONEYBERA_STAKING), PROTOCOL);
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("stake(uint256)")), "stake", PROTOCOL, true);
@@ -219,8 +219,8 @@ contract HoneyLockerTest is Test {
         uint256 bgtBalanceBefore = BGT.balanceOf(address(honeyLocker));
         // deal some BGT
         StdCheats.deal(address(BGT), address(honeyLocker), 1);
-        honeyLocker.setOperator(address(honeyQueen.automaton()));
-        vm.startPrank(honeyQueen.automaton());
+        honeyLocker.setOperator(operator);
+        vm.startPrank(operator);
         honeyLocker.claimRewards(
             address(HONEYBERA_STAKING), abi.encodeWithSignature("getReward(address)", address(honeyLocker))
         );
