@@ -35,7 +35,6 @@ contract HoneyQueen is Ownable {
                             STORAGE
     ###############################################################*/
     address public treasury;
-    address public automaton; // address responsible for executing automated calls
     address public validator;
     uint256 public fees = 200; // in bps
     Beekeeper public immutable beekeeper;
@@ -125,11 +124,6 @@ contract HoneyQueen is Ownable {
     function setValidator(address _validator) external onlyOwner {
         emit ValidatorSet(validator, _validator);
         validator = _validator;
-    }
-
-    function setAutomaton(address _automaton) external onlyOwner {
-        emit AutomatonSet(automaton, _automaton);
-        automaton = _automaton;
     }
 
     function setIsRewardToken(address _token, bool _isRewardToken) external onlyOwner {

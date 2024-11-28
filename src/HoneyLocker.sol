@@ -228,7 +228,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     }
 
     /// @notice Claims rewards from a staking contract
-    /// @dev Only the owner or automaton can call this function, and the staking contract and selector must be allowed
+    /// @dev Only the owner or the operator can call this function, and the staking contract and selector must be allowed
     /// @param _stakingContract The address of the staking contract
     /// @param _data The calldata to be sent to the staking contract
     /// @custom:throws ClaimRewardsFailed if the call to the staking contract fails
