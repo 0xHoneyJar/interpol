@@ -13,37 +13,7 @@ import {LockerFactory} from "../src/LockerFactory.sol";
 import {HoneyLockerV2} from "./mocks/HoneyLockerV2.sol";
 import {GaugeAsNFT} from "./mocks/GaugeAsNFT.sol";
 import {IStakingContract} from "../src/utils/IStakingContract.sol";
-
-interface IBGT {
-    event Redeem(
-        address indexed from,
-        address indexed receiver,
-        uint256 amount
-    );
-    event QueueBoost(
-        address indexed sender,
-        address indexed validator,
-        uint128 amount
-    );
-    event CancelBoost(
-        address indexed sender,
-        address indexed validator,
-        uint128 amount
-    );
-    event ActivateBoost(address indexed sender, address indexed validator);
-    event DropBoost(
-        address indexed sender,
-        address indexed validator,
-        uint128 amount
-    );
-
-    function minter() external view returns (address);
-    function mint(address distributor, uint256 amount) external;
-}
-
-interface IBGTStaker {
-    event Staked(address indexed staker, uint256 amount);
-}
+import {IBGT} from "./interfaces/IBGT.sol";
 
 /*
     This test file tests all the functionnalities of the locker
@@ -68,10 +38,8 @@ contract HoneyLockerTest is Test {
 
     // IMPORTANT
     // BARTIO ADDRESSES
-    address public constant GOVERNANCE = 0xE3EDa03401Cf32010a9A9967DaBAEe47ed0E1a0b;
     ERC20 public constant HONEYBERA_LP = ERC20(0xd28d852cbcc68DCEC922f6d5C7a8185dBaa104B7);
     ERC20 public constant BGT = ERC20(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
-    IBGTStaker public constant BGT_STAKER = IBGTStaker(0x791fb53432eED7e2fbE4cf8526ab6feeA604Eb6d);
     IStakingContract public HONEYBERA_STAKING = IStakingContract(0xAD57d7d39a487C04a44D3522b910421888Fb9C6d);
 
     function setUp() public {
