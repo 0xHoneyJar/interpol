@@ -33,7 +33,14 @@ abstract contract BaseVaultAdapter {
     function stake(uint256 amount) external virtual;
     function unstake(uint256 amount) external virtual;
     function claim() external virtual;
+    /*###############################################################
+                            VIEW/PURE
+    ###############################################################*/
     function stakingToken() external view virtual returns (address);
     function vault() external view virtual returns (address);
+    
+    function version() external pure virtual returns (uint256) {
+        return 1;
+    }
 }
 

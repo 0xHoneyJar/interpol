@@ -53,7 +53,9 @@ contract BGTStation is BaseVaultAdapter {
             ERC20(rewardToken).transfer(locker, rewardAmount);
         }
     }
-
+    /*###############################################################
+                            VIEW
+    ###############################################################*/
     function stakingToken() external view override returns (address) {
         return token;
     }

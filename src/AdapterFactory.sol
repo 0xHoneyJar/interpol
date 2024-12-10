@@ -3,45 +3,55 @@ pragma solidity ^0.8.23;
 
 import {LibClone} from "solady/utils/LibClone.sol";
 
-import {IVaultAdapter} from "./utils/IVaultAdapter.sol";
+import {BaseVaultAdapter} from "./adapters/BaseVaultAdapter.sol";
+import {HoneyQueen} from "./HoneyQueen.sol";
 
 contract AdapterFactory {
     /*###############################################################
                             ERRORS
     ###############################################################*/
     error AdapterFactory__CallerMustBeLocker();
+    error AdapterFactory__InvalidAdapter();
     /*###############################################################
                             EVENTS
     ###############################################################*/
     event AdapterCreated(
         address indexed logic,
         address indexed locker,
-        address vault,
+        address indexed vault,
         address stakingToken,
         address adapter
     );
     /*###############################################################
+                            STORAGE
+    ###############################################################*/
+    HoneyQueen public immutable honeyQueen;
+    /*###############################################################
+                            CONSTRUCTOR
+    ###############################################################*/
+    constructor(address _honeyQueen) {
+        honeyQueen = HoneyQueen(_honeyQueen);
+    }
+    /*###############################################################
                             EXTERNAL
     ###############################################################*/
-    /// @notice                 Creates a new adapter instance for a vault
-    /// @dev                    Uses minimal proxy pattern to clone the adapter logic contract
-    /// @param  logic           The address of the adapter logic contract to clone
-    /// @param  locker          The address of the Locker contract that will control this adapter
-    /// @param  vault           The address of the vault contract this adapter will interact with
-    /// @param  stakingToken    The address of the token that can be staked in the vault
-    /// @return adapter         The address of the newly created adapter instance
     function createAdapter(
-        address logic,
         address locker,
-        address vault,
-        address stakingToken
+        address vault
     ) external returns (address adapter) {
         if (msg.sender != locker) revert AdapterFactory__CallerMustBeLocker();
 
-        adapter = LibClone.clone(0, logic);
+        (address logic, address token) = honeyQueen.vaultToAdapterParams(vault);
+        
+        // Validate the adapter deployment through HoneyQueen
+        if (logic == address(0) || token == address(0)) {
+            revert AdapterFactory__InvalidAdapter();
+        }
 
-        IVaultAdapter(adapter).initialize(locker, vault, stakingToken);
+        adapter = LibClone.clone(logic);
+        BaseVaultAdapter(adapter).initialize(locker, vault, token);
 
-        emit AdapterCreated(logic, locker, vault, stakingToken, adapter);
+        emit AdapterCreated(logic, locker, vault, token, adapter);
     }
 }
+
