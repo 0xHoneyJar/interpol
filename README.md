@@ -18,7 +18,7 @@ This is your locker contract, the one that holds your LP tokens. You deposit, st
 
 ## Deployments
 
-### Beekeepr
+### Beekeeper
 
 ```
 source .env && forge script script/Beekeeper.s.sol:BeekeeperDeploy \
