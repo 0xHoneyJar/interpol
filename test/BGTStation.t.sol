@@ -158,8 +158,7 @@ contract BGTStationTest is BaseTest {
         This test a single stake.
         It checks ;
         - proper events
-        - expiration is respected
-        - withdrawal is successful
+        - proper balances
     */
     function test_stake(uint256 amountToDeposit, uint128 expiration) external prankAsTHJ {
         amountToDeposit = StdUtils.bound(amountToDeposit, 1, type(uint32).max);
@@ -177,6 +176,33 @@ contract BGTStationTest is BaseTest {
 
         assertEq(LP_TOKEN.balanceOf(THJ), 0);
         assertEq(LP_TOKEN.balanceOf(address(locker)), 0);
+        assertEq(LP_TOKEN.balanceOf(address(lockerAdapter)), 0);
+    }
+
+    /*
+        This test a single unstake.
+        It checks ;
+        - proper events
+        - proper balances
+    */
+    function test_unstake(uint256 amountToDeposit, uint128 expiration) external prankAsTHJ {
+        amountToDeposit = StdUtils.bound(amountToDeposit, 1, type(uint32).max);
+
+        StdCheats.deal(address(LP_TOKEN), THJ, amountToDeposit);
+
+        LP_TOKEN.approve(address(locker), amountToDeposit);
+        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, uint256(expiration));
+
+        locker.stake(address(GAUGE), amountToDeposit);
+
+        vm.expectEmit(true, false, false, true, address(GAUGE));
+        emit IBGTStationGauge.Withdrawn(address(lockerAdapter), amountToDeposit);
+        vm.expectEmit(true, true, false, true, address(locker));
+        emit HoneyLocker.Unstaked(address(GAUGE), address(LP_TOKEN), amountToDeposit);
+        locker.unstake(address(GAUGE), amountToDeposit);
+
+        assertEq(LP_TOKEN.balanceOf(THJ), 0);
+        assertEq(LP_TOKEN.balanceOf(address(locker)), amountToDeposit);
         assertEq(LP_TOKEN.balanceOf(address(lockerAdapter)), 0);
     }
 }
