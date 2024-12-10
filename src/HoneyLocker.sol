@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {BaseVaultAdapter as BVA} from "./adapters/BaseVaultAdapter.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
+
+import {BaseVaultAdapter as BVA} from "./adapters/BaseVaultAdapter.sol";
 import {AdapterFactory} from "./AdapterFactory.sol";
 import {IBGTStationGauge} from "./adapters/BGTStationAdapter.sol";
 import {Constants} from "./Constants.sol";
+import {IBGT} from "./utils/IBGT.sol";
+
 contract HoneyLocker is Ownable {
     /*###############################################################
                             ERRORS
@@ -106,10 +109,32 @@ contract HoneyLocker is Ownable {
     /*###############################################################
                             BGT MANAGEMENT
     ###############################################################*/
+    /*
+        Claim directly the BGT rewards from the vault.
+        vault HAS to be a BG Station vault.
+        locker HAS to be the operator of the adapter.
+
+    */
     function claimBGT(address vault) external onlyValidAdapter(vault) onlyOwner {
         BVA adapter = vaultToAdapter[vault];
         uint256 reward = IBGTStationGauge(vault).getReward(address(adapter));
         emit BVA.Claimed(address(this), vault, Constants.BGT, reward);
+    }
+
+    function delegateBGT(uint128 amount, address validator) external onlyOwner {
+        IBGT(Constants.BGT).queueBoost(validator, amount);
+    }
+
+    function activateBoost(address validator) external onlyOwner {
+        IBGT(Constants.BGT).activateBoost(validator);
+    }
+
+    function cancelQueuedBoost(uint128 amount, address validator) external onlyOwner {
+        IBGT(Constants.BGT).cancelBoost(validator, amount);
+    }
+
+    function dropBoost(uint128 amount, address validator) external onlyOwner {
+        IBGT(Constants.BGT).dropBoost(validator, amount);
     }
     /*###############################################################
                             LP MANAGEMENT

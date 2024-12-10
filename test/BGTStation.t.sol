@@ -8,16 +8,10 @@ import {console2} from "forge-std/console2.sol";
 
 import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
-import {BGTStationAdapter} from "../src/adapters/BGTStationAdapter.sol";
+import {BGTStationAdapter, IBGTStationGauge} from "../src/adapters/BGTStationAdapter.sol";
 import {BaseVaultAdapter as BVA} from "../src/adapters/BaseVaultAdapter.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
 import {Constants} from "../src/Constants.sol";
-
-interface IBGTStationGauge {
-    event Staked(address indexed account, uint256 amount);
-    event Withdrawn(address indexed account, uint256 amount);
-    function earned(address account) external view returns (uint256);
-}
 
 contract BGTStationTest is BaseTest {    
     /*###############################################################
@@ -30,7 +24,7 @@ contract BGTStationTest is BaseTest {
     address public constant GAUGE = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
     // LBGT-WBERA LP token
     ERC20 public constant LP_TOKEN = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
-    IBGT public constant BGT = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
+    IBGT public constant BGT = IBGT(Constants.BGT);
 
     uint256 public constant INITIAL_LP_BALANCE = 1000 ether;
     /*###############################################################
@@ -236,8 +230,6 @@ contract BGTStationTest is BaseTest {
         assertEq(BGT.unboostedBalanceOf(address(locker)), earned);
         assertEq(BGT.unboostedBalanceOf(address(lockerAdapter)), 0);
         assertEq(BGT.unboostedBalanceOf(THJ), 0);
-
-
     }
 }
 

@@ -6,10 +6,14 @@ import {ERC721} from "solady/tokens/ERC721.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 
 interface IBGTStationGauge {
+    event Staked(address indexed account, uint256 amount);
+    event Withdrawn(address indexed account, uint256 amount);
+
     function stake(uint256 amount) external;
     function withdraw(uint256 amount) external;
     function getReward(address account) external returns (uint256);
     function setOperator(address operator) external;
+    function earned(address account) external view returns (uint256);
 }
 
 contract BGTStationAdapter is BaseVaultAdapter {
