@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {IVaultAdapter} from "../utils/IVaultAdapter.sol";
+import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 
 interface IBeradromeVault {
@@ -9,32 +9,30 @@ interface IBeradromeVault {
     function withdrawTo(address account, uint256 amount) external;
     function getReward(address account) external;
     function getRewardTokens() external view returns (address[] memory);
-    function stakingToken() external view returns (address);
 }
 
-contract BeradromeAdapter is IVaultAdapter {
+contract BeradromeAdapter is BaseVaultAdapter {
+    /*###############################################################
+                            STORAGE
+    ###############################################################*/
     IBeradromeVault public beradromeVault;
-    address public token;
-    address public locker;
-    bool private initialized;
-
-    modifier onlyLocker() {
-        require(msg.sender == locker, "Not authorized");
-        _;
-    }
-
+    /*###############################################################
+                            INITIALIZATION
+    ###############################################################*/
     function initialize(
         address _locker,
         address _vault,
         address _stakingToken
-    ) external {
-        require(!initialized, "Already initialized");
+    ) external override {
+        if (locker != address(0)) revert BaseVaultAdapter__AlreadyInitialized();
         locker = _locker;
         beradromeVault = IBeradromeVault(_vault);
         token = _stakingToken;
-        initialized = true;
+        emit Initialized(locker, _vault, _stakingToken);
     }
-
+    /*###############################################################
+                            EXTERNAL
+    ###############################################################*/
     function stake(uint256 amount) external override onlyLocker {
         ERC20(token).approve(address(beradromeVault), amount);
         beradromeVault.depositFor(address(this), amount);

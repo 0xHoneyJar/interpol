@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {IVaultAdapter} from "../utils/IVaultAdapter.sol";
+import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 
 interface IBGTStationGauge {
@@ -12,29 +12,28 @@ interface IBGTStationGauge {
     function getWhitelistedTokensCount() external view returns (uint256);
 }
 
-contract BGTStation is IVaultAdapter {
+contract BGTStation is BaseVaultAdapter {
+    /*###############################################################
+                            STORAGE
+    ###############################################################*/
     IBGTStationGauge public bgtStationGauge;
-    address public token;
-    address public locker;
-    bool private initialized;
-
-    modifier onlyLocker() {
-        require(msg.sender == locker, "Not authorized");
-        _;
-    }
-
+    /*###############################################################
+                            INITIALIZATION
+    ###############################################################*/
     function initialize(
         address _locker,
         address _vault,
         address _stakingToken
-    ) external {
-        require(!initialized, "Already initialized");
+    ) external override {
+        if (locker != address(0)) revert BaseVaultAdapter__AlreadyInitialized();
         locker = _locker;
         bgtStationGauge = IBGTStationGauge(_vault);
         token = _stakingToken;
-        initialized = true;
+        emit Initialized(locker, _vault, _stakingToken);
     }
-
+    /*###############################################################
+                            EXTERNAL
+    ###############################################################*/
     function stake(uint256 amount) external override onlyLocker {
         ERC20(token).approve(address(bgtStationGauge), amount);
         bgtStationGauge.stake(amount);
@@ -42,7 +41,6 @@ contract BGTStation is IVaultAdapter {
 
     function unstake(uint256 amount) external override onlyLocker {
         bgtStationGauge.withdraw(amount);
-        // Tokens now held by adapter, send them back to the locker
         ERC20(token).transfer(locker, amount);
     }
 

@@ -1,34 +1,35 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {IVaultAdapter} from "./utils/IVaultAdapter.sol";
+import {BaseVaultAdapter} from "./adapters/BaseVaultAdapter.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {AdapterFactory} from "./AdapterFactory.sol";
 
 contract Locker is Ownable {
-    AdapterFactory public factory;
-
-    // vaultId => adapter instance
-    mapping(uint256 => IVaultAdapter) public vaultAdapters;
-
+    /*###############################################################
+                            EVENTS
+    ###############################################################*/
     event VaultRegistered(
-        uint256 vaultId,
-        address logic,
         address vault,
-        address adapter
+        address adapter,
+        address logic
     );
-
+    /*###############################################################
+                            STORAGE
+    ###############################################################*/
+    AdapterFactory                          public factory;
+    // vaultId => adapter instance
+    mapping(address vault => BaseVaultAdapter adapter)    public vaultToAdapter;
+    /*###############################################################
+                            CONSTRUCTOR
+    ###############################################################*/
     constructor(address _factory) {
         factory = AdapterFactory(_factory);
     }
-
-    /**
-     * @dev Register a new vault. This creates a unique adapter for the vault and stores it by vaultId.
-     * @param vaultId A unique ID for this vault.
-     * @param logic The address of the vault adapter logic contract (e.g., KodiakAdapter logic).
-     * @param vault The address of the actual vault contract.
-     */
+    /*###############################################################
+                            OWNER
+    ###############################################################*/
     function registerVault(
         uint256 vaultId,
         address logic,
@@ -49,6 +50,9 @@ contract Locker is Ownable {
         emit VaultRegistered(vaultId, logic, vault, adapterAddr);
     }
 
+    /*###############################################################
+                            EXTERNAL
+    ###############################################################*/
     /**
      * @dev Stake tokens into a chosen vault by vaultId.
      *      User must have approved this Locker to transfer their tokens.
