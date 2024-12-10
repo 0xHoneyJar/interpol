@@ -4,15 +4,19 @@ pragma solidity ^0.8.23;
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
+import {console2} from "forge-std/console2.sol";
 
 import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {BGTStationAdapter} from "../src/adapters/BGTStationAdapter.sol";
 import {BaseVaultAdapter as BVA} from "../src/adapters/BaseVaultAdapter.sol";
+import {IBGT} from "../src/utils/IBGT.sol";
+import {Constants} from "../src/Constants.sol";
 
 interface IBGTStationGauge {
     event Staked(address indexed account, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
+    function earned(address account) external view returns (uint256);
 }
 
 contract BGTStationTest is BaseTest {    
@@ -26,6 +30,7 @@ contract BGTStationTest is BaseTest {
     address public constant GAUGE = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
     // LBGT-WBERA LP token
     ERC20 public constant LP_TOKEN = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
+    IBGT public constant BGT = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
 
     uint256 public constant INITIAL_LP_BALANCE = 1000 ether;
     /*###############################################################
@@ -33,8 +38,7 @@ contract BGTStationTest is BaseTest {
     ###############################################################*/
     function setUp() public override {
         /*
-            Choosing this block number because the vault LBGT-WBERA has enough incentives
-            and has 2 incentives tokens instead of 1.
+            Choosing this block number because the vault LBGT-WBERA is active
         */
         vm.createSelectFork("https://bartio.rpc.berachain.com/", uint256(7925685));
 
@@ -204,6 +208,36 @@ contract BGTStationTest is BaseTest {
         assertEq(LP_TOKEN.balanceOf(THJ), 0);
         assertEq(LP_TOKEN.balanceOf(address(locker)), amountToDeposit);
         assertEq(LP_TOKEN.balanceOf(address(lockerAdapter)), 0);
+    }
+
+    /*
+        This test claiming rewards, which should be only BGT.
+        It checks ;
+        - proper events
+        - proper balances
+    */
+    function test_claimRewards(uint256 amountToDeposit, uint128 expiration) external prankAsTHJ {
+        amountToDeposit = StdUtils.bound(amountToDeposit, 1, type(uint32).max);
+
+        StdCheats.deal(address(LP_TOKEN), THJ, amountToDeposit);
+
+        LP_TOKEN.approve(address(locker), amountToDeposit);
+        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, expiration);
+        locker.stake(address(GAUGE), amountToDeposit);
+
+        vm.warp(block.timestamp + 10000);
+
+        uint256 earned = IBGTStationGauge(GAUGE).earned(address(lockerAdapter));
+
+        vm.expectEmit(true, true, true, true, address(locker));
+        emit BVA.Claimed(address(locker), address(GAUGE), Constants.BGT, earned);
+        locker.claimBGT(address(GAUGE));
+
+        assertEq(BGT.unboostedBalanceOf(address(locker)), earned);
+        assertEq(BGT.unboostedBalanceOf(address(lockerAdapter)), 0);
+        assertEq(BGT.unboostedBalanceOf(THJ), 0);
+
+
     }
 }
 

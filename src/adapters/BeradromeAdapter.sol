@@ -50,6 +50,7 @@ contract BeradromeAdapter is BaseVaultAdapter {
             address rewardToken = rewardTokens[i];
             uint256 rewardAmount = ERC20(rewardToken).balanceOf(address(this));
             ERC20(rewardToken).transfer(locker, rewardAmount);
+            emit Claimed(locker, address(beradromeVault), rewardToken, rewardAmount);
         }
     }
     /*###############################################################

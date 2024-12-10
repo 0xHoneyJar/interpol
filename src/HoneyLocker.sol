@@ -5,7 +5,8 @@ import {BaseVaultAdapter as BVA} from "./adapters/BaseVaultAdapter.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {AdapterFactory} from "./AdapterFactory.sol";
-
+import {IBGTStationGauge} from "./adapters/BGTStationAdapter.sol";
+import {Constants} from "./Constants.sol";
 contract HoneyLocker is Ownable {
     /*###############################################################
                             ERRORS
@@ -84,7 +85,7 @@ contract HoneyLocker is Ownable {
     function stake(address vault, uint256 amount) external onlyValidAdapter(vault) onlyOwner {
         BVA adapter = vaultToAdapter[vault];
         address token = adapter.stakingToken();
-        
+
         ERC721(token).approve(address(adapter), amount);
         adapter.stake(amount);
 
@@ -102,8 +103,14 @@ contract HoneyLocker is Ownable {
         BVA adapter = vaultToAdapter[vault];
         adapter.claim();
     }
-
-
+    /*###############################################################
+                            BGT MANAGEMENT
+    ###############################################################*/
+    function claimBGT(address vault) external onlyValidAdapter(vault) onlyOwner {
+        BVA adapter = vaultToAdapter[vault];
+        uint256 reward = IBGTStationGauge(vault).getReward(address(adapter));
+        emit BVA.Claimed(address(this), vault, Constants.BGT, reward);
+    }
     /*###############################################################
                             LP MANAGEMENT
     ###############################################################*/

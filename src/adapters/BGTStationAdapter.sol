@@ -8,7 +8,8 @@ import {ERC20} from "solady/tokens/ERC20.sol";
 interface IBGTStationGauge {
     function stake(uint256 amount) external;
     function withdraw(uint256 amount) external;
-    function getReward(address account) external;
+    function getReward(address account) external returns (uint256);
+    function setOperator(address operator) external;
 }
 
 contract BGTStationAdapter is BaseVaultAdapter {
@@ -28,6 +29,10 @@ contract BGTStationAdapter is BaseVaultAdapter {
         locker = _locker;
         bgtStationGauge = IBGTStationGauge(_vault);
         token = _stakingToken;
+
+        // the locker will be the one receiving the rewards
+        bgtStationGauge.setOperator(_locker);
+
         emit Initialized(locker, _vault, _stakingToken);
     }
     /*###############################################################
@@ -44,13 +49,12 @@ contract BGTStationAdapter is BaseVaultAdapter {
         ERC20(token).transfer(locker, amount);
     }
 
+    /*
+        Claiming is disabled because we are exclusively relying on the locker to claim rewards.
+        This is possible because we have set the locker as the operator of the gauge for this adapter.
+    */
     function claim() external override onlyLocker {
-        bgtStationGauge.getReward(address(this));
-        // Since we don't know reward tokens, transfer any token balance back to locker
-        uint256 rewardAmount = ERC20(token).balanceOf(address(this));
-        if (rewardAmount > 0) {
-            ERC20(token).transfer(locker, rewardAmount);
-        }
+        revert BaseVaultAdapter__NotImplemented();
     }
     /*###############################################################
                             VIEW
