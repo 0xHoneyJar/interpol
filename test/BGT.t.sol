@@ -31,7 +31,7 @@ contract BGTTest is BaseTest {
                             TESTS
     ###############################################################*/
 
- function test_cancelQueuedBoost(uint128 amount) external prankAsTHJ {
+    function test_cancelQueuedBoost(uint128 amount) external prankAsTHJ {
         amount = uint128(StdUtils.bound(amount, 1, uint256(INITIAL_BGT_BALANCE)));
         StdCheats.deal(address(BGT), address(locker), uint256(amount));
 
@@ -53,7 +53,7 @@ contract BGTTest is BaseTest {
     function test_dropBoost(uint128 amount) external prankAsTHJ {
         amount = uint128(StdUtils.bound(amount, 1, uint256(INITIAL_BGT_BALANCE)));
         StdCheats.deal(address(BGT), address(locker), uint256(amount));
-        
+
         // test the delegate part
         vm.expectEmit(true, true, false, true, address(BGT));
         emit IBGT.QueueBoost(address(locker), THJ, amount);
@@ -71,5 +71,10 @@ contract BGTTest is BaseTest {
 
         assertEq(BGT.unboostedBalanceOf(address(locker)), amount);
     }
+
+    function test_burnBGTForBera(uint256 amountOfBGT) external prankAsTHJ {
+        assertEq(true, false);
+    }
+    
 }
 
