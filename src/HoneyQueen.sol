@@ -3,8 +3,10 @@ pragma solidity ^0.8.23;
 
 import {Ownable} from "solady/auth/Ownable.sol";
 import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
+
 import {Beekeeper} from "./Beekeeper.sol";
 import {IBGT} from "./utils/IBGT.sol";
+import {HoneyGuard} from "./HoneyGuard.sol";
 
 /*
     HoneyQueen is the ground source of truth as to which contracts
@@ -37,7 +39,8 @@ contract HoneyQueen is Ownable {
     address     public treasury;
     address     public validator;
     uint256     public fees = 200; // in bps
-    Beekeeper   public immutable beekeeper;
+    address     public beekeeper;
+    address     public honeyGuard;
     IBGT        public immutable BGT;
 
 
@@ -55,7 +58,7 @@ contract HoneyQueen is Ownable {
     constructor(address _treasury, address _BGT, address _beekeeper) {
         treasury = _treasury;
         BGT = IBGT(_BGT);
-        beekeeper = Beekeeper(_beekeeper);
+        beekeeper = _beekeeper;
         _initializeOwner(msg.sender);
     }
     /*###############################################################
@@ -131,6 +134,14 @@ contract HoneyQueen is Ownable {
     function setIsRewardToken(address _token, bool _isRewardToken) external onlyOwner {
         isRewardToken[_token] = _isRewardToken;
         emit RewardTokenSet(_token, _isRewardToken);
+    }
+
+    function setHoneyGuard(address _honeyGuard) external onlyOwner {
+        honeyGuard = _honeyGuard;
+    }
+
+    function setBeekeeper(address _beekeeper) external onlyOwner {
+        beekeeper = _beekeeper;
     }
     /*###############################################################
                             VIEW LOGIC

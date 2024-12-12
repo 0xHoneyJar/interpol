@@ -6,9 +6,11 @@ import {ERC20} from "solady/tokens/ERC20.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
+
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {Beekeeper} from "./Beekeeper.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
+import {HoneyGuard} from "./HoneyGuard.sol";
 
 /*
     The HoneyLocker is designed in such a way that it's multiple LP tokens
@@ -36,6 +38,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
     error MigrationAlreadySet();
     error WrongTargetVaultParameters();
     error EmptyCalldata();
+    error UnauthorizedCalldata();
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -81,12 +84,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
         _;
     }
 
-    modifier onlyAllowedSelector(address _stakingContract, string memory action, bytes memory _data) {
-        if (_data.length < 4) revert EmptyCalldata();
-        bytes4 selector;
-        assembly {
-            selector := mload(add(_data, 32))
-        }
+    modifier onlyAllowedSelector(address _stakingContract, string memory action, bytes4 selector) {
         if (!HONEY_QUEEN.isSelectorAllowedForTarget(selector, action, _stakingContract)) {
             revert SelectorNotAllowed();
         }
@@ -116,20 +114,24 @@ contract HoneyLocker is TokenReceiver, Ownable {
                             OWNER LOGIC
     ###############################################################*/
 
-    /// @notice             Executes a wildcard function call on a target contract
-    /// @notice             A wildcard is for an "usual" function that is necessary but
-    ///                     doesn't fit in the stake/unstake/rewards categories
+    /// @notice                     Executes a wildcard function call on a target contract
+    /// @notice                     A wildcard is for an "usual" function that is necessary but
+    ///                             doesn't fit in the stake/unstake/rewards categories
     ///
-    /// @param _contract    The address of the target contract
-    /// @param _data        The calldata to be sent to the target contract
-    /// @custom:throws      WildcardFailed if the call to the target contract fails
-    function wildcard(address _contract, bytes calldata _data)
+    /// @param _stakingContract     The address of the target contract
+    /// @param _data                The calldata to be sent to the target contract
+    /// @custom:throws              WildcardFailed if the call to the target contract fails
+    function wildcard(address _stakingContract, bytes calldata _data)
         external
         onlyOwnerOrOperator
-        onlyAllowedTargetContract(_contract)
-        onlyAllowedSelector(_contract, "wildcard", _data)
+        onlyAllowedTargetContract(_stakingContract)
+        onlyAllowedSelector(_stakingContract, "wildcard", bytes4(_data[0:4]))
     {
-        (bool success,) = _contract.call(_data);
+        if (!HoneyGuard(HONEY_QUEEN.honeyGuard()).verify(_stakingContract, abi.encode(address(this)), _data)) {
+            revert UnauthorizedCalldata();
+        }
+
+        (bool success,) = _stakingContract.call(_data);
         if (!success) revert WildcardFailed();
     }
 
@@ -141,12 +143,16 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /// @param _data            The calldata to be sent to the staking contract
     /// @custom:throws          StakeFailed if the call to the staking contract fails
     /// @custom:emits           Staked event with the staking contract, LP token, and amount staked
-    function stake(address _LPToken, address _stakingContract, uint256 _amount, bytes memory _data)
+    function stake(address _LPToken, address _stakingContract, uint256 _amount, bytes calldata _data)
         external
         onlyOwnerOrOperator
         onlyAllowedTargetContract(_stakingContract)
-        onlyAllowedSelector(_stakingContract, "stake", _data)
+        onlyAllowedSelector(_stakingContract, "stake", bytes4(_data[0:4]))
     {
+        if (!HoneyGuard(HONEY_QUEEN.honeyGuard()).verify(_stakingContract, abi.encode(address(this)), _data)) {
+            revert UnauthorizedCalldata();
+        }
+
         ERC721(_LPToken).approve(address(_stakingContract), _amount);
         (bool success,) = _stakingContract.call(_data);
         if (!success) revert StakeFailed();
@@ -162,12 +168,16 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /// @param _data            The calldata to be sent to the staking contract
     /// @custom:throws          UnstakeFailed if the call to the staking contract fails
     /// @custom:emits           Unstaked event with the staking contract, LP token, and amount unstaked
-    function unstake(address _LPToken, address _stakingContract, uint256 _amount, bytes memory _data)
+    function unstake(address _LPToken, address _stakingContract, uint256 _amount, bytes calldata _data)
         public
         onlyOwnerOrOperator
         onlyAllowedTargetContract(_stakingContract)
-        onlyAllowedSelector(_stakingContract, "unstake", _data)
+        onlyAllowedSelector(_stakingContract, "unstake", bytes4(_data[0:4]))
     {
+        if (!HoneyGuard(HONEY_QUEEN.honeyGuard()).verify(_stakingContract, abi.encode(address(this)), _data)) {
+            revert UnauthorizedCalldata();
+        }
+
         // it should fail for an ERC721 in most cases, except if owning token #0
         // which is an edge case and shouldn't change anything
         try ERC721(_LPToken).approve(address(_stakingContract), 0) {} catch {}
@@ -175,6 +185,27 @@ contract HoneyLocker is TokenReceiver, Ownable {
         if (!success) revert UnstakeFailed();
 
         emit Unstaked(_stakingContract, _LPToken, _amount);
+    }
+
+    /// @notice                     Claims rewards from a staking contract
+    /// @dev                        Only the owner or the operator can call this function, and the staking contract and selector must be allowed
+    /// @param _stakingContract     The address of the staking contract
+    /// @param _data                The calldata to be sent to the staking contract
+    /// @custom:throws              ClaimRewardsFailed if the call to the staking contract fails
+    /// @custom:emits               RewardsClaimed event with the staking contract address
+    function claimRewards(address _stakingContract, bytes calldata _data)
+        external
+        onlyOwnerOrOperator
+        onlyAllowedTargetContract(_stakingContract)
+        onlyAllowedSelector(_stakingContract, "rewards", bytes4(_data[0:4]))
+    {
+        if (!HoneyGuard(HONEY_QUEEN.honeyGuard()).verify(_stakingContract, abi.encode(address(this)), _data)) {
+            revert UnauthorizedCalldata();
+        }
+        
+        (bool success,) = _stakingContract.call(_data);
+        if (!success) revert ClaimRewardsFailed();
+        emit RewardsClaimed(_stakingContract);
     }
 
     /// @notice             Withdraws LP tokens from the HoneyLocker to the owner
@@ -221,23 +252,6 @@ contract HoneyLocker is TokenReceiver, Ownable {
 
             emit Migrated(_LPTokens[i], address(this), _newHoneyLocker);
         }
-    }
-
-    /// @notice                     Claims rewards from a staking contract
-    /// @dev                        Only the owner or the operator can call this function, and the staking contract and selector must be allowed
-    /// @param _stakingContract     The address of the staking contract
-    /// @param _data                The calldata to be sent to the staking contract
-    /// @custom:throws              ClaimRewardsFailed if the call to the staking contract fails
-    /// @custom:emits               RewardsClaimed event with the staking contract address
-    function claimRewards(address _stakingContract, bytes memory _data)
-        external
-        onlyOwnerOrOperator
-        onlyAllowedTargetContract(_stakingContract)
-        onlyAllowedSelector(_stakingContract, "rewards", _data)
-    {
-        (bool success,) = _stakingContract.call(_data);
-        if (!success) revert ClaimRewardsFailed();
-        emit RewardsClaimed(_stakingContract);
     }
 
     /// @notice                 Deposits and locks LP tokens in the HoneyLocker
@@ -295,14 +309,14 @@ contract HoneyLocker is TokenReceiver, Ownable {
     function withdrawBERA(uint256 _amount) public onlyOwnerOrOperator {
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
         STL.safeTransferETH(recipient(), _amount - fees);
-        HONEY_QUEEN.beekeeper().distributeFees{value: fees}(referral, address(0), fees);
+        Beekeeper(HONEY_QUEEN.beekeeper()).distributeFees{value: fees}(referral, address(0), fees);
         emit Withdrawn(address(0), _amount - fees);
     }
 
     function withdrawERC20(address _token, uint256 _amount) external onlyUnblockedTokens(_token) onlyOwnerOrOperator {
         // cannot withdraw any lp token that has an expiration
         if (expirations[_token] != 0) revert CannotBeLPToken();
-        Beekeeper beekeeper = HONEY_QUEEN.beekeeper();
+        Beekeeper beekeeper = Beekeeper(HONEY_QUEEN.beekeeper());
         uint256 fees = HONEY_QUEEN.computeFees(_amount);
         // self approval to be compliant with ERC20 transferFrom
         ERC20(_token).approve(address(this), _amount);

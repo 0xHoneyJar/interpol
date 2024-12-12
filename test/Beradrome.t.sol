@@ -11,6 +11,7 @@ import {Solarray as SLA} from "solarray/Solarray.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {Beekeeper} from "../src/Beekeeper.sol";
+import {HoneyGuard} from "../src/HoneyGuard.sol";
 import {LockerFactory} from "../src/LockerFactory.sol";
 import {BaseTest} from "./Base.t.sol";
 
@@ -54,6 +55,9 @@ contract BeradromeTest is BaseTest {
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("withdrawTo(address,uint256)")), "unstake", PROTOCOL, true);
         honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("getReward(address)")), "rewards", PROTOCOL, true);
 
+        honeyGuard.setVerifySelector(PROTOCOL, bytes4(keccak256("depositFor(address,uint256)")), true);
+        honeyGuard.setVerifySelector(PROTOCOL, bytes4(keccak256("withdrawTo(address,uint256)")), true);
+
         vm.stopPrank();
 
         vm.label(address(GAUGE), "PAW-HONEYGauge");
@@ -77,6 +81,25 @@ contract BeradromeTest is BaseTest {
         assertEq(LP_TOKEN.balanceOf(address(honeyLocker)), 0);
     }
 
+
+    function test_stakingWithCheatingAttempt(uint64 _amount, bool useOperator) external prankAsTHJ(useOperator) {
+        address user = useOperator ? operator : THJ;
+        uint256 amount = StdUtils.bound(uint256(_amount), 1e18, type(uint64).max);
+
+        StdCheats.deal(address(LP_TOKEN), address(honeyLocker), amount);
+
+        vm.expectRevert(HoneyLocker.UnauthorizedCalldata.selector);
+        honeyLocker.stake(
+            address(LP_TOKEN),
+            address(PLUGIN),
+            amount,
+            abi.encodeWithSelector(bytes4(keccak256("depositFor(address,uint256)")), address(user), amount)
+        );
+
+        assertEq(LP_TOKEN.balanceOf(address(honeyLocker)), amount);
+        assertEq(LP_TOKEN.balanceOf(address(user)), 0);
+    }
+
     function test_unstaking(uint64 _amount, bool useOperator) external prankAsTHJ(useOperator) {
         address user = useOperator ? operator : THJ;
         uint256 amount = StdUtils.bound(uint256(_amount), 1e18, type(uint64).max);
@@ -98,6 +121,33 @@ contract BeradromeTest is BaseTest {
         );
 
         assertEq(LP_TOKEN.balanceOf(address(honeyLocker)), amount);
+    }
+
+    function test_unstakingWithCheatingAttempt(uint64 _amount, bool useOperator) external prankAsTHJ(useOperator) {
+        address user = useOperator ? operator : THJ;
+        uint256 amount = StdUtils.bound(uint256(_amount), 1e18, type(uint64).max);
+
+        StdCheats.deal(address(LP_TOKEN), address(honeyLocker), amount);
+
+        // deposit normally
+        honeyLocker.stake(
+            address(LP_TOKEN),
+            address(PLUGIN),
+            amount,
+            abi.encodeWithSelector(bytes4(keccak256("depositFor(address,uint256)")), address(honeyLocker), amount)
+        );
+
+        // withdraw to user
+        vm.expectRevert(HoneyLocker.UnauthorizedCalldata.selector);
+        honeyLocker.unstake(
+            address(LP_TOKEN),
+            address(PLUGIN),
+            amount,
+            abi.encodeWithSelector(bytes4(keccak256("withdrawTo(address,uint256)")), address(user), amount)
+        );
+
+        assertEq(LP_TOKEN.balanceOf(address(honeyLocker)), 0);
+        assertEq(LP_TOKEN.balanceOf(address(user)), 0);
     }
 
     function test_claimRewards(uint64 _amount, bool useOperator) external prankAsTHJ(useOperator) {

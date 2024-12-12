@@ -10,6 +10,7 @@ import {Beekeeper} from "../src/Beekeeper.sol";
 import {LockerFactory} from "../src/LockerFactory.sol";
 import {TokenReceiver} from "../src/utils/TokenReceiver.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
+import {HoneyGuard} from "../src/HoneyGuard.sol";
 
 abstract contract BaseTest is Test, TokenReceiver {
     /*###############################################################
@@ -28,6 +29,7 @@ abstract contract BaseTest is Test, TokenReceiver {
     HoneyLocker     internal honeyLocker;
     HoneyQueen      internal honeyQueen;
     Beekeeper       internal beekeeper;
+    HoneyGuard      internal honeyGuard;
 
     string          internal PROTOCOL;
     /*###############################################################
@@ -43,6 +45,9 @@ abstract contract BaseTest is Test, TokenReceiver {
         factory = new LockerFactory(address(honeyQueen));
         honeyLocker = HoneyLocker(payable(factory.clone(THJ, referral)));
         honeyLocker.setOperator(operator);
+
+        honeyGuard = new HoneyGuard(address(honeyQueen));
+        honeyQueen.setHoneyGuard(address(honeyGuard));
 
         vm.stopPrank();
 
