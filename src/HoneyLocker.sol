@@ -215,7 +215,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
         }
         for (uint256 i; i < _LPTokens.length; i++) {
             // send to new locker and deposit and lock
-            ERC20(_LPTokens[i]).approve(address(_newHoneyLocker), _amountsOrIds[i]);
+            ERC721(_LPTokens[i]).approve(address(_newHoneyLocker), _amountsOrIds[i]);
             HoneyLocker(_newHoneyLocker).depositAndLock(_LPTokens[i], _amountsOrIds[i], expirations[_LPTokens[i]]);
 
             emit Migrated(_LPTokens[i], address(this), _newHoneyLocker);
