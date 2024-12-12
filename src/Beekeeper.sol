@@ -51,6 +51,7 @@ contract Beekeeper is Ownable {
     function setReferrerOverride(address _referrer, address _overridingReferrer) external onlyOwner {
         if (!isReferrer[_referrer]) revert NotAReferrer();
         referrerOverrides[_referrer] = _overridingReferrer;
+        _referrerFeeShare[_overridingReferrer] = _referrerFeeShare[_referrer];
     }
     function setReferrerFeeShare(address _referrer, uint256 _shareOfFeeInBps) external onlyOwner {
         if (!isReferrer[_referrer]) revert NotAReferrer();

@@ -7,6 +7,7 @@ import {LibString} from "solady/utils/LibString.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
+import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
 
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
@@ -20,11 +21,6 @@ contract BeekeeperTest is BaseTest {
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
-
-    // LBGT-WBERA gauge
-    address public constant GAUGE   = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
-    // LBGT-WBERA LP token
-    ERC20 public constant LP_TOKEN  = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
     /*###############################################################
                             SETUP
     ###############################################################*/
@@ -36,18 +32,6 @@ contract BeekeeperTest is BaseTest {
         vm.createSelectFork("https://bartio.rpc.berachain.com/", uint256(7925685));
 
         super.setUp();
-
-        vm.startPrank(THJ);
-
-        honeyQueen.setProtocolOfTarget(address(GAUGE), PROTOCOL);
-        honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("stake(uint256)")), "stake", PROTOCOL, true);
-        honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("withdraw(uint256)")), "unstake", PROTOCOL, true);
-        honeyQueen.setIsSelectorAllowedForProtocol(bytes4(keccak256("getReward(address)")), "rewards", PROTOCOL, true);
-
-        vm.stopPrank();
-
-        vm.label(address(GAUGE), "LBGT-WBERA Gauge");
-        vm.label(address(LP_TOKEN), "LBGT-WBERA LP Token");
     }
 
     function test_feesBERA(uint64 _amount, bool _useOperator) external prankAsTHJ(_useOperator) {
@@ -178,5 +162,22 @@ contract BeekeeperTest is BaseTest {
 
         // check balances
         assertApproxEqRel(referral.balance, pythonReferrerFees, 1e16);
+    }
+
+    function test_overridingReferrerImpactsFeeShare(uint64 _amount) external prankAsTHJ(false) {
+        address overridingReferrer = makeAddr("overridingReferrer");
+        beekeeper.setReferrerFeeShare(referral, 5000); // 50%
+        
+        uint256 referrerFeeShareInBps = beekeeper.referrerFeeShare(referral);
+        uint256 expectedReferrerFee = FPML.mulDivUp(_amount, referrerFeeShareInBps, 10000);
+
+        beekeeper.setReferrerOverride(referral, overridingReferrer);
+
+        vm.deal(address(beekeeper), _amount);
+        beekeeper.distributeFees(referral, address(0), _amount);
+
+        assertEq(overridingReferrer.balance, expectedReferrerFee);
+        assertEq(referral.balance, 0);
+
     }
 }
