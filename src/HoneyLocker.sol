@@ -177,13 +177,6 @@ contract HoneyLocker is TokenReceiver, Ownable {
         emit Unstaked(_stakingContract, _LPToken, _amount);
     }
 
-    /// @notice         Burns BGT tokens for BERA and withdraws the BERA
-    /// @param _amount  The amount of BGT to burn and BERA to withdraw
-    function burnBGTForBERA(uint256 _amount) external onlyOwnerOrOperator {
-        HONEY_QUEEN.BGT().redeem(address(this), _amount);
-        withdrawBERA(_amount);
-    }
-
     /// @notice             Withdraws LP tokens from the HoneyLocker to the owner
     /// @dev                The expiration time must have passed
     /// @param _LPToken     The address of the LP token to withdraw
@@ -264,7 +257,6 @@ contract HoneyLocker is TokenReceiver, Ownable {
         if (!unlocked && expirations[_LPToken] != 0 && _expiration < expirations[_LPToken]) {
             revert ExpirationNotMatching();
         }
-        // set expiration to 1 so token is marked as lp token
         expirations[_LPToken] = unlocked ? 0 : _expiration;
         // using transferFrom from ERC721 because same signature for ERC20
         // with the difference that ERC721 doesn't expect a return value
@@ -289,6 +281,13 @@ contract HoneyLocker is TokenReceiver, Ownable {
 
     function dropBoost(uint128 _amount, address _validator) external onlyOwnerOrOperator {
         HONEY_QUEEN.BGT().dropBoost(_validator, _amount);
+    }
+
+    /// @notice         Burns BGT tokens for BERA and withdraws the BERA
+    /// @param _amount  The amount of BGT to burn and BERA to withdraw
+    function burnBGTForBERA(uint256 _amount) external onlyOwnerOrOperator {
+        HONEY_QUEEN.BGT().redeem(address(this), _amount);
+        withdrawBERA(_amount);
     }
 
     /*###############################################################*/
