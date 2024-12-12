@@ -214,6 +214,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
             revert WrongTargetVaultParameters();
         }
         for (uint256 i; i < _LPTokens.length; i++) {
+            if (unlocked || !HONEY_QUEEN.isTokenBlocked(_LPTokens[i])) revert TokenBlocked();
             // send to new locker and deposit and lock
             ERC721(_LPTokens[i]).approve(address(_newHoneyLocker), _amountsOrIds[i]);
             HoneyLocker(_newHoneyLocker).depositAndLock(_LPTokens[i], _amountsOrIds[i], expirations[_LPTokens[i]]);
