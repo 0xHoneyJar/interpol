@@ -18,7 +18,7 @@ abstract contract BaseVaultAdapter {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    address public token;
+    address public token;   // LP token
     address public locker;
     /*###############################################################
                             MODIFIERS
@@ -34,6 +34,7 @@ abstract contract BaseVaultAdapter {
     function stake(uint256 amount) external virtual;
     function unstake(uint256 amount) external virtual;
     function claim() external virtual;
+    function wildcard(uint8 func, bytes calldata args) external virtual;
     /*###############################################################
                             VIEW/PURE
     ###############################################################*/

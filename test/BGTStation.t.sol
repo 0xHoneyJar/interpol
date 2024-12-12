@@ -66,8 +66,9 @@ contract BGTStationTest is BaseTest {
         - proper events
         - balance is updated
     */
-    function test_singleDeposit(uint256 amountToDeposit, uint256 expiration) external prankAsTHJ {
-        StdCheats.deal(address(LP_TOKEN), THJ, amountToDeposit);
+    function test_singleDeposit(uint256 amountToDeposit, uint256 expiration, bool _useOperator) external prankAsTHJ(_useOperator) {
+        address user = _useOperator ? operator : THJ;
+        StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
 
         LP_TOKEN.approve(address(locker), amountToDeposit);
 
@@ -86,15 +87,16 @@ contract BGTStationTest is BaseTest {
         - balance is updated
         - expiration is updated
     */
-    function test_multipleDeposits(uint32[4] memory amounts, uint128[4] memory expirations) external prankAsTHJ {
+    function test_multipleDeposits(uint32[4] memory amounts, uint128[4] memory expirations, bool _useOperator) external prankAsTHJ(_useOperator) {
         uint runningBalance;
+        address user = _useOperator ? operator : THJ;
 
         // mint, deposit the first amount
         uint256 amount = uint256(amounts[0]);
         uint256 expiration = uint256(expirations[0]);
 
         runningBalance += amount;
-        StdCheats.deal(address(LP_TOKEN), THJ, amount);
+        StdCheats.deal(address(LP_TOKEN), user, amount);
         LP_TOKEN.approve(address(locker), amount);
         locker.depositAndLock(address(LP_TOKEN), amount, expiration);
 
@@ -102,7 +104,7 @@ contract BGTStationTest is BaseTest {
             uint256 _amount = uint256(amounts[i]);
             uint256 _expiration = uint256(expirations[i]);
 
-            StdCheats.deal(address(LP_TOKEN), THJ, _amount);
+            StdCheats.deal(address(LP_TOKEN), user, _amount);
             LP_TOKEN.approve(address(locker), _amount);
 
             // getting ready to revert if the new expiration is less than the current one
@@ -128,10 +130,10 @@ contract BGTStationTest is BaseTest {
         - expiration is respected
         - withdrawal is successful
     */
-    function test_singleWithdrawal(uint256 amountTDeposit, uint256 expiration) external prankAsTHJ {
+    function test_singleWithdrawal(uint256 amountTDeposit, uint256 expiration, bool _useOperator) external prankAsTHJ(_useOperator) {
         expiration = StdUtils.bound(expiration, 0, type(uint256).max - 1);
-
-        StdCheats.deal(address(LP_TOKEN), THJ, amountTDeposit);
+        address user = _useOperator ? operator : THJ;
+        StdCheats.deal(address(LP_TOKEN), user, amountTDeposit);
 
         LP_TOKEN.approve(address(locker), amountTDeposit);
         locker.depositAndLock(address(LP_TOKEN), amountTDeposit, expiration);
@@ -158,10 +160,11 @@ contract BGTStationTest is BaseTest {
         - proper events
         - proper balances
     */
-    function test_stake(uint256 amountToDeposit, uint128 expiration) external prankAsTHJ {
+    function test_stake(uint256 amountToDeposit, uint128 expiration, bool _useOperator) external prankAsTHJ(_useOperator) {
         amountToDeposit = StdUtils.bound(amountToDeposit, 1, type(uint32).max);
 
-        StdCheats.deal(address(LP_TOKEN), THJ, amountToDeposit);
+        address user = _useOperator ? operator : THJ;
+        StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
 
         LP_TOKEN.approve(address(locker), amountToDeposit);
         locker.depositAndLock(address(LP_TOKEN), amountToDeposit, uint256(expiration));
@@ -183,10 +186,11 @@ contract BGTStationTest is BaseTest {
         - proper events
         - proper balances
     */
-    function test_unstake(uint256 amountToDeposit, uint128 expiration) external prankAsTHJ {
+    function test_unstake(uint256 amountToDeposit, uint128 expiration, bool _useOperator) external prankAsTHJ(_useOperator) {
         amountToDeposit = StdUtils.bound(amountToDeposit, 1, type(uint32).max);
 
-        StdCheats.deal(address(LP_TOKEN), THJ, amountToDeposit);
+        address user = _useOperator ? operator : THJ;
+        StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
 
         LP_TOKEN.approve(address(locker), amountToDeposit);
         locker.depositAndLock(address(LP_TOKEN), amountToDeposit, uint256(expiration));
@@ -210,10 +214,11 @@ contract BGTStationTest is BaseTest {
         - proper events
         - proper balances
     */
-    function test_claimRewards(uint256 amountToDeposit, uint128 expiration) external prankAsTHJ {
+    function test_claimRewards(uint256 amountToDeposit, uint128 expiration, bool _useOperator) external prankAsTHJ(_useOperator) {
         amountToDeposit = StdUtils.bound(amountToDeposit, 1, type(uint32).max);
 
-        StdCheats.deal(address(LP_TOKEN), THJ, amountToDeposit);
+        address user = _useOperator ? operator : THJ;
+        StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
 
         LP_TOKEN.approve(address(locker), amountToDeposit);
         locker.depositAndLock(address(LP_TOKEN), amountToDeposit, expiration);

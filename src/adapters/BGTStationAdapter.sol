@@ -60,6 +60,10 @@ contract BGTStationAdapter is BaseVaultAdapter {
     function claim() external override onlyLocker {
         revert BaseVaultAdapter__NotImplemented();
     }
+
+    function wildcard(uint8 func, bytes calldata args) external override onlyLocker {
+        revert BaseVaultAdapter__NotImplemented();
+    }
     /*###############################################################
                             VIEW
     ###############################################################*/

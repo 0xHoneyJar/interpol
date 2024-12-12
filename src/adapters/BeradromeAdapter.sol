@@ -53,6 +53,10 @@ contract BeradromeAdapter is BaseVaultAdapter {
             emit Claimed(locker, address(beradromeVault), rewardToken, rewardAmount);
         }
     }
+
+    function wildcard(uint8 func, bytes calldata args) external override onlyLocker {
+        revert BaseVaultAdapter__NotImplemented();
+    }
     /*###############################################################
                             VIEW
     ###############################################################*/

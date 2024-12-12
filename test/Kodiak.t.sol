@@ -2,8 +2,9 @@
 pragma solidity ^0.8.23;
 
 import {ERC20} from "solady/tokens/ERC20.sol";
+import {ERC721} from "solady/tokens/ERC721.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
-import {StdUtils} from "forge-std/StdUtils";
+import {StdUtils} from "forge-std/StdUtils.sol";
 import {console2} from "forge-std/console2.sol";
 
 import {BaseTest} from "./Base.t.sol";
@@ -12,19 +13,73 @@ import {KodiakAdapter} from "../src/adapters/KodiakAdapter.sol";
 import {BaseVaultAdapter as BVA} from "../src/adapters/BaseVaultAdapter.sol";
 import {Constants} from "../src/Constants.sol";
 
+interface KodiakFarm {
+    function stakeLocked(uint256 amount, uint256 secs) external;
+    function withdrawLocked(bytes32 kekId) external;
+    function getReward() external returns (uint256[] memory);
+    function getAllRewardTokens() external view returns (address[] memory);
+    function lockedLiquidityOf(address account) external view returns (uint256);
+    function earned(address account) external view returns (uint256[] memory);
+    function sync() external;
+
+    event StakeLocked(
+        address indexed user,
+        uint256 amount,
+        uint256 secs,
+        bytes32 kek_id,
+        address source_address
+    );
+    event WithdrawLocked(
+        address indexed user,
+        uint256 amount,
+        bytes32 kek_id,
+        address destination_address
+    );
+    event RewardPaid(
+        address indexed user,
+        uint256 reward,
+        address token_address,
+        address destination_address
+    );
+}
+
+interface XKDK {
+    function redeem(uint256 amount, uint256 duration) external;
+    function finalizeRedeem(uint256 redeemIndex) external;
+    function balanceOf(address account) external view returns (uint256);
+}
+
+/*
+    There are currently no "real" Kodiak gauges using KodiakV3
+    so we have to use a bogus one.
+*/
+contract KodiakV3Gauge {
+    ERC721 kodiakv3;
+    constructor(address _kodiakV3) {
+        kodiakv3 = ERC721(_kodiakV3);
+    }
+    function stake(uint256 _tokenId) external {
+        kodiakv3.transferFrom(msg.sender, address(this), _tokenId);
+    }
+    function unstake(uint _tokenId) external {
+        kodiakv3.transferFrom(address(this), msg.sender, _tokenId);
+    }
+}
+
 contract KodiakTest is BaseTest {    
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
-    KodiakAdapter public adapter;
-    BVA public lockerAdapter;   // adapter for Kodiak used by locker
-
-    // Kodiak gauge
-    address public constant GAUGE = 0x1234...;  // TODO: Add actual Kodiak gauge address
-    // Kodiak LP token  
-    ERC20 public constant LP_TOKEN = ERC20(0x5678...); // TODO: Add actual Kodiak LP token address
-
-    uint256 public constant INITIAL_LP_BALANCE = 1000 ether;
+    KodiakAdapter   public adapter;
+    BVA             public lockerAdapter;
+    ERC20           public constant KDK             = ERC20(0xfd27998fa0eaB1A6372Db14Afd4bF7c4a58C5364);
+    XKDK            public constant xKDK            = XKDK(0x414B50157a5697F14e91417C5275A7496DcF429D);
+    ERC20           public constant LP_TOKEN        = ERC20(0xE5A2ab5D2fb268E5fF43A5564e44c3309609aFF9); // YEET-WBERA
+    KodiakFarm      public constant GAUGE           = KodiakFarm(0xbdEE3F788a5efDdA1FcFe6bfe7DbbDa5690179e6);
+    ERC721          public constant KODIAKV3        = ERC721(0xC0568C6E9D5404124c8AA9EfD955F3f14C8e64A6);
+    KodiakV3Gauge   public kodiakV3Gauge;
+    
+    uint256         public NFT_ID;
     /*###############################################################
                             SETUP
     ###############################################################*/
@@ -38,192 +93,191 @@ contract KodiakTest is BaseTest {
 
         vm.startPrank(THJ);
 
-        queen.setAdapterApproval(GAUGE, address(adapter), true);
-        queen.setVaultAdapter(GAUGE, address(adapter), address(LP_TOKEN));
-        locker.registerVault(GAUGE, false);
+        queen.setAdapterApproval(address(GAUGE), address(adapter), true);
+        queen.setVaultAdapter(address(GAUGE), address(adapter), address(LP_TOKEN));
+        locker.registerVault(address(GAUGE), false);
 
-        lockerAdapter = BVA(locker.vaultToAdapter(GAUGE));
+        lockerAdapter = BVA(locker.vaultToAdapter(address(GAUGE)));
 
         vm.stopPrank();
 
         vm.label(address(adapter), "KodiakAdapter");
         vm.label(address(GAUGE), "Kodiak Gauge");
         vm.label(address(LP_TOKEN), "Kodiak LP Token");
+        vm.label(address(KODIAKV3), "KodiakV3");
+        vm.label(address(kodiakV3Gauge), "KodiakV3Gauge");
+        vm.label(address(xKDK), "XKDK");
+        vm.label(address(KDK), "KDK");
     }
 
     /*###############################################################
                             TESTS
     ###############################################################*/
 
-    /*
-        This test a single simple deposit.
-        It checks ;
-        - proper events
-        - balance is updated
-    */
-    function test_singleDeposit(uint256 amountToDeposit, uint256 expiration) external prankAsTHJ {
-        StdCheats.deal(address(LP_TOKEN), THJ, amountToDeposit);
+  function test_stake(uint32 _amountToDeposit, uint128 _expiration, bool _useOperator) external prankAsTHJ(_useOperator) {
+        address user = _useOperator ? operator : THJ;
+        uint256 amountToDeposit = StdUtils.bound(uint256(_amountToDeposit), 1, type(uint32).max);
+        
+        StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
 
         LP_TOKEN.approve(address(locker), amountToDeposit);
+        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, uint256(_expiration));
 
-        vm.expectEmit(true, true, false, false, address(locker));
-        emit HoneyLocker.Deposited(address(LP_TOKEN), amountToDeposit);
-        vm.expectEmit(true, false, false, false, address(locker));
-        emit HoneyLocker.LockedUntil(address(LP_TOKEN), expiration);
-        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, expiration);
+        bytes32 expectedKekId = keccak256(
+            abi.encodePacked(
+                address(lockerAdapter), block.timestamp, amountToDeposit, GAUGE.lockedLiquidityOf(address(lockerAdapter))
+            )
+        );
+
+        vm.expectEmit(true, false, false, true, address(GAUGE));
+        emit KodiakFarm.StakeLocked(address(lockerAdapter), amountToDeposit, 30 days, expectedKekId, address(lockerAdapter));
+        locker.stake(address(GAUGE), amountToDeposit);
+    }
+
+    function test_unstakeSingle(
+        uint128 _amountToDeposit,
+        uint128 _expiration,
+        bool _useOperator
+    ) external prankAsTHJ(_useOperator) {
+        address user = _useOperator ? operator : THJ;
+        // too low amount results in the withdrawal failing because of how Kodiak works
+        uint256 amountToDeposit = StdUtils.bound(uint256(_amountToDeposit), 1e20, type(uint128).max);
+        
+        StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
+
+        LP_TOKEN.approve(address(locker), amountToDeposit);
+        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, uint256(_expiration));
+
+        bytes32 expectedKekId = keccak256(
+            abi.encodePacked(
+                address(lockerAdapter), block.timestamp, amountToDeposit, GAUGE.lockedLiquidityOf(address(lockerAdapter))
+            )
+        );
+
+        locker.stake(address(GAUGE), amountToDeposit);
+
+        vm.warp(block.timestamp + 30 days);
+        GAUGE.sync();
+
+        vm.expectEmit(true, false, false, true, address(GAUGE));
+        emit KodiakFarm.WithdrawLocked(address(lockerAdapter), amountToDeposit, expectedKekId, address(lockerAdapter));
+        locker.unstake(address(GAUGE), uint256(expectedKekId));
 
         assertEq(LP_TOKEN.balanceOf(address(locker)), amountToDeposit);
     }
 
-    /*
-        This test multiple deposits.
-        It checks ;
-        - balance is updated
-        - expiration is updated
-    */
-    function test_multipleDeposits(uint32[4] memory amounts, uint128[4] memory expirations) external prankAsTHJ {
-        uint runningBalance;
-
-        // mint, deposit the first amount
-        uint256 amount = uint256(amounts[0]);
-        uint256 expiration = uint256(expirations[0]);
-
-        runningBalance += amount;
-        StdCheats.deal(address(LP_TOKEN), THJ, amount);
-        LP_TOKEN.approve(address(locker), amount);
-        locker.depositAndLock(address(LP_TOKEN), amount, expiration);
-
-        for (uint i = 1; i < amounts.length; i++) {
-            uint256 _amount = uint256(amounts[i]);
-            uint256 _expiration = uint256(expirations[i]);
-
-            StdCheats.deal(address(LP_TOKEN), THJ, _amount);
-            LP_TOKEN.approve(address(locker), _amount);
-
-            // getting ready to revert if the new expiration is less than the current one
-            if (expiration >_expiration) {
-                vm.expectRevert(HoneyLocker.HoneyLocker__ExpirationNotMatching.selector);
-            } else {
-                // if the new expiration is greater than the current one, update the expiration
-                // and add the amount to the running balance because successful deposit
-                expiration = _expiration;
-                runningBalance += _amount;
-            }
-
-            locker.depositAndLock(address(LP_TOKEN), _amount, _expiration);
-        }
-
-        assertEq(LP_TOKEN.balanceOf(address(locker)), runningBalance);
-    }
-
-    /*
-        This test a single simple withdrawal.
-        It checks ;
-        - proper events
-        - expiration is respected
-        - withdrawal is successful
-    */
-    function test_singleWithdrawal(uint256 amountTDeposit, uint256 expiration) external prankAsTHJ {
-        expiration = StdUtils.bound(expiration, 0, type(uint256).max - 1);
-
-        StdCheats.deal(address(LP_TOKEN), THJ, amountTDeposit);
-
-        LP_TOKEN.approve(address(locker), amountTDeposit);
-        locker.depositAndLock(address(LP_TOKEN), amountTDeposit, expiration);
-
-        // cannot withdraw too early if expiration is in the future
-        if (expiration > block.timestamp) {
-            vm.expectRevert(HoneyLocker.HoneyLocker__NotExpiredYet.selector);
-            locker.withdrawLPToken(address(LP_TOKEN), amountTDeposit);
-        }
-
-        // move forward in time
-        vm.warp(expiration + 1);
-
-        vm.expectEmit(true, false, false, true, address(locker));
-        emit HoneyLocker.Withdrawn(address(LP_TOKEN), amountTDeposit);
-        locker.withdrawLPToken(address(LP_TOKEN), amountTDeposit);
-
-        assertEq(LP_TOKEN.balanceOf(THJ), amountTDeposit);
-    }
-
-    /*
-        This test a single stake.
-        It checks ;
-        - proper events
-        - proper balances
-    */
-    function test_stake(uint256 amountToDeposit, uint128 expiration) external prankAsTHJ {
-        amountToDeposit = StdUtils.bound(amountToDeposit, 1, type(uint32).max);
-
-        StdCheats.deal(address(LP_TOKEN), THJ, amountToDeposit);
+    function test_claimRewards(
+        uint128 _amountToDeposit,
+        uint128 _expiration,
+        bool _useOperator
+    ) external prankAsTHJ(_useOperator) {
+        address user = _useOperator ? operator : THJ;
+        uint256 amountToDeposit = StdUtils.bound(uint256(_amountToDeposit), 1e20, type(uint128).max);
+        
+        StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
 
         LP_TOKEN.approve(address(locker), amountToDeposit);
-        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, uint256(expiration));
-
-        vm.expectEmit(true, false, false, true, address(GAUGE));
-        emit IKodiakGauge.Staked(address(lockerAdapter), amountToDeposit);
-        vm.expectEmit(true, true, false, true, address(locker));
-        emit HoneyLocker.Staked(address(GAUGE), address(LP_TOKEN), amountToDeposit);
-        locker.stake(address(GAUGE), amountToDeposit);
-
-        assertEq(LP_TOKEN.balanceOf(THJ), 0);
-        assertEq(LP_TOKEN.balanceOf(address(locker)), 0);
-        assertEq(LP_TOKEN.balanceOf(address(lockerAdapter)), 0);
-    }
-
-    /*
-        This test a single unstake.
-        It checks ;
-        - proper events
-        - proper balances
-    */
-    function test_unstake(uint256 amountToDeposit, uint128 expiration) external prankAsTHJ {
-        amountToDeposit = StdUtils.bound(amountToDeposit, 1, type(uint32).max);
-
-        StdCheats.deal(address(LP_TOKEN), THJ, amountToDeposit);
-
-        LP_TOKEN.approve(address(locker), amountToDeposit);
-        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, uint256(expiration));
+        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, uint256(_expiration));
 
         locker.stake(address(GAUGE), amountToDeposit);
 
-        vm.expectEmit(true, false, false, true, address(GAUGE));
-        emit IKodiakGauge.Withdrawn(address(lockerAdapter), amountToDeposit);
-        vm.expectEmit(true, true, false, true, address(locker));
-        emit HoneyLocker.Unstaked(address(GAUGE), address(LP_TOKEN), amountToDeposit);
-        locker.unstake(address(GAUGE), amountToDeposit);
+        vm.warp(block.timestamp + 30 days);
+        GAUGE.sync();
 
-        assertEq(LP_TOKEN.balanceOf(THJ), 0);
-        assertEq(LP_TOKEN.balanceOf(address(locker)), amountToDeposit);
-        assertEq(LP_TOKEN.balanceOf(address(lockerAdapter)), 0);
-    }
+        uint256[] memory earned = GAUGE.earned(address(lockerAdapter));
+        address[] memory rewardTokens = GAUGE.getAllRewardTokens();
 
-    /*
-        This test claiming rewards.
-        It checks ;
-        - proper events
-        - proper balances
-    */
-    function test_claimRewards(uint256 amountToDeposit, uint128 expiration) external prankAsTHJ {
-        amountToDeposit = StdUtils.bound(amountToDeposit, 1, type(uint32).max);
-
-        StdCheats.deal(address(LP_TOKEN), THJ, amountToDeposit);
-
-        LP_TOKEN.approve(address(locker), amountToDeposit);
-        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, expiration);
-        locker.stake(address(GAUGE), amountToDeposit);
-
-        vm.warp(block.timestamp + 10000);
-
-        uint256 earned = IKodiakGauge(GAUGE).earned(address(lockerAdapter));
-
-        vm.expectEmit(true, true, true, true, address(locker));
-        emit BVA.Claimed(address(locker), address(GAUGE), Constants.REWARD_TOKEN, earned);
         locker.claim(address(GAUGE));
-
-        assertEq(ERC20(Constants.REWARD_TOKEN).balanceOf(address(locker)), earned);
-        assertEq(ERC20(Constants.REWARD_TOKEN).balanceOf(address(lockerAdapter)), 0);
-        assertEq(ERC20(Constants.REWARD_TOKEN).balanceOf(THJ), 0);
+        uint256 xkdkBalance = xKDK.balanceOf(address(lockerAdapter));
+        for (uint256 i; i < rewardTokens.length; i++) {
+            address rewardToken = rewardTokens[i];
+            uint256 rewardBalanceAfter = ERC20(rewardToken).balanceOf(address(locker));
+            if (rewardToken == address(KDK)) {
+                assertEq(earned[i], rewardBalanceAfter + xkdkBalance);
+            } else {
+                assertEq(rewardBalanceAfter, earned[i]);
+            }
+        }
     }
+
+    function test_xkdk(uint128 _amount, bool _useOperator) external prankAsTHJ(_useOperator) {
+        uint256 KDKBalanceOfXKDK = KDK.balanceOf(address(xKDK));
+        uint256 xkdkBalance = StdUtils.bound(uint256(_amount), 1e20, KDKBalanceOfXKDK);
+
+        StdCheats.deal(address(xKDK), address(lockerAdapter), xkdkBalance);
+
+        // start the redeem for 15 days so 0.5x multiplier
+        locker.wildcard(address(GAUGE), 0, abi.encode(xkdkBalance, 15 days));
+
+        vm.warp(block.timestamp + 15 days);
+
+        // finalize the redeem
+        locker.wildcard(address(GAUGE), 1, abi.encode(0));
+
+        assertEq(KDK.balanceOf(address(locker)), xkdkBalance / 2);
+    }
+
+    // function test_depositV3() external prankAsTHJ {
+    //     uint256 nftId = 6658;
+
+    //     StdCheats.dealERC721(address(KODIAKV3), THJ, nftId);
+
+    //     KODIAKV3.approve(address(locker), nftId);
+
+
+    //     vm.expectEmit(true, false, false, true, address(locker));
+    //     emit locker.Deposited(address(KODIAKV3), nftId);
+    //     vm.expectEmit(true, false, false, true, address(locker));
+    //     emit locker.LockedUntil(address(KODIAKV3), expiration);
+    //     locker.depositAndLock(address(KODIAKV3), nftId, expiration);
+    // }
+
+    // function test_depositKodiakV3() external prankAsTHJ(){
+    //     KODIAKV3.approve(address(locker), 6658);
+    //     vm.expectEmit(true, false, false, true, address(locker));
+    //     emit locker.Deposited(address(KODIAKV3), 6658);
+    //     vm.expectEmit(true, false, false, true, address(locker));
+    //     emit locker.LockedUntil(address(KODIAKV3), expiration);
+    //     locker.depositAndLock(address(KODIAKV3), 6658, expiration);
+    // }
+
+    // function test_withdrawKodiakV3() external prankAsTHJ(){
+    //     KODIAKV3.approve(address(locker), 6658);
+    //     locker.depositAndLock(address(KODIAKV3), 6658, 1);
+
+    //     vm.expectEmit(true, false, false, true, address(locker));
+    //     emit locker.Withdrawn(address(KODIAKV3), 6658);
+    //     locker.withdrawLPToken(address(KODIAKV3), 6658);
+    // }
+
+    // function test_stakingKodiakV3() external prankAsTHJ() {
+    //     KODIAKV3.approve(address(locker), 6658);
+    //     locker.depositAndLock(address(KODIAKV3), 6658, expiration);
+
+    //     locker.stake(
+    //         address(KODIAKV3),
+    //         address(kodiakV3Gauge),
+    //         6658,
+    //         abi.encodeWithSelector(bytes4(keccak256("stake(uint256)")), 6658)
+    //     );
+    // }
+
+    // function test_unstakingKodiakV3() external prankAsTHJ() {
+    //     KODIAKV3.approve(address(locker), 6658);
+    //     locker.depositAndLock(address(KODIAKV3), 6658, expiration);
+
+    //     locker.stake(
+    //         address(KODIAKV3),
+    //         address(kodiakV3Gauge),
+    //         6658,
+    //         abi.encodeWithSelector(bytes4(keccak256("stake(uint256)")), 6658)
+    //     );
+
+    //     locker.unstake(
+    //         address(KODIAKV3),
+    //         address(kodiakV3Gauge),
+    //         6658,
+    //         abi.encodeWithSelector(bytes4(keccak256("unstake(uint256)")), 6658)
+    //     );
+    // }
 }
