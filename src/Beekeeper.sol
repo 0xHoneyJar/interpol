@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
+import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
 
 // prettier-ignore
 contract Beekeeper is Ownable {
@@ -20,9 +21,9 @@ contract Beekeeper is Ownable {
     ###############################################################*/
     address public treasury;
     uint256 public standardReferrerFeeShare = 3000; // in bps 30%
-    mapping(address referrer => bool authorized) public isReferrer;
-    mapping(address referrer => address overridingReferrer) public referrerOverrides;
-    mapping(address referrer => uint256 shareOfFeeInBps) internal _referrerFeeShare;
+    mapping(address referrer => bool authorized)            public      isReferrer;
+    mapping(address referrer => address overridingReferrer) public      referrerOverrides;
+    mapping(address referrer => uint256 shareOfFeeInBps)    public      _referrerFeeShare;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -58,11 +59,12 @@ contract Beekeeper is Ownable {
     /*###############################################################
                             VIEW ONLY
     ###############################################################*/
-    /// @notice Returns the fee share for a given referrer
-    /// @dev If a custom fee share is set for the referrer, it returns that value.
-    ///      Otherwise, it returns the standard referrer fee share.
-    /// @param _referrer The address of the referrer
-    /// @return The fee share for the referrer in basis points (bps)
+    /// @notice                 Returns the fee share for a given referrer
+    /// @dev                    If a custom fee share is set for the referrer, it returns that value.
+    ///                         Otherwise, it returns the standard referrer fee share.
+    ///
+    /// @param _referrer        The address of the referrer
+    /// @return _               The fee share for the referrer in basis points (bps)
     function referrerFeeShare(address _referrer) public view returns (uint256) {
         return _referrerFeeShare[_referrer] != 0 ? _referrerFeeShare[_referrer] : standardReferrerFeeShare;
     }
@@ -70,12 +72,12 @@ contract Beekeeper is Ownable {
                             EXTERNAL
     ###############################################################*/
 
-    /// @notice Distributes fees between the referrer and the treasury
-    /// @dev If the referrer is not authorized, all fees go to the treasury
-    /// @param _referrer The address of the referrer
-    /// @param _token The address of the token being distributed (address(0) for native token)
-    /// @param _amount The total amount of fees to be distributed
-    /// @custom:emits FeesDistributed emitted for each recipient (referrer and treasury) with their respective amounts
+    /// @notice             Distributes fees between the referrer and the treasury
+    /// @dev                If the referrer is not authorized, all fees go to the treasury
+    /// @param _referrer    The address of the referrer
+    /// @param _token       The address of the token being distributed (address(0) for native token)
+    /// @param _amount      The total amount of fees to be distributed
+    /// @custom:emits       FeesDistributed emitted for each recipient (referrer and treasury) with their respective amounts
     function distributeFees(address _referrer, address _token, uint256 _amount) external payable {
         bool isBera = _token == address(0);
         if (!isBera && _token.code.length == 0) revert NoCodeForToken();
@@ -88,7 +90,7 @@ contract Beekeeper is Ownable {
         // use the referrer fee override if it exists, otherwise use the original referrer
         address referrer = referrerOverrides[_referrer] != address(0) ? referrerOverrides[_referrer] : _referrer;
         uint256 referrerFeeShareInBps = referrerFeeShare(referrer);
-        uint256 referrerFee = (_amount * referrerFeeShareInBps) / 10000;
+        uint256 referrerFee = FPML.mulDivUp(_amount, referrerFeeShareInBps, 10000);
 
         if (isBera) {
             STL.safeTransferETH(referrer, referrerFee);

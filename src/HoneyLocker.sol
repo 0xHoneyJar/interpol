@@ -57,12 +57,12 @@ contract HoneyLocker is TokenReceiver, Ownable {
                             STORAGE
     ###############################################################*/
     mapping(address LPToken => uint256 expiration) public expirations;
-    address public referral;
-    address public treasury; // personnal treasury of the locker
-    address public operator; // operator of the locker
-    bool public unlocked; // whether contract should not or should enforce restrictions
-    HoneyQueen public HONEY_QUEEN;
-    address internal migratingVault; // can only be set once
+    address     public referral;
+    address     public treasury;            // personnal treasury of the locker
+    address     public operator;            // operator of the locker
+    bool        public unlocked;            // whether contract should not or should enforce restrictions
+    HoneyQueen  public HONEY_QUEEN;
+    address     internal migratingVault;    // can only be set once
     /*###############################################################
                             MODIFIERS
     ###############################################################*/
@@ -116,12 +116,13 @@ contract HoneyLocker is TokenReceiver, Ownable {
                             OWNER LOGIC
     ###############################################################*/
 
-    /// @notice Executes a wildcard function call on a target contract
-    /// @notice A wildcard is for an "usual" function that is necessary but
-    ///         doesn't fit in the stake/unstake/rewards categories
-    /// @param _contract The address of the target contract
-    /// @param _data The calldata to be sent to the target contract
-    /// @custom:throws WildcardFailed if the call to the target contract fails
+    /// @notice             Executes a wildcard function call on a target contract
+    /// @notice             A wildcard is for an "usual" function that is necessary but
+    ///                     doesn't fit in the stake/unstake/rewards categories
+    ///
+    /// @param _contract    The address of the target contract
+    /// @param _data        The calldata to be sent to the target contract
+    /// @custom:throws      WildcardFailed if the call to the target contract fails
     function wildcard(address _contract, bytes calldata _data)
         external
         onlyOwnerOrOperator
@@ -132,13 +133,14 @@ contract HoneyLocker is TokenReceiver, Ownable {
         if (!success) revert WildcardFailed();
     }
 
-    /// @notice Stakes LP tokens in a staking contract
-    /// @param _LPToken The address of the LP token to stake
+    /// @notice                 Stakes LP tokens in a staking contract
+    ///
+    /// @param _LPToken         The address of the LP token to stake
     /// @param _stakingContract The address of the staking contract
-    /// @param _amount The amount of LP tokens to stake
-    /// @param _data The calldata to be sent to the staking contract
-    /// @custom:throws StakeFailed if the call to the staking contract fails
-    /// @custom:emits Staked event with the staking contract, LP token, and amount staked
+    /// @param _amount          The amount of LP tokens to stake
+    /// @param _data            The calldata to be sent to the staking contract
+    /// @custom:throws          StakeFailed if the call to the staking contract fails
+    /// @custom:emits           Staked event with the staking contract, LP token, and amount staked
     function stake(address _LPToken, address _stakingContract, uint256 _amount, bytes memory _data)
         external
         onlyOwnerOrOperator
@@ -152,13 +154,14 @@ contract HoneyLocker is TokenReceiver, Ownable {
         emit Staked(_stakingContract, _LPToken, _amount);
     }
 
-    /// @notice Unstakes LP tokens from a staking contract
-    /// @param _LPToken The address of the LP token to unstake
+    /// @notice                 Unstakes LP tokens from a staking contract
+    ///
+    /// @param _LPToken         The address of the LP token to unstake
     /// @param _stakingContract The address of the staking contract
-    /// @param _amount The amount of LP tokens to unstake
-    /// @param _data The calldata to be sent to the staking contract
-    /// @custom:throws UnstakeFailed if the call to the staking contract fails
-    /// @custom:emits Unstaked event with the staking contract, LP token, and amount unstaked
+    /// @param _amount          The amount of LP tokens to unstake
+    /// @param _data            The calldata to be sent to the staking contract
+    /// @custom:throws          UnstakeFailed if the call to the staking contract fails
+    /// @custom:emits           Unstaked event with the staking contract, LP token, and amount unstaked
     function unstake(address _LPToken, address _stakingContract, uint256 _amount, bytes memory _data)
         public
         onlyOwnerOrOperator
@@ -174,23 +177,22 @@ contract HoneyLocker is TokenReceiver, Ownable {
         emit Unstaked(_stakingContract, _LPToken, _amount);
     }
 
-    /// @notice Burns BGT tokens for BERA and withdraws the BERA
-    /// @param _amount The amount of BGT to burn and BERA to withdraw
+    /// @notice         Burns BGT tokens for BERA and withdraws the BERA
+    /// @param _amount  The amount of BGT to burn and BERA to withdraw
     function burnBGTForBERA(uint256 _amount) external onlyOwnerOrOperator {
         HONEY_QUEEN.BGT().redeem(address(this), _amount);
         withdrawBERA(_amount);
     }
 
-    /// @notice Withdraws LP tokens from the HoneyLocker to the owner
-    /// @dev The expiration time must have passed
-    /// @param _LPToken The address of the LP token to withdraw
-    /// @param _amount The amount of LP tokens to withdraw
-    /// @custom:throws HasToBeLPToken if the token is not an LP token
-    /// @custom:throws NotExpiredYet if the expiration time has not passed
-    /// @custom:emits Withdrawn event with the LP token address and amount withdrawn
+    /// @notice             Withdraws LP tokens from the HoneyLocker to the owner
+    /// @dev                The expiration time must have passed
+    /// @param _LPToken     The address of the LP token to withdraw
+    /// @param _amount      The amount of LP tokens to withdraw
+    /// @custom:throws      HasToBeLPToken if the token is not an LP token
+    /// @custom:throws      NotExpiredYet if the expiration time has not passed
+    /// @custom:emits       Withdrawn event with the LP token address and amount withdrawn
     function withdrawLPToken(address _LPToken, uint256 _amount) external onlyUnblockedTokens(_LPToken) onlyOwnerOrOperator {
         if (HONEY_QUEEN.isRewardToken(_LPToken)) revert HasToBeLPToken();
-        if (expirations[_LPToken] == 0) revert HasToBeLPToken();
         // only withdraw if expiration is OK
         if (block.timestamp < expirations[_LPToken]) revert NotExpiredYet();
         // self approval only needed for ERC20, try/catch in case it's an ERC721
@@ -199,13 +201,13 @@ contract HoneyLocker is TokenReceiver, Ownable {
         emit Withdrawn(_LPToken, _amount);
     }
 
-    /// @notice Migrates LP tokens to a new HoneyLocker contract
-    /// @dev The migration must be enabled
-    /// @param _LPTokens An array of LP token addresses to migrate
-    /// @param _amountsOrIds An array of amounts or IDs corresponding to the LP tokens
-    /// @param _newHoneyLocker The address of the new HoneyLocker contract
-    /// @custom:throws MigrationNotEnabled if the migration is not enabled for the current and new contract
-    /// @custom:emits Migrated event for each LP token migrated
+    /// @notice                 Migrates LP tokens to a new HoneyLocker contract
+    /// @dev                    The migration must be enabled
+    /// @param _LPTokens        An array of LP token addresses to migrate
+    /// @param _amountsOrIds    An array of amounts or IDs corresponding to the LP tokens
+    /// @param _newHoneyLocker  The address of the new HoneyLocker contract
+    /// @custom:throws          MigrationNotEnabled if the migration is not enabled for the current and new contract
+    /// @custom:emits           Migrated event for each LP token migrated
     function migrate(address[] calldata _LPTokens, uint256[] calldata _amountsOrIds ,address payable _newHoneyLocker) external onlyOwner {
         // check migration is authorized based on codehashes
         if (!HONEY_QUEEN.isMigrationEnabled(address(this).codehash, _newHoneyLocker.codehash)) {
@@ -227,12 +229,12 @@ contract HoneyLocker is TokenReceiver, Ownable {
         }
     }
 
-    /// @notice Claims rewards from a staking contract
-    /// @dev Only the owner or the operator can call this function, and the staking contract and selector must be allowed
-    /// @param _stakingContract The address of the staking contract
-    /// @param _data The calldata to be sent to the staking contract
-    /// @custom:throws ClaimRewardsFailed if the call to the staking contract fails
-    /// @custom:emits RewardsClaimed event with the staking contract address
+    /// @notice                     Claims rewards from a staking contract
+    /// @dev                        Only the owner or the operator can call this function, and the staking contract and selector must be allowed
+    /// @param _stakingContract     The address of the staking contract
+    /// @param _data                The calldata to be sent to the staking contract
+    /// @custom:throws              ClaimRewardsFailed if the call to the staking contract fails
+    /// @custom:emits               RewardsClaimed event with the staking contract address
     function claimRewards(address _stakingContract, bytes memory _data)
         external
         onlyOwnerOrOperator
@@ -244,14 +246,15 @@ contract HoneyLocker is TokenReceiver, Ownable {
         emit RewardsClaimed(_stakingContract);
     }
 
-    /// @notice Deposits and locks LP tokens in the HoneyLocker
-    /// @dev Only the owner or migrating vault can call this function
-    /// @param _LPToken The address of the LP token to deposit and lock
-    /// @param _amountOrId The amount or ID of the LP token to deposit
-    /// @param _expiration The expiration timestamp for the lock
-    /// @custom:throws ExpirationNotMatching if the new expiration is less than the existing one for non-unlocked tokens
-    /// @custom:emits Deposited event with the LP token address and amount or ID deposited
-    /// @custom:emits LockedUntil event with the LP token address and expiration timestamp
+    /// @notice                 Deposits and locks LP tokens in the HoneyLocker
+    /// @dev                    Only the owner or migrating vault can call this function
+    ///
+    /// @param _LPToken         The address of the LP token to deposit and lock
+    /// @param _amountOrId      The amount or ID of the LP token to deposit
+    /// @param _expiration      The expiration timestamp for the lock
+    /// @custom:throws          ExpirationNotMatching if the new expiration is less than the existing one for non-unlocked tokens
+    /// @custom:emits           Deposited event with the LP token address and amount or ID deposited
+    /// @custom:emits           LockedUntil event with the LP token address and expiration timestamp
     function depositAndLock(address _LPToken, uint256 _amountOrId, uint256 _expiration) 
     external
     onlyOwnerOrOperatorOrMigratingVault 
@@ -262,7 +265,7 @@ contract HoneyLocker is TokenReceiver, Ownable {
             revert ExpirationNotMatching();
         }
         // set expiration to 1 so token is marked as lp token
-        expirations[_LPToken] = unlocked ? 1 : _expiration;
+        expirations[_LPToken] = unlocked ? 0 : _expiration;
         // using transferFrom from ERC721 because same signature for ERC20
         // with the difference that ERC721 doesn't expect a return value
         ERC721(_LPToken).transferFrom(msg.sender, address(this), _amountOrId);
@@ -328,18 +331,18 @@ contract HoneyLocker is TokenReceiver, Ownable {
         emit MigrationSet(_migratingVault);
     }
 
-    /// @notice Sets the treasury address for the HoneyLocker
-    /// @dev It's the responsability of the owner to ensure the treasury can handle any type of fund
-    /// @param _treasury The address to set as the treasury
+    /// @notice             Sets the treasury address for the HoneyLocker
+    /// @dev                It's the responsability of the owner to ensure the treasury can handle any type of fund
+    /// @param _treasury    The address to set as the treasury
     function setTreasury(address _treasury) external onlyOwner {
         treasury = _treasury;
         emit TreasurySet(_treasury);
     }
 
-    /// @notice Sets the operator address for the HoneyLocker
-    /// @dev Only the owner can call this function
-    /// @dev The only operator cannot call migration or treasury related functions
-    /// @param _operator The address to set as the new operator
+    /// @notice             Sets the operator address for the HoneyLocker
+    /// @dev                Only the owner can call this function
+    /// @dev                The only operator cannot call migration or treasury related functions
+    /// @param _operator    The address to set as the new operator
     function setOperator(address _operator) external onlyOwner {
         operator = _operator;
         emit OperatorSet(_operator);
@@ -347,9 +350,9 @@ contract HoneyLocker is TokenReceiver, Ownable {
     /*###############################################################
                             VIEW LOGIC
     ###############################################################*/
-    /// @notice Returns the recipient address for rewards and LP tokens withdrawals
-    /// @dev If treasury is set, returns treasury address. Otherwise, returns owner address.
-    /// @return The address of the recipient (either treasury or owner)
+    /// @notice         Returns the recipient address for rewards and LP tokens withdrawals
+    /// @dev            If treasury is set, returns treasury address. Otherwise, returns owner address.
+    /// @return address The address of the recipient (either treasury or owner)
     function recipient() public view returns (address) {
         return treasury == address(0) ? owner() : treasury;
     }

@@ -34,19 +34,21 @@ contract HoneyQueen is Ownable {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    address public treasury;
-    address public validator;
-    uint256 public fees = 200; // in bps
-    Beekeeper public immutable beekeeper;
-    IBGT public immutable BGT;
-    mapping(address targetContract => string protocol) public protocolOfTarget;
+    address     public treasury;
+    address     public validator;
+    uint256     public fees = 200; // in bps
+    Beekeeper   public immutable beekeeper;
+    IBGT        public immutable BGT;
+
+
+    mapping(address targetContract => string protocol)  public protocolOfTarget;
+    // this is for cases where gauges give you a NFT to represent your staking position
+    mapping(address token => bool blocked)              public isTokenBlocked;
+    mapping(address token => bool isRewardToken)        public isRewardToken;
     mapping(bytes4 selector => mapping(string action => mapping(string protocol => bool allowed)))
         public isSelectorAllowedForProtocol;
-    // this is for cases where gauges give you a NFT to represent your staking position
-    mapping(address token => bool blocked) public isTokenBlocked;
     mapping(bytes32 fromCodeHash => mapping(bytes32 toCodeHash => bool isEnabled))
         public isMigrationEnabled;
-    mapping(address token => bool isRewardToken) public isRewardToken;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -77,13 +79,13 @@ contract HoneyQueen is Ownable {
         contracts will follow the same ABI, so it makes sense to just
         group the selectors by protocol.
     */
-    /// @notice Sets whether a selector is allowed for a specific action and protocol
-    /// @dev This function allows the owner to configure which function selectors are permitted for different actions within each protocol
-    /// @param _selector The function selector to be configured
-    /// @param _action The action category (e.g., "stake", "unstake", "rewards")
-    /// @param _protocol The protocol identifier (e.g., "BGTSTATION", "KODIAK")
-    /// @param _isAllowed Boolean indicating whether the selector is allowed (true) or disallowed (false)
-    /// @custom:emits SelectorAllowedForProtocol event with the selector, action, protocol, and allowed status
+    /// @notice             Sets whether a selector is allowed for a specific action and protocol
+    /// @dev                This function allows the owner to configure which function selectors are permitted for different actions within each protocol
+    /// @param _selector    The function selector to be configured
+    /// @param _action      The action category (e.g., "stake", "unstake", "rewards")
+    /// @param _protocol    The protocol identifier (e.g., "BGTSTATION", "KODIAK")
+    /// @param _isAllowed   Boolean indicating whether the selector is allowed (true) or disallowed (false)
+    /// @custom:emits       SelectorAllowedForProtocol event with the selector, action, protocol, and allowed status
     function setIsSelectorAllowedForProtocol(
         bytes4 _selector,
         string memory _action,

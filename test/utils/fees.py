@@ -10,8 +10,8 @@ def main(args):
         print("All arguments are required.")
         return
 
-    fees = int((amount * fees_bps) / 10000)
-    referrer_fees = int((fees * referrer_fees_bps) / 10000)
+    fees = (amount * fees_bps) // 10000
+    referrer_fees = (fees * referrer_fees_bps) // 10000
     treasury_fees = fees - referrer_fees
 
     treasury_fees_hex = "{:064x}".format(treasury_fees)
