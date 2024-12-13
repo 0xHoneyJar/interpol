@@ -46,11 +46,13 @@ contract BGTStationAdapter is BaseVaultAdapter {
         ERC721(token).transferFrom(msg.sender, address(this), amount);
         ERC721(token).approve(address(bgtStationGauge), amount);
         bgtStationGauge.stake(amount);
+        emit Staked(locker, address(bgtStationGauge), token, amount);
     }
 
     function unstake(uint256 amount) external override onlyLocker {
         bgtStationGauge.withdraw(amount);
         ERC20(token).transfer(locker, amount);
+        emit Unstaked(locker, address(bgtStationGauge), token, amount);
     }
 
     /*

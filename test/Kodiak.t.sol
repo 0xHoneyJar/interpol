@@ -84,7 +84,7 @@ contract KodiakTest is BaseTest {
                             SETUP
     ###############################################################*/
     function setUp() public override {
-        vm.createSelectFork("https://bartio.rpc.berachain.com/", uint256(7925685));
+        vm.createSelectFork(RPC_URL, uint256(7925685));
 
         super.setUp();
 

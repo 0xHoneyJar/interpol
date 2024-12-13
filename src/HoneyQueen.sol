@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {Ownable} from "solady/auth/Ownable.sol";
+import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
 
 contract HoneyQueen is Ownable {
     /*###############################################################
@@ -12,9 +13,8 @@ contract HoneyQueen is Ownable {
     /*###############################################################
                             EVENTS
     ###############################################################*/
-    event AdapterApproved(address indexed vault, address adapter, bool approved);
-    event AdapterFactorySet(address oldFactory, address newFactory);
-    event VaultAdapterSet(address indexed vault, address adapter);
+    event HoneyQueen__AdapterApproved(address indexed vault, address adapter, bool approved);
+    event HoneyQueen__VaultAdapterSet(address indexed vault, address adapter);
     /*###############################################################
                             STRUCTS
     ###############################################################*/
@@ -27,9 +27,15 @@ contract HoneyQueen is Ownable {
     ###############################################################*/
     // adapter = logic of adapter
     mapping(address vault => mapping(address adapter => bool approved)) public isAdapterForVaultApproved;
+    // this is for cases where gauges give you a NFT to represent your staking position
+    mapping(address token => bool blocked)              public isTokenBlocked;
+    mapping(address token => bool isRewardToken)        public isRewardToken;
     // tracks the latest adapter for a vault
-    mapping(address vault => AdapterParams params)  public vaultToAdapterParams;
-    address                                         public adapterFactory;
+    mapping(address vault => AdapterParams params)      public vaultToAdapterParams;
+    address                                             public adapterFactory;
+    address                                             public beekeeper;
+    uint256                                             public protocolFees;
+
     
     /*###############################################################
                             CONSTRUCTOR
@@ -54,7 +60,7 @@ contract HoneyQueen is Ownable {
         bool approved
     ) external onlyOwner {
         isAdapterForVaultApproved[vault][adapter] = approved;
-        emit AdapterApproved(vault, adapter, approved);
+        emit HoneyQueen__AdapterApproved(vault, adapter, approved);
     }
 
     /**
@@ -65,16 +71,27 @@ contract HoneyQueen is Ownable {
      */
     function setVaultAdapter(address vault, address adapter, address token) external onlyOwner {
         vaultToAdapterParams[vault] = AdapterParams(adapter, token);
-        emit VaultAdapterSet(vault, adapter);
+        emit HoneyQueen__VaultAdapterSet(vault, adapter);
     }
 
-    /**
-     * @notice Sets the authorized adapter factory
-     * @param _adapterFactory The new factory address
-     */
+    function setTokenBlocked(address token, bool blocked) external onlyOwner {
+        isTokenBlocked[token] = blocked;
+    }
+
+    function setIsRewardToken(address token, bool _isRewardToken) external onlyOwner {
+        isRewardToken[token] = _isRewardToken;
+    }
+
     function setAdapterFactory(address _adapterFactory) external onlyOwner {
         adapterFactory = _adapterFactory;
-        emit AdapterFactorySet(adapterFactory, _adapterFactory);
+    }
+
+    function setBeekeeper(address _beekeeper) external onlyOwner {
+        beekeeper = _beekeeper;
+    }
+
+    function setProtocolFees(uint256 _protocolFees) external onlyOwner {
+        protocolFees = _protocolFees;
     }
 
     /*###############################################################
@@ -94,5 +111,11 @@ contract HoneyQueen is Ownable {
         if (msg.sender != adapterFactory) return false;
         
         return isAdapterForVaultApproved[vault][logic];
+    }
+    /*###############################################################
+                            READ FUNCTIONS
+    ###############################################################*/
+    function computeFees(uint256 amount) public view returns (uint256) {
+        return FPML.mulDivUp(amount, protocolFees, 10000);
     }
 }

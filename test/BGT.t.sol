@@ -18,12 +18,11 @@ contract BGTTest is BaseTest {
                             STATE VARIABLES
     ###############################################################*/
     IBGT public constant BGT = IBGT(Constants.BGT);
-    uint128 public constant INITIAL_BGT_BALANCE = 100 ether;
     /*###############################################################
                             SETUP
     ###############################################################*/
     function setUp() public override {
-        vm.createSelectFork("https://bartio.rpc.berachain.com/", uint256(7925685));
+        vm.createSelectFork(RPC_URL, uint256(7925685));
         super.setUp();
     }
 
@@ -32,7 +31,7 @@ contract BGTTest is BaseTest {
     ###############################################################*/
 
     function test_cancelQueuedBoost(uint128 amount, bool _useOperator) external prankAsTHJ(_useOperator) {
-        amount = uint128(StdUtils.bound(amount, 1, uint256(INITIAL_BGT_BALANCE)));
+        amount = uint128(StdUtils.bound(amount, 1, type(uint128).max));
         StdCheats.deal(address(BGT), address(locker), uint256(amount));
 
         // test the delegate part
@@ -51,7 +50,7 @@ contract BGTTest is BaseTest {
     }
 
     function test_dropBoost(uint128 amount, bool _useOperator) external prankAsTHJ(_useOperator) {
-        amount = uint128(StdUtils.bound(amount, 1, uint256(INITIAL_BGT_BALANCE)));
+        amount = uint128(StdUtils.bound(amount, 1, type(uint64).max));
         StdCheats.deal(address(BGT), address(locker), uint256(amount));
 
         // test the delegate part
@@ -71,10 +70,5 @@ contract BGTTest is BaseTest {
 
         assertEq(BGT.unboostedBalanceOf(address(locker)), amount);
     }
-
-    function test_burnBGTForBera(uint256 amountOfBGT, bool _useOperator) external prankAsTHJ(_useOperator) {
-        assertEq(true, false);
-    }
-    
 }
 

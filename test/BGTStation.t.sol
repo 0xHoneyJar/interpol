@@ -21,12 +21,10 @@ contract BGTStationTest is BaseTest {
     BVA                 public lockerAdapter;   // adapter for BGT Station used by locker
 
     // LBGT-WBERA gauge
-    address public constant GAUGE = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
+    address public constant GAUGE   = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
     // LBGT-WBERA LP token
-    ERC20 public constant LP_TOKEN = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
-    IBGT public constant BGT = IBGT(Constants.BGT);
-
-    uint256 public constant INITIAL_LP_BALANCE = 1000 ether;
+    ERC20 public constant LP_TOKEN  = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
+    IBGT public constant BGT        = IBGT(Constants.BGT);
     /*###############################################################
                             SETUP
     ###############################################################*/
@@ -34,7 +32,7 @@ contract BGTStationTest is BaseTest {
         /*
             Choosing this block number because the vault LBGT-WBERA is active
         */
-        vm.createSelectFork("https://bartio.rpc.berachain.com/", uint256(7925685));
+        vm.createSelectFork(RPC_URL, uint256(7925685));
 
         super.setUp();
 
@@ -51,7 +49,7 @@ contract BGTStationTest is BaseTest {
 
         vm.stopPrank();
 
-        vm.label(address(adapter), "BGTStationAdapter");
+        vm.label(address(lockerAdapter), "BGTStationAdapter");
         vm.label(address(GAUGE), "LBGT-WBERA Gauge");
         vm.label(address(LP_TOKEN), "LBGT-WBERA LP Token");
     }

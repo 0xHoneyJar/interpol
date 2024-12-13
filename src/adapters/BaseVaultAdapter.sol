@@ -12,8 +12,8 @@ abstract contract BaseVaultAdapter {
                             EVENTS
     ###############################################################*/
     event Initialized(address locker, address vault, address stakingToken);
-    event Staked(address indexed locker, address indexed vault, uint256 amount);
-    event Unstaked(address indexed locker, address indexed vault, uint256 amount);
+    event Staked(address indexed locker, address indexed vault, address indexed LPtoken, uint256 amount);
+    event Unstaked(address indexed locker, address indexed vault, address indexed LPtoken, uint256 amount);
     event Claimed(address indexed locker, address indexed vault, address indexed rewardToken, uint256 amount);
     /*###############################################################
                             STORAGE

@@ -2,7 +2,9 @@
 pragma solidity ^0.8.23;
 
 import {ERC721} from "solady/tokens/ERC721.sol";
+import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 
 import {BaseVaultAdapter as BVA} from "./adapters/BaseVaultAdapter.sol";
 import {AdapterFactory} from "./AdapterFactory.sol";
@@ -10,6 +12,7 @@ import {IBGTStationGauge} from "./adapters/BGTStationAdapter.sol";
 import {Constants} from "./Constants.sol";
 import {IBGT} from "./utils/IBGT.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
+import {Beekeeper} from "./Beekeeper.sol";
 
 contract HoneyLocker is Ownable {
     /*###############################################################
@@ -22,6 +25,8 @@ contract HoneyLocker is Ownable {
     error HoneyLocker__HasToBeLPToken();
     error HoneyLocker__NotExpiredYet();
     error HoneyLocker__WithdrawalFailed();
+    error HoneyLocker__CannotBeLPToken();
+    error HoneyLocker__TokenBlocked();
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -67,6 +72,10 @@ contract HoneyLocker is Ownable {
     }
     modifier onlyOwnerOrOperator() {
         if (msg.sender != owner() && msg.sender != operator) revert Unauthorized();
+        _;
+    }
+    modifier onlyUnblockedTokens(address _token) {
+        if (!unlocked && honeyQueen.isTokenBlocked(_token)) revert HoneyLocker__TokenBlocked();
         _;
     }
     /*###############################################################
@@ -142,6 +151,11 @@ contract HoneyLocker is Ownable {
         emit BVA.Claimed(address(this), vault, Constants.BGT, reward);
     }
 
+    function burnBGTForBERA(uint256 _amount) external onlyOwnerOrOperator {
+        IBGT(Constants.BGT).redeem(address(this), _amount);
+        withdrawBERA(_amount);
+    }
+
     function delegateBGT(uint128 amount, address validator) external onlyOwnerOrOperator {
         IBGT(Constants.BGT).queueBoost(validator, amount);
     }
@@ -195,6 +209,43 @@ contract HoneyLocker is Ownable {
         emit Withdrawn(_LPToken, _amountOrId);
     }
 
+    /*###############################################################
+                            TOKENS WITHDRAWALS
+    ###############################################################*/
+    function withdrawBERA(uint256 _amount) public onlyOwnerOrOperator {
+        uint256 fees = honeyQueen.computeFees(_amount);
+        STL.safeTransferETH(recipient(), _amount - fees);
+        Beekeeper(honeyQueen.beekeeper()).distributeFees{value: fees}(referrer, address(0), fees);
+        emit Withdrawn(address(0), _amount - fees);
+    }
+
+    function withdrawERC20(address _token, uint256 _amount) external onlyUnblockedTokens(_token) onlyOwnerOrOperator {
+        // cannot withdraw any lp token that has an expiration
+        if (expirations[_token] != 0) revert HoneyLocker__CannotBeLPToken();
+        Beekeeper beekeeper = Beekeeper(honeyQueen.beekeeper());
+        uint256 fees = honeyQueen.computeFees(_amount);
+        // self approval to be compliant with ERC20 transferFrom
+        ERC721(_token).approve(address(this), _amount);
+        // use ERC721 transferFrom because same signature for ERC20 and doesn't expect a return value
+        ERC721(_token).transferFrom(address(this), recipient(), _amount - fees);
+        ERC721(_token).transferFrom(address(this), address(beekeeper), fees);
+        beekeeper.distributeFees(referrer, _token, fees);
+        emit Withdrawn(_token, _amount - fees);
+    }
+
+    function withdrawERC721(address _token, uint256 _id) external onlyUnblockedTokens(_token) onlyOwnerOrOperator {
+        if (expirations[_token] != 0) revert HoneyLocker__CannotBeLPToken();
+        ERC721(_token).safeTransferFrom(address(this), recipient(), _id);
+    }
+
+    function withdrawERC1155(address _token, uint256 _id, uint256 _amount, bytes calldata _data)
+        external
+        onlyUnblockedTokens(_token)
+        onlyOwnerOrOperator
+    {
+        if (expirations[_token] != 0) revert HoneyLocker__CannotBeLPToken();
+        ERC1155(_token).safeTransferFrom(address(this), recipient(), _id, _amount, _data);
+    }
     /*###############################################################
                             VIEW LOGIC
     ###############################################################*/
