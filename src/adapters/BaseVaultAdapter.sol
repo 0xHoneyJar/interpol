@@ -12,9 +12,7 @@ abstract contract BaseVaultAdapter {
                             EVENTS
     ###############################################################*/
     event Initialized(address locker, address vault, address stakingToken);
-    event Staked(address indexed locker, address indexed vault, address indexed LPtoken, uint256 amount);
-    event Unstaked(address indexed locker, address indexed vault, address indexed LPtoken, uint256 amount);
-    event Claimed(address indexed locker, address indexed vault, address indexed rewardToken, uint256 amount);
+    event FailedTransfer(address indexed locker, address indexed token, uint256 amount);
     /*###############################################################
                             STORAGE
     ###############################################################*/
@@ -33,14 +31,14 @@ abstract contract BaseVaultAdapter {
     function initialize(address locker, address vault, address stakingToken) external virtual;
     function stake(uint256 amount) external virtual;
     function unstake(uint256 amount) external virtual;
-    function claim() external virtual;
+    function claim() external virtual returns (address[] memory rewardTokens, uint256[] memory earned);
     function wildcard(uint8 func, bytes calldata args) external virtual;
     /*###############################################################
                             VIEW/PURE
     ###############################################################*/
     function stakingToken() external view virtual returns (address);
     function vault() external view virtual returns (address);
-
+    function earned() external view virtual returns (address[] memory rewardTokens, uint256[] memory amounts);
     function version() external pure virtual returns (uint256) {
         return 1;
     }

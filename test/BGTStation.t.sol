@@ -158,14 +158,10 @@ contract BGTStationTest is BaseTest {
         - proper events
         - proper balances
     */
-    function test_stake(uint256 amountToDeposit, uint128 expiration, bool _useOperator) external prankAsTHJ(_useOperator) {
+    function test_stake(uint256 amountToDeposit, bool _useOperator) external prankAsTHJ(_useOperator) {
         amountToDeposit = StdUtils.bound(amountToDeposit, 1, type(uint32).max);
 
-        address user = _useOperator ? operator : THJ;
-        StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
-
-        LP_TOKEN.approve(address(locker), amountToDeposit);
-        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, uint256(expiration));
+        StdCheats.deal(address(LP_TOKEN), address(locker), amountToDeposit);
 
         vm.expectEmit(true, false, false, true, address(GAUGE));
         emit IBGTStationGauge.Staked(address(lockerAdapter), amountToDeposit);
@@ -184,14 +180,10 @@ contract BGTStationTest is BaseTest {
         - proper events
         - proper balances
     */
-    function test_unstake(uint256 amountToDeposit, uint128 expiration, bool _useOperator) external prankAsTHJ(_useOperator) {
+    function test_unstake(uint256 amountToDeposit, bool _useOperator) external prankAsTHJ(_useOperator) {
         amountToDeposit = StdUtils.bound(amountToDeposit, 1, type(uint32).max);
 
-        address user = _useOperator ? operator : THJ;
-        StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
-
-        LP_TOKEN.approve(address(locker), amountToDeposit);
-        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, uint256(expiration));
+        StdCheats.deal(address(LP_TOKEN), address(locker), amountToDeposit);
 
         locker.stake(address(GAUGE), amountToDeposit);
 
@@ -212,14 +204,11 @@ contract BGTStationTest is BaseTest {
         - proper events
         - proper balances
     */
-    function test_claimRewards(uint256 amountToDeposit, uint128 expiration, bool _useOperator) external prankAsTHJ(_useOperator) {
+    function test_claimRewards(uint256 amountToDeposit, bool _useOperator) external prankAsTHJ(_useOperator) {
         amountToDeposit = StdUtils.bound(amountToDeposit, 1, type(uint32).max);
 
-        address user = _useOperator ? operator : THJ;
-        StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
+        StdCheats.deal(address(LP_TOKEN), address(locker), amountToDeposit);
 
-        LP_TOKEN.approve(address(locker), amountToDeposit);
-        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, expiration);
         locker.stake(address(GAUGE), amountToDeposit);
 
         vm.warp(block.timestamp + 10000);
@@ -227,7 +216,7 @@ contract BGTStationTest is BaseTest {
         uint256 earned = IBGTStationGauge(GAUGE).earned(address(lockerAdapter));
 
         vm.expectEmit(true, true, true, true, address(locker));
-        emit BVA.Claimed(address(locker), address(GAUGE), Constants.BGT, earned);
+        emit HoneyLocker.Claimed(address(GAUGE), Constants.BGT, earned);
         locker.claimBGT(address(GAUGE));
 
         assertEq(BGT.unboostedBalanceOf(address(locker)), earned);

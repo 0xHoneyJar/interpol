@@ -46,20 +46,18 @@ contract BGTStationAdapter is BaseVaultAdapter {
         ERC721(token).transferFrom(msg.sender, address(this), amount);
         ERC721(token).approve(address(bgtStationGauge), amount);
         bgtStationGauge.stake(amount);
-        emit Staked(locker, address(bgtStationGauge), token, amount);
     }
 
     function unstake(uint256 amount) external override onlyLocker {
         bgtStationGauge.withdraw(amount);
         ERC20(token).transfer(locker, amount);
-        emit Unstaked(locker, address(bgtStationGauge), token, amount);
     }
 
     /*
         Claiming is disabled because we are exclusively relying on the locker to claim rewards.
         This is possible because we have set the locker as the operator of the gauge for this adapter.
     */
-    function claim() external override onlyLocker {
+    function claim() external override onlyLocker returns (address[] memory, uint256[] memory) {
         revert BaseVaultAdapter__NotImplemented();
     }
 
@@ -75,6 +73,10 @@ contract BGTStationAdapter is BaseVaultAdapter {
 
     function vault() external view override returns (address) {
         return address(bgtStationGauge);
+    }
+
+    function earned() external view override returns (address[] memory, uint256[] memory) {
+        revert BaseVaultAdapter__NotImplemented();
     }
 }
 

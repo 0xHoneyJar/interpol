@@ -43,25 +43,30 @@ contract BeradromeAdapter is BaseVaultAdapter {
         ERC20(token).transferFrom(locker, address(this), amount);
         ERC20(token).approve(address(beradromePlugin), amount);
         beradromePlugin.depositFor(address(this), amount);
-        emit Staked(locker, address(beradromePlugin), token, amount);
     }
 
     function unstake(uint256 amount) external override onlyLocker {
         beradromePlugin.withdrawTo(address(this), amount);
         ERC20(token).transfer(locker, amount);
-        emit Unstaked(locker, address(beradromePlugin), token, amount);
     }
 
-    function claim() external override onlyLocker {
+    function claim() external override onlyLocker returns (address[] memory, uint256[] memory) {
         IBeradromeGauge gauge = IBeradromeGauge(beradromePlugin.getGauge());
-        gauge.getReward(address(this));
         address[] memory rewardTokens = gauge.getRewardTokens();
+        uint256[] memory amounts = new uint256[](rewardTokens.length);
+        gauge.getReward(address(this));
         for (uint256 i; i < rewardTokens.length; i++) {
-            address rewardToken = rewardTokens[i];
-            uint256 rewardAmount = ERC20(rewardToken).balanceOf(address(this));
-            ERC20(rewardToken).transfer(locker, rewardAmount);
-            emit Claimed(locker, address(beradromePlugin), rewardToken, rewardAmount);
+            amounts[i] = ERC20(rewardTokens[i]).balanceOf(address(this));
+            /*
+                we skip the transfer, to not block any other rewards
+                it can always be retrieved later because we use the balanceOf() function
+            */
+            try ERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
+                emit FailedTransfer(locker, rewardTokens[i], amounts[i]);
+                amounts[i] = 0;
+            }
         }
+        return (rewardTokens, amounts);
     }
 
     function wildcard(uint8 func, bytes calldata args) external override onlyLocker {
@@ -76,5 +81,15 @@ contract BeradromeAdapter is BaseVaultAdapter {
 
     function vault() external view override returns (address) {
         return address(beradromePlugin);
+    }
+
+    function earned() external view override returns (address[] memory, uint256[] memory) {
+        IBeradromeGauge gauge = IBeradromeGauge(beradromePlugin.getGauge());
+        address[] memory rewardTokens = gauge.getRewardTokens();
+        uint256[] memory amounts = new uint256[](rewardTokens.length);
+        for (uint256 i; i < rewardTokens.length; i++) {
+            amounts[i] = gauge.earned(address(this), rewardTokens[i]);
+        }
+        return (rewardTokens, amounts);
     }
 }

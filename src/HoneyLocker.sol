@@ -42,6 +42,7 @@ contract HoneyLocker is Ownable {
 
     event Staked(address indexed vault, address indexed LPToken, uint256 amountOrId);
     event Unstaked(address indexed vault, address indexed LPToken, uint256 amountOrId);
+    event Claimed(address indexed vault, address indexed rewardToken, uint256 amount);
     /*###############################################################
                             STORAGE
     ###############################################################*/
@@ -129,7 +130,10 @@ contract HoneyLocker is Ownable {
 
     function claim(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator {
         BVA adapter = vaultToAdapter[vault];
-        adapter.claim();
+        (address[] memory rewardTokens, uint256[] memory earned) = adapter.claim();
+        for (uint256 i; i < rewardTokens.length; i++) {
+            emit Claimed(vault, rewardTokens[i], earned[i]);
+        }
     }
     
     function wildcard(address vault, uint8 func, bytes calldata args) external onlyValidAdapter(vault) onlyOwnerOrOperator {
@@ -148,7 +152,7 @@ contract HoneyLocker is Ownable {
     function claimBGT(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator {
         BVA adapter = vaultToAdapter[vault];
         uint256 reward = IBGTStationGauge(vault).getReward(address(adapter));
-        emit BVA.Claimed(address(this), vault, Constants.BGT, reward);
+        emit Claimed(vault, Constants.BGT, reward);
     }
 
     function burnBGTForBERA(uint256 _amount) external onlyOwnerOrOperator {

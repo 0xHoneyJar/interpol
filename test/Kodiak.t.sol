@@ -9,45 +9,9 @@ import {console2} from "forge-std/console2.sol";
 
 import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
-import {KodiakAdapter} from "../src/adapters/KodiakAdapter.sol";
+import {KodiakAdapter, IKodiakFarm, XKDK} from "../src/adapters/KodiakAdapter.sol";
 import {BaseVaultAdapter as BVA} from "../src/adapters/BaseVaultAdapter.sol";
 import {Constants} from "../src/Constants.sol";
-
-interface KodiakFarm {
-    function stakeLocked(uint256 amount, uint256 secs) external;
-    function withdrawLocked(bytes32 kekId) external;
-    function getReward() external returns (uint256[] memory);
-    function getAllRewardTokens() external view returns (address[] memory);
-    function lockedLiquidityOf(address account) external view returns (uint256);
-    function earned(address account) external view returns (uint256[] memory);
-    function sync() external;
-
-    event StakeLocked(
-        address indexed user,
-        uint256 amount,
-        uint256 secs,
-        bytes32 kek_id,
-        address source_address
-    );
-    event WithdrawLocked(
-        address indexed user,
-        uint256 amount,
-        bytes32 kek_id,
-        address destination_address
-    );
-    event RewardPaid(
-        address indexed user,
-        uint256 reward,
-        address token_address,
-        address destination_address
-    );
-}
-
-interface XKDK {
-    function redeem(uint256 amount, uint256 duration) external;
-    function finalizeRedeem(uint256 redeemIndex) external;
-    function balanceOf(address account) external view returns (uint256);
-}
 
 /*
     There are currently no "real" Kodiak gauges using KodiakV3
@@ -75,7 +39,7 @@ contract KodiakTest is BaseTest {
     ERC20           public constant KDK             = ERC20(0xfd27998fa0eaB1A6372Db14Afd4bF7c4a58C5364);
     XKDK            public constant xKDK            = XKDK(0x414B50157a5697F14e91417C5275A7496DcF429D);
     ERC20           public constant LP_TOKEN        = ERC20(0xE5A2ab5D2fb268E5fF43A5564e44c3309609aFF9); // YEET-WBERA
-    KodiakFarm      public constant GAUGE           = KodiakFarm(0xbdEE3F788a5efDdA1FcFe6bfe7DbbDa5690179e6);
+    IKodiakFarm      public constant GAUGE           = IKodiakFarm(0xbdEE3F788a5efDdA1FcFe6bfe7DbbDa5690179e6);
     ERC721          public constant KODIAKV3        = ERC721(0xC0568C6E9D5404124c8AA9EfD955F3f14C8e64A6);
     KodiakV3Gauge   public kodiakV3Gauge;
     
@@ -130,7 +94,7 @@ contract KodiakTest is BaseTest {
         );
 
         vm.expectEmit(true, false, false, true, address(GAUGE));
-        emit KodiakFarm.StakeLocked(address(lockerAdapter), amountToDeposit, 30 days, expectedKekId, address(lockerAdapter));
+        emit IKodiakFarm.StakeLocked(address(lockerAdapter), amountToDeposit, 30 days, expectedKekId, address(lockerAdapter));
         locker.stake(address(GAUGE), amountToDeposit);
     }
 
@@ -160,7 +124,7 @@ contract KodiakTest is BaseTest {
         GAUGE.sync();
 
         vm.expectEmit(true, false, false, true, address(GAUGE));
-        emit KodiakFarm.WithdrawLocked(address(lockerAdapter), amountToDeposit, expectedKekId, address(lockerAdapter));
+        emit IKodiakFarm.WithdrawLocked(address(lockerAdapter), amountToDeposit, expectedKekId, address(lockerAdapter));
         locker.unstake(address(GAUGE), uint256(expectedKekId));
 
         assertEq(LP_TOKEN.balanceOf(address(locker)), amountToDeposit);
@@ -168,36 +132,34 @@ contract KodiakTest is BaseTest {
 
     function test_claimRewards(
         uint128 _amountToDeposit,
-        uint128 _expiration,
         bool _useOperator
     ) external prankAsTHJ(_useOperator) {
-        address user = _useOperator ? operator : THJ;
         uint256 amountToDeposit = StdUtils.bound(uint256(_amountToDeposit), 1e20, type(uint128).max);
         
-        StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
-
-        LP_TOKEN.approve(address(locker), amountToDeposit);
-        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, uint256(_expiration));
+        StdCheats.deal(address(LP_TOKEN), address(locker), amountToDeposit);
 
         locker.stake(address(GAUGE), amountToDeposit);
 
         vm.warp(block.timestamp + 30 days);
         GAUGE.sync();
 
-        uint256[] memory earned = GAUGE.earned(address(lockerAdapter));
-        address[] memory rewardTokens = GAUGE.getAllRewardTokens();
+        (address[] memory rewardTokens, uint256[] memory earned) = lockerAdapter.earned();
+
+        // always skip xKDK because it won't be emitted
+        for (uint256 i; i < rewardTokens.length - 1; i++) {
+            vm.expectEmit(true, true, false, true, address(locker));
+            emit HoneyLocker.Claimed(address(GAUGE), rewardTokens[i], earned[i]);
+        }
 
         locker.claim(address(GAUGE));
-        uint256 xkdkBalance = xKDK.balanceOf(address(lockerAdapter));
-        for (uint256 i; i < rewardTokens.length; i++) {
+        // skip xKDK testing in the loop, do it separately
+        for (uint256 i; i < rewardTokens.length - 1; i++) {
             address rewardToken = rewardTokens[i];
             uint256 rewardBalanceAfter = ERC20(rewardToken).balanceOf(address(locker));
-            if (rewardToken == address(KDK)) {
-                assertEq(earned[i], rewardBalanceAfter + xkdkBalance);
-            } else {
-                assertEq(rewardBalanceAfter, earned[i]);
-            }
+            assertEq(rewardBalanceAfter, earned[i]);
         }
+        uint256 xkdkBalance = xKDK.balanceOf(address(lockerAdapter));
+        assertEq(xkdkBalance, earned[earned.length - 1]);
     }
 
     function test_xkdk(uint128 _amount, bool _useOperator) external prankAsTHJ(_useOperator) {

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
+import {DynamicArrayLib as DAL} from "solady/utils/DynamicArrayLib.sol";
+
+import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
 
 interface IKodiakFarm {
     function stakeLocked(uint256 liquidity, uint256 secs) external;
@@ -13,14 +15,42 @@ interface IKodiakFarm {
     function xKdk() external view returns (address);
     function kdk() external view returns (address);
     function stakingToken() external view returns (address);
+    function earned(address account) external view returns (uint256[] memory);
+    function xKdkPercentage() external view returns (uint256);
+    function lockedLiquidityOf(address account) external view returns (uint256);
+    function sync() external;
+
+    event StakeLocked(
+        address indexed user,
+        uint256 amount,
+        uint256 secs,
+        bytes32 kek_id,
+        address source_address
+    );
+    event WithdrawLocked(
+        address indexed user,
+        uint256 amount,
+        bytes32 kek_id,
+        address destination_address
+    );
+    event RewardPaid(
+        address indexed user,
+        uint256 reward,
+        address token_address,
+        address destination_address
+    );
 }
 
 interface XKDK {
     function redeem(uint256,uint256) external;
     function finalizeRedeem(uint256) external;
+    function balanceOf(address account) external view returns (uint256);
 }
 
 contract KodiakAdapter is BaseVaultAdapter {
+    using DAL for address[];
+    using DAL for uint256[];
+    using DAL for DAL.DynamicArray;
     /*###############################################################
                             STORAGE
     ###############################################################*/
@@ -54,15 +84,22 @@ contract KodiakAdapter is BaseVaultAdapter {
         ERC20(token).transfer(locker, amount);
     }
 
-    function claim() external override onlyLocker {
-        kodiakFarm.getReward();
+    function claim() external override onlyLocker returns (address[] memory, uint256[] memory) {
         address[] memory rewardTokens = kodiakFarm.getAllRewardTokens();
+        uint256[] memory amounts = new uint256[](rewardTokens.length);
+        kodiakFarm.getReward();
         for (uint256 i; i < rewardTokens.length; i++) {
-            address rewardToken = rewardTokens[i];
-            uint256 rewardAmount = ERC20(rewardToken).balanceOf(address(this));
-            ERC20(rewardToken).transfer(locker, rewardAmount);
-            emit Claimed(locker, address(kodiakFarm), rewardToken, rewardAmount);
+            amounts[i] = ERC20(rewardTokens[i]).balanceOf(address(this));
+            /*
+                we skip the transfer, to not block any other rewards
+                it can always be retrieved later because we use the balanceOf() function
+            */
+            try ERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
+                emit FailedTransfer(locker, rewardTokens[i], amounts[i]);
+                amounts[i] = 0;
+            }
         }
+        return (rewardTokens, amounts);
     }
 
     function wildcard(uint8 func, bytes calldata args) external override onlyLocker {
@@ -85,6 +122,28 @@ contract KodiakAdapter is BaseVaultAdapter {
 
     function vault() external view override returns (address) {
         return address(kodiakFarm);
+    }
+
+    function earned() external view override returns (address[] memory, uint256[] memory) {
+        DAL.DynamicArray memory rewardTokens = kodiakFarm.getAllRewardTokens().wrap();
+        DAL.DynamicArray memory amounts = kodiakFarm.earned(address(this)).wrap();
+        address kdk = kodiakFarm.kdk();
+        uint256 xKDKAmount;
+        /*
+            To have an accurate result, we must reproduce the logic of the rewards payout
+            meaning that a chunk of kdk goes as xKDK
+        */
+        for (uint256 i; i < rewardTokens.length(); i++) {
+            if (rewardTokens.getAddress(i) == kdk) {
+                uint256 amount = amounts.getUint256(i);
+                xKDKAmount = amount * kodiakFarm.xKdkPercentage() / 100e18;
+                amounts.set(i, amount - xKDKAmount);
+            }
+        }
+        rewardTokens.p(kodiakFarm.xKdk());
+        amounts.p(xKDKAmount);
+        // resize arrays to include xKDK as a reward
+        return (rewardTokens.asAddressArray(), amounts.asUint256Array());
     }
 }
 

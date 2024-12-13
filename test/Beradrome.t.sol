@@ -95,10 +95,11 @@ contract BeradromeTest is BaseTest {
         // Simulate some time passing to accrue rewards
         vm.warp(block.timestamp + 7 days);
 
-        address[] memory rewardTokens = IBeradromeGauge(GAUGE).getRewardTokens();
-        uint256[] memory earned = new uint256[](rewardTokens.length);
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            earned[i] = IBeradromeGauge(GAUGE).earned(address(lockerAdapter), rewardTokens[i]);
+        (address[] memory rewardTokens, uint256[] memory earned) = lockerAdapter.earned();
+
+        for (uint256 i; i < rewardTokens.length; i++) {
+            vm.expectEmit(true, true, false, true, address(locker));
+            emit HoneyLocker.Claimed(address(PLUGIN), rewardTokens[i], earned[i]);
         }
 
         locker.claim(address(PLUGIN));
