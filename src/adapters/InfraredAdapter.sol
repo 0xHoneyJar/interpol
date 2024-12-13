@@ -1,27 +1,28 @@
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
+import {ERC721} from "solady/tokens/ERC721.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 
-interface IBeradromePlugin {
-    function depositFor(address account, uint256 amount) external;
-    function withdrawTo(address account, uint256 amount) external;
-    function getGauge() external view returns (address);
-    function getToken() external view returns (address);
+interface IInfraredVault {
+    event Staked(address indexed account, uint256 amount);
+    event Withdrawn(address indexed account, uint256 amount);
+
+    function stake(uint256 amount) external;
+    function withdraw(uint256 amount) external;
+    function getReward() external returns (uint256);
+    function rewardTokens() external view returns (address[] memory);
+    function earned(address account, address rewardToken) external view returns (uint256);
+    function stakingToken() external view returns (address);
 }
 
-interface IBeradromeGauge {
-    function getReward(address account) external;
-    function getRewardTokens() external view returns (address[] memory);
-    function earned(address account, address _rewardsToken) external view returns (uint256);
-}
-
-contract BeradromeAdapter is BaseVaultAdapter {
+contract BGTStationAdapter is BaseVaultAdapter {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    IBeradromePlugin public beradromePlugin;
+    IInfraredVault public infraredVault;
     /*###############################################################
                             INITIALIZATION
     ###############################################################*/
@@ -32,36 +33,37 @@ contract BeradromeAdapter is BaseVaultAdapter {
     ) external override {
         if (locker != address(0)) revert BaseVaultAdapter__AlreadyInitialized();
         locker = _locker;
-        beradromePlugin = IBeradromePlugin(_vault);
-        token = beradromePlugin.getToken();
+        infraredVault = IInfraredVault(_vault);
+        // Ensure consistency by getting token from vault itself
+        token = infraredVault.stakingToken();
+
         emit Initialized(locker, _vault, token);
     }
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
     function stake(uint256 amount) external override onlyLocker {
-        ERC20(token).transferFrom(locker, address(this), amount);
-        ERC20(token).approve(address(beradromePlugin), amount);
-        beradromePlugin.depositFor(address(this), amount);
-        emit Staked(locker, address(beradromePlugin), token, amount);
+        ERC721(token).transferFrom(msg.sender, address(this), amount);
+        ERC721(token).approve(address(infraredVault), amount);
+        infraredVault.stake(amount);
+        emit Staked(locker, address(infraredVault), token, amount);
     }
 
     function unstake(uint256 amount) external override onlyLocker {
-        beradromePlugin.withdrawTo(address(this), amount);
+        infraredVault.withdraw(amount);
         ERC20(token).transfer(locker, amount);
-        emit Unstaked(locker, address(beradromePlugin), token, amount);
+        emit Unstaked(locker, address(infraredVault), token, amount);
     }
 
     function claim() external override onlyLocker {
-        IBeradromeGauge gauge = IBeradromeGauge(beradromePlugin.getGauge());
-        gauge.getReward(address(this));
-        address[] memory rewardTokens = gauge.getRewardTokens();
+        address[] memory rewardTokens = infraredVault.rewardTokens();
+        uint256[] memory earned = new uint256[](rewardTokens.length);
         for (uint256 i; i < rewardTokens.length; i++) {
-            address rewardToken = rewardTokens[i];
-            uint256 rewardAmount = ERC20(rewardToken).balanceOf(address(this));
-            ERC20(rewardToken).transfer(locker, rewardAmount);
-            emit Claimed(locker, address(beradromePlugin), rewardToken, rewardAmount);
+            earned[i] = infraredVault.earned(address(this), rewardTokens[i]);
+            emit Claimed(locker, address(infraredVault), rewardTokens[i], earned[i]);
         }
+        infraredVault.getReward();
+
     }
 
     function wildcard(uint8 func, bytes calldata args) external override onlyLocker {
@@ -75,6 +77,7 @@ contract BeradromeAdapter is BaseVaultAdapter {
     }
 
     function vault() external view override returns (address) {
-        return address(beradromePlugin);
+        return address(infraredVault);
     }
 }
+

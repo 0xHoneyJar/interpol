@@ -12,6 +12,7 @@ interface IKodiakFarm {
     function lock_time_for_max_multiplier() external view returns (uint256);
     function xKdk() external view returns (address);
     function kdk() external view returns (address);
+    function stakingToken() external view returns (address);
 }
 
 interface XKDK {
@@ -35,8 +36,8 @@ contract KodiakAdapter is BaseVaultAdapter {
         if (locker != address(0)) revert BaseVaultAdapter__AlreadyInitialized();
         locker = _locker;
         kodiakFarm = IKodiakFarm(_vault);
-        token = _stakingToken;
-        emit Initialized(locker, _vault, _stakingToken);
+        token = kodiakFarm.stakingToken();
+        emit Initialized(locker, _vault, token);
     }
     /*###############################################################
                             EXTERNAL
