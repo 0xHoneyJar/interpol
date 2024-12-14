@@ -34,16 +34,16 @@ contract KodiakTest is BaseTest {
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
-    KodiakAdapter   public adapter;
-    BVA             public lockerAdapter;
+    KodiakAdapter   public          adapter;
+    BVA             public          lockerAdapter;
     ERC20           public constant KDK             = ERC20(0xfd27998fa0eaB1A6372Db14Afd4bF7c4a58C5364);
     XKDK            public constant xKDK            = XKDK(0x414B50157a5697F14e91417C5275A7496DcF429D);
     ERC20           public constant LP_TOKEN        = ERC20(0xE5A2ab5D2fb268E5fF43A5564e44c3309609aFF9); // YEET-WBERA
     IKodiakFarm     public constant GAUGE           = IKodiakFarm(0xbdEE3F788a5efDdA1FcFe6bfe7DbbDa5690179e6);
     ERC721          public constant KODIAKV3        = ERC721(0xC0568C6E9D5404124c8AA9EfD955F3f14C8e64A6);
-    KodiakV3Gauge   public kodiakV3Gauge;
+    KodiakV3Gauge   public          kodiakV3Gauge;
     
-    uint256         public NFT_ID;
+    uint256         public          NFT_ID;
     /*###############################################################
                             SETUP
     ###############################################################*/
