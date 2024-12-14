@@ -9,25 +9,33 @@ import {console2} from "forge-std/console2.sol";
 
 import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
-import {KodiakAdapter, IKodiakFarm, XKDK} from "../src/adapters/KodiakAdapter.sol";
-import {KodiakAdapterOld} from "./mocks/KodiakAdapterOld.sol";
+import {BGTStationAdapter, IBGTStationGauge} from "../src/adapters/BGTStationAdapter.sol";
 import {BaseVaultAdapter as BVA} from "../src/adapters/BaseVaultAdapter.sol";
+import {IBGT} from "../src/utils/IBGT.sol";
 import {Constants} from "../src/Constants.sol";
 
-
-
-contract UpgradesTest is BaseTest {    
+contract MultiAdaptersTest is BaseTest {    
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
     BGTStationAdapter   public adapter;
-    BVA                 public lockerAdapter;   // adapter for BGT Station used by locker
+    BVA                 public lockerAdapter1;
+    BVA                 public lockerAdapter2;
+
 
     // LBGT-WBERA gauge
-    address public constant     GAUGE       = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
+    address public constant     GAUGE1       = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
     // LBGT-WBERA LP token
-    ERC20   public constant     LP_TOKEN    = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
+    ERC20   public constant     LP_TOKEN1    = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
+
+    // YEET-WBERA gauge
+    address public constant     GAUGE2       = 0x175e2429bCb92643255abCbCDF47Fff63F7990CC;
+    // YEET-WBERA LP token
+    ERC20   public constant     LP_TOKEN2    = ERC20(0xE5A2ab5D2fb268E5fF43A5564e44c3309609aFF9);
+
+
     IBGT    public constant     BGT         = IBGT(Constants.BGT);
+
     /*###############################################################
                             SETUP
     ###############################################################*/
@@ -37,27 +45,28 @@ contract UpgradesTest is BaseTest {
         super.setUp();
 
         // Deploy adapter implementation that will be cloned
-        oldAdapter = new KodiakAdapterOld();
-        newAdapter = new KodiakAdapter();
+        adapter = new BGTStationAdapter();
 
         vm.startPrank(THJ);
 
-        queen.setAdapterForProtocol("KODIAK", address(oldAdapter));
-        queen.setVaultForProtocol("KODIAK", address(GAUGE), address(LP_TOKEN), true);
-        locker.registerVault(address(GAUGE), false);
+        queen.setAdapterForProtocol("BGTSTATION", address(adapter));
 
-        lockerAdapter = BVA(locker.vaultToAdapter(address(GAUGE)));
+        queen.setVaultForProtocol("BGTSTATION", GAUGE1, address(LP_TOKEN1), true);
+        locker.registerVault(GAUGE1, false);
+        lockerAdapter1 = BVA(locker.vaultToAdapter(GAUGE1));
+
+        queen.setVaultForProtocol("BGTSTATION", GAUGE2, address(LP_TOKEN2), true);
+        locker.registerVault(GAUGE2, false);
+        lockerAdapter2 = BVA(locker.vaultToAdapter(GAUGE2));
 
         vm.stopPrank();
 
-        vm.label(address(oldAdapter), "KodiakAdapterOld");
-        vm.label(address(newAdapter), "KodiakAdapter");
-        vm.label(address(lockerAdapter), "LockerAdapter");
-        vm.label(address(GAUGE), "Kodiak Gauge");
-        vm.label(address(LP_TOKEN), "Kodiak LP Token");
-        vm.label(address(KODIAKV3), "KodiakV3");
-        vm.label(address(xKDK), "XKDK");
-        vm.label(address(KDK), "KDK");
+        vm.label(address(lockerAdapter1), "BGTStationAdapter");
+        vm.label(address(GAUGE1), "LBGT-WBERA Gauge");
+        vm.label(address(LP_TOKEN1), "LBGT-WBERA LP Token");
+        vm.label(address(lockerAdapter2), "YEETIONAdapter");
+        vm.label(address(GAUGE2), "YEET-WBERA Gauge");
+        vm.label(address(LP_TOKEN2), "YEET-WBERA LP Token");
     }
 
     /*###############################################################
@@ -65,6 +74,39 @@ contract UpgradesTest is BaseTest {
     ###############################################################*/
 
     /*###############################################################
+        We test that the locker works with multiple adapters for the same protocol
+        but for different gauges.
+        We do it with a simple staking operation.
     ###############################################################*/
+    function test_LockerWorksWithMultipleAdaptersForSameProtocol(
+        uint64 _amountToDeposit1,
+        uint64 _amountToDeposit2
+    ) public prankAsTHJ(false) {
+        uint256 amountToDeposit1 = StdUtils.bound(_amountToDeposit1, 1, type(uint64).max);
+        uint256 amountToDeposit2 = StdUtils.bound(_amountToDeposit2, 1, type(uint64).max);
+
+        StdCheats.deal(address(LP_TOKEN1), address(locker), amountToDeposit1);
+        StdCheats.deal(address(LP_TOKEN2), address(locker), amountToDeposit2);
+
+        assertEq(address(locker.vaultToAdapter(GAUGE1)), address(lockerAdapter1));
+        assertEq(address(locker.vaultToAdapter(GAUGE2)), address(lockerAdapter2));
+
+        vm.expectEmit(true, false, false, true, address(GAUGE1));
+        emit IBGTStationGauge.Staked(address(lockerAdapter1), amountToDeposit1);
+        vm.expectEmit(true, true, false, true, address(locker));
+        emit HoneyLocker.Staked(address(GAUGE1), address(LP_TOKEN1), amountToDeposit1);
+        locker.stake(address(GAUGE1), amountToDeposit1);
+
+        vm.expectEmit(true, false, false, true, address(GAUGE2));
+        emit IBGTStationGauge.Staked(address(lockerAdapter2), amountToDeposit2);
+        vm.expectEmit(true, true, false, true, address(locker));
+        emit HoneyLocker.Staked(address(GAUGE2), address(LP_TOKEN2), amountToDeposit2);
+        locker.stake(address(GAUGE2), amountToDeposit2);
+
+        assertEq(LP_TOKEN1.balanceOf(address(locker)), 0);
+        assertEq(LP_TOKEN1.balanceOf(address(lockerAdapter1)), 0);
+        assertEq(LP_TOKEN2.balanceOf(address(locker)), 0);
+        assertEq(LP_TOKEN2.balanceOf(address(lockerAdapter2)), 0);
+    }
 }
 
