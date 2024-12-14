@@ -24,7 +24,7 @@ contract BGTStationTest is BaseTest {
     address     public constant GAUGE       = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
     // LBGT-WBERA LP token
     ERC20       public constant LP_TOKEN    = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
-    IBGT        public constant BGT        = IBGT(Constants.BGT);
+    IBGT        public constant BGT         = IBGT(Constants.BGT);
     /*###############################################################
                             SETUP
     ###############################################################*/
@@ -71,9 +71,9 @@ contract BGTStationTest is BaseTest {
         LP_TOKEN.approve(address(locker), amountToDeposit);
 
         vm.expectEmit(true, true, false, false, address(locker));
-        emit HoneyLocker.Deposited(address(LP_TOKEN), amountToDeposit);
+        emit HoneyLocker.HoneyLocker__Deposited(address(LP_TOKEN), amountToDeposit);
         vm.expectEmit(true, false, false, false, address(locker));
-        emit HoneyLocker.LockedUntil(address(LP_TOKEN), expiration);
+        emit HoneyLocker.HoneyLocker__LockedUntil(address(LP_TOKEN), expiration);
         locker.depositAndLock(address(LP_TOKEN), amountToDeposit, expiration);
 
         assertEq(LP_TOKEN.balanceOf(address(locker)), amountToDeposit);
@@ -146,7 +146,7 @@ contract BGTStationTest is BaseTest {
         vm.warp(expiration + 1);
 
         vm.expectEmit(true, false, false, true, address(locker));
-        emit HoneyLocker.Withdrawn(address(LP_TOKEN), amountTDeposit);
+        emit HoneyLocker.HoneyLocker__Withdrawn(address(LP_TOKEN), amountTDeposit);
         locker.withdrawLPToken(address(LP_TOKEN), amountTDeposit);
 
         assertEq(LP_TOKEN.balanceOf(THJ), amountTDeposit);
@@ -166,7 +166,7 @@ contract BGTStationTest is BaseTest {
         vm.expectEmit(true, false, false, true, address(GAUGE));
         emit IBGTStationGauge.Staked(address(lockerAdapter), amountToDeposit);
         vm.expectEmit(true, true, false, true, address(locker));
-        emit HoneyLocker.Staked(address(GAUGE), address(LP_TOKEN), amountToDeposit);
+        emit HoneyLocker.HoneyLocker__Staked(address(GAUGE), address(LP_TOKEN), amountToDeposit);
         locker.stake(address(GAUGE), amountToDeposit);
 
         assertEq(LP_TOKEN.balanceOf(THJ), 0);
@@ -190,7 +190,7 @@ contract BGTStationTest is BaseTest {
         vm.expectEmit(true, false, false, true, address(GAUGE));
         emit IBGTStationGauge.Withdrawn(address(lockerAdapter), amountToDeposit);
         vm.expectEmit(true, true, false, true, address(locker));
-        emit HoneyLocker.Unstaked(address(GAUGE), address(LP_TOKEN), amountToDeposit);
+        emit HoneyLocker.HoneyLocker__Unstaked(address(GAUGE), address(LP_TOKEN), amountToDeposit);
         locker.unstake(address(GAUGE), amountToDeposit);
 
         assertEq(LP_TOKEN.balanceOf(THJ), 0);
@@ -216,7 +216,7 @@ contract BGTStationTest is BaseTest {
         uint256 earned = IBGTStationGauge(GAUGE).earned(address(lockerAdapter));
 
         vm.expectEmit(true, true, true, true, address(locker));
-        emit HoneyLocker.Claimed(address(GAUGE), Constants.BGT, earned);
+        emit HoneyLocker.HoneyLocker__Claimed(address(GAUGE), Constants.BGT, earned);
         locker.claimBGT(address(GAUGE));
 
         assertEq(BGT.unboostedBalanceOf(address(locker)), earned);

@@ -54,7 +54,7 @@ contract BeekeeperTest is BaseTest {
         vm.expectEmit(true, true, false, false, address(beekeeper));
         emit Beekeeper.FeesDistributed(THJTreasury, address(0), pythonTreasuryFees);
         vm.expectEmit(true, false, false, false, address(locker));
-        emit HoneyLocker.Withdrawn(address(0), pythonWithdrawn);
+        emit HoneyLocker.HoneyLocker__Withdrawn(address(0), pythonWithdrawn);
 
         uint256 balanceOfTHJBefore = THJ.balance;
 
@@ -89,7 +89,7 @@ contract BeekeeperTest is BaseTest {
         vm.expectEmit(true, true, false, false, address(beekeeper));
         emit Beekeeper.FeesDistributed(THJTreasury, address(token), pythonTreasuryFees);
         vm.expectEmit(true, false, false, false, address(locker));
-        emit HoneyLocker.Withdrawn(address(token), pythonWithdrawn);
+        emit HoneyLocker.HoneyLocker__Withdrawn(address(token), pythonWithdrawn);
 
         uint256 balanceOfTHJBefore = token.balanceOf(address(THJ));
 

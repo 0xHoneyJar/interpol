@@ -33,19 +33,19 @@ contract HoneyLocker is Ownable {
     /*###############################################################
                             EVENTS
     ###############################################################*/
-    event VaultRegistered(
+    event HoneyLocker__VaultRegistered(
         address indexed vault,
         address indexed adapter,
         address logic
     );
     
-    event Deposited(address indexed LPToken, uint256 amountOrId);
-    event LockedUntil(address indexed LPToken, uint256 expiration);
-    event Withdrawn(address indexed LPToken, uint256 amountOrId);
+    event HoneyLocker__Deposited(address indexed LPToken, uint256 amountOrId);
+    event HoneyLocker__LockedUntil(address indexed LPToken, uint256 expiration);
+    event HoneyLocker__Withdrawn(address indexed LPToken, uint256 amountOrId);
 
-    event Staked(address indexed vault, address indexed LPToken, uint256 amountOrId);
-    event Unstaked(address indexed vault, address indexed LPToken, uint256 amountOrId);
-    event Claimed(address indexed vault, address indexed rewardToken, uint256 amount);
+    event HoneyLocker__Staked(address indexed vault, address indexed LPToken, uint256 amountOrId);
+    event HoneyLocker__Unstaked(address indexed vault, address indexed LPToken, uint256 amountOrId);
+    event HoneyLocker__Claimed(address indexed vault, address indexed rewardToken, uint256 amount);
     /*###############################################################
                             STORAGE
     ###############################################################*/
@@ -139,21 +139,21 @@ contract HoneyLocker is Ownable {
         ERC721(token).approve(address(adapter), amount);
         adapter.stake(amount);
 
-        emit Staked(vault, token, amount);
+        emit HoneyLocker__Staked(vault, token, amount);
     }
 
     function unstake(address vault, uint256 amount) external onlyValidAdapter(vault) onlyOwnerOrOperator {
         BVA adapter = vaultToAdapter[vault];
         adapter.unstake(amount);
 
-        emit Unstaked(vault, adapter.stakingToken(), amount);
+        emit HoneyLocker__Unstaked(vault, adapter.stakingToken(), amount);
     }
 
     function claim(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator {
         BVA adapter = vaultToAdapter[vault];
         (address[] memory rewardTokens, uint256[] memory earned) = adapter.claim();
         for (uint256 i; i < rewardTokens.length; i++) {
-            emit Claimed(vault, rewardTokens[i], earned[i]);
+            emit HoneyLocker__Claimed(vault, rewardTokens[i], earned[i]);
         }
     }
     
@@ -173,7 +173,7 @@ contract HoneyLocker is Ownable {
     function claimBGT(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator {
         BVA adapter = vaultToAdapter[vault];
         uint256 reward = IBGTStationGauge(vault).getReward(address(adapter));
-        emit Claimed(vault, Constants.BGT, reward);
+        emit HoneyLocker__Claimed(vault, Constants.BGT, reward);
     }
 
     function burnBGTForBERA(uint256 _amount) external onlyOwnerOrOperator {
@@ -219,8 +219,8 @@ contract HoneyLocker is Ownable {
         // with the difference that ERC721 doesn't expect a return value
         ERC721(_LPToken).transferFrom(msg.sender, address(this), _amountOrId);
 
-        emit Deposited(_LPToken, _amountOrId);
-        emit LockedUntil(_LPToken, _expiration);
+        emit HoneyLocker__Deposited(_LPToken, _amountOrId);
+        emit HoneyLocker__LockedUntil(_LPToken, _expiration);
     }
 
     function withdrawLPToken(address _LPToken, uint256 _amountOrId) external onlyOwnerOrOperator {
@@ -231,7 +231,7 @@ contract HoneyLocker is Ownable {
         // self approval only needed for ERC20, try/catch in case it's an ERC721
         try ERC721(_LPToken).approve(address(this), _amountOrId) {} catch {}
         ERC721(_LPToken).transferFrom(address(this), recipient(), _amountOrId);
-        emit Withdrawn(_LPToken, _amountOrId);
+        emit HoneyLocker__Withdrawn(_LPToken, _amountOrId);
     }
 
     /*###############################################################
@@ -241,7 +241,7 @@ contract HoneyLocker is Ownable {
         uint256 fees = honeyQueen.computeFees(_amount);
         STL.safeTransferETH(recipient(), _amount - fees);
         Beekeeper(honeyQueen.beekeeper()).distributeFees{value: fees}(referrer, address(0), fees);
-        emit Withdrawn(address(0), _amount - fees);
+        emit HoneyLocker__Withdrawn(address(0), _amount - fees);
     }
 
     function withdrawERC20(address _token, uint256 _amount) external onlyUnblockedTokens(_token) onlyOwnerOrOperator {
@@ -255,7 +255,7 @@ contract HoneyLocker is Ownable {
         ERC721(_token).transferFrom(address(this), recipient(), _amount - fees);
         ERC721(_token).transferFrom(address(this), address(beekeeper), fees);
         beekeeper.distributeFees(referrer, _token, fees);
-        emit Withdrawn(_token, _amount - fees);
+        emit HoneyLocker__Withdrawn(_token, _amount - fees);
     }
 
     function withdrawERC721(address _token, uint256 _id) external onlyUnblockedTokens(_token) onlyOwnerOrOperator {

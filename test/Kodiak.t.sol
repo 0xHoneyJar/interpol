@@ -139,7 +139,7 @@ contract KodiakTest is BaseTest {
         // always skip xKDK because it won't be emitted
         for (uint256 i; i < rewardTokens.length - 1; i++) {
             vm.expectEmit(true, true, false, true, address(locker));
-            emit HoneyLocker.Claimed(address(GAUGE), rewardTokens[i], earned[i]);
+            emit HoneyLocker.HoneyLocker__Claimed(address(GAUGE), rewardTokens[i], earned[i]);
         }
 
         locker.claim(address(GAUGE));
@@ -179,18 +179,18 @@ contract KodiakTest is BaseTest {
 
 
     //     vm.expectEmit(true, false, false, true, address(locker));
-    //     emit locker.Deposited(address(KODIAKV3), nftId);
+    //     emit HoneyLocker.HoneyLocker__Deposited(address(KODIAKV3), nftId);
     //     vm.expectEmit(true, false, false, true, address(locker));
-    //     emit locker.LockedUntil(address(KODIAKV3), expiration);
+    //     emit HoneyLocker.HoneyLocker__LockedUntil(address(KODIAKV3), expiration);
     //     locker.depositAndLock(address(KODIAKV3), nftId, expiration);
     // }
 
     // function test_depositKodiakV3() external prankAsTHJ(){
     //     KODIAKV3.approve(address(locker), 6658);
     //     vm.expectEmit(true, false, false, true, address(locker));
-    //     emit locker.Deposited(address(KODIAKV3), 6658);
+    //     emit HoneyLocker.HoneyLocker__Deposited(address(KODIAKV3), 6658);
     //     vm.expectEmit(true, false, false, true, address(locker));
-    //     emit locker.LockedUntil(address(KODIAKV3), expiration);
+    //     emit HoneyLocker.HoneyLocker__LockedUntil(address(KODIAKV3), expiration);
     //     locker.depositAndLock(address(KODIAKV3), 6658, expiration);
     // }
 
@@ -199,7 +199,7 @@ contract KodiakTest is BaseTest {
     //     locker.depositAndLock(address(KODIAKV3), 6658, 1);
 
     //     vm.expectEmit(true, false, false, true, address(locker));
-    //     emit locker.Withdrawn(address(KODIAKV3), 6658);
+    //     emit HoneyLocker.HoneyLocker__Withdrawn(address(KODIAKV3), 6658);
     //     locker.withdrawLPToken(address(KODIAKV3), 6658);
     // }
 

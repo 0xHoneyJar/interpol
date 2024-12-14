@@ -64,7 +64,7 @@ contract BGTStationTest is BaseTest {
         vm.expectEmit(true, false, false, true, address(GAUGE));
         emit IInfraredVault.Staked(address(lockerAdapter), amountToDeposit);
         vm.expectEmit(true, true, false, true, address(locker));
-        emit HoneyLocker.Staked(address(GAUGE), address(LP_TOKEN), amountToDeposit);
+        emit HoneyLocker.HoneyLocker__Staked(address(GAUGE), address(LP_TOKEN), amountToDeposit);
         locker.stake(address(GAUGE), amountToDeposit);
 
         assertEq(LP_TOKEN.balanceOf(THJ), 0);
@@ -82,7 +82,7 @@ contract BGTStationTest is BaseTest {
         vm.expectEmit(true, false, false, true, address(GAUGE));
         emit IInfraredVault.Withdrawn(address(lockerAdapter), amountToDeposit);
         vm.expectEmit(true, true, false, true, address(locker));
-        emit HoneyLocker.Unstaked(address(GAUGE), address(LP_TOKEN), amountToDeposit);
+        emit HoneyLocker.HoneyLocker__Unstaked(address(GAUGE), address(LP_TOKEN), amountToDeposit);
         locker.unstake(address(GAUGE), amountToDeposit);
 
         assertEq(LP_TOKEN.balanceOf(THJ), 0);
@@ -109,7 +109,7 @@ contract BGTStationTest is BaseTest {
                 earned[i] = 0;
             }
             vm.expectEmit(true, true, false, true, address(locker));
-            emit HoneyLocker.Claimed(address(GAUGE), rewardTokens[i], earned[i]);
+            emit HoneyLocker.HoneyLocker__Claimed(address(GAUGE), rewardTokens[i], earned[i]);
         }
 
         locker.claim(address(GAUGE));

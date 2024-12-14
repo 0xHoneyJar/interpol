@@ -24,17 +24,17 @@ contract MultiAdaptersTest is BaseTest {
 
 
     // LBGT-WBERA gauge
-    address public constant     GAUGE1       = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
+    address public constant     GAUGE1          = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
     // LBGT-WBERA LP token
-    ERC20   public constant     LP_TOKEN1    = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
+    ERC20   public constant     LP_TOKEN1       = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
 
     // YEET-WBERA gauge
-    address public constant     GAUGE2       = 0x175e2429bCb92643255abCbCDF47Fff63F7990CC;
+    address public constant     GAUGE2          = 0x175e2429bCb92643255abCbCDF47Fff63F7990CC;
     // YEET-WBERA LP token
-    ERC20   public constant     LP_TOKEN2    = ERC20(0xE5A2ab5D2fb268E5fF43A5564e44c3309609aFF9);
+    ERC20   public constant     LP_TOKEN2       = ERC20(0xE5A2ab5D2fb268E5fF43A5564e44c3309609aFF9);
 
 
-    IBGT    public constant     BGT         = IBGT(Constants.BGT);
+    IBGT    public constant     BGT             = IBGT(Constants.BGT);
 
     /*###############################################################
                             SETUP
@@ -94,13 +94,13 @@ contract MultiAdaptersTest is BaseTest {
         vm.expectEmit(true, false, false, true, address(GAUGE1));
         emit IBGTStationGauge.Staked(address(lockerAdapter1), amountToDeposit1);
         vm.expectEmit(true, true, false, true, address(locker));
-        emit HoneyLocker.Staked(address(GAUGE1), address(LP_TOKEN1), amountToDeposit1);
+        emit HoneyLocker.HoneyLocker__Staked(address(GAUGE1), address(LP_TOKEN1), amountToDeposit1);
         locker.stake(address(GAUGE1), amountToDeposit1);
 
         vm.expectEmit(true, false, false, true, address(GAUGE2));
         emit IBGTStationGauge.Staked(address(lockerAdapter2), amountToDeposit2);
         vm.expectEmit(true, true, false, true, address(locker));
-        emit HoneyLocker.Staked(address(GAUGE2), address(LP_TOKEN2), amountToDeposit2);
+        emit HoneyLocker.HoneyLocker__Staked(address(GAUGE2), address(LP_TOKEN2), amountToDeposit2);
         locker.stake(address(GAUGE2), amountToDeposit2);
 
         assertEq(LP_TOKEN1.balanceOf(address(locker)), 0);

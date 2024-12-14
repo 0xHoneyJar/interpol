@@ -99,7 +99,7 @@ contract BeradromeTest is BaseTest {
 
         for (uint256 i; i < rewardTokens.length; i++) {
             vm.expectEmit(true, true, false, true, address(locker));
-            emit HoneyLocker.Claimed(address(PLUGIN), rewardTokens[i], earned[i]);
+            emit HoneyLocker.HoneyLocker__Claimed(address(PLUGIN), rewardTokens[i], earned[i]);
         }
 
         locker.claim(address(PLUGIN));
