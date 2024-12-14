@@ -22,11 +22,11 @@ contract BeradromeTest is BaseTest {
 
 
     // Beradrome Bex PAW-HONEY PLUGIN for deposits and withdrawals
-    address public constant PLUGIN      = 0xF89F4fdE1Bf970404160eD7B9F4758B0b1ae266D;
+    address public constant PLUGIN          = 0xF89F4fdE1Bf970404160eD7B9F4758B0b1ae266D;
     // Beradrome Bex PAW-HONEY Gauge for rewards
-    address public constant GAUGE       = 0x3fE3030005C11C17146Ea11F4c51406a9a77442A;
+    address public constant GAUGE           = 0x3fE3030005C11C17146Ea11F4c51406a9a77442A;
     //  Bex PAW-HONEY LP token  
-    ERC20 public constant LP_TOKEN      = ERC20(0xa51afAF359d044F8e56fE74B9575f23142cD4B76);
+    ERC20   public constant LP_TOKEN        = ERC20(0xa51afAF359d044F8e56fE74B9575f23142cD4B76);
     /*###############################################################
                             SETUP
     ###############################################################*/

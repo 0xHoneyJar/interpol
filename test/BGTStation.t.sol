@@ -21,10 +21,10 @@ contract BGTStationTest is BaseTest {
     BVA                 public lockerAdapter;   // adapter for BGT Station used by locker
 
     // LBGT-WBERA gauge
-    address public constant GAUGE   = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
+    address     public constant GAUGE       = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
     // LBGT-WBERA LP token
-    ERC20 public constant LP_TOKEN  = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
-    IBGT public constant BGT        = IBGT(Constants.BGT);
+    ERC20       public constant LP_TOKEN    = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
+    IBGT        public constant BGT        = IBGT(Constants.BGT);
     /*###############################################################
                             SETUP
     ###############################################################*/
