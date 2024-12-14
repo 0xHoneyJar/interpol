@@ -38,8 +38,8 @@ contract BeradromeTest is BaseTest {
 
         vm.startPrank(THJ);
 
-        queen.setAdapterApproval(PLUGIN, address(adapter), true);
-        queen.setVaultAdapter(PLUGIN, address(adapter), address(LP_TOKEN));
+        queen.setAdapterForProtocol("BERADROME", address(adapter));
+        queen.setVaultForProtocol("BERADROME", PLUGIN, address(LP_TOKEN), true);
         locker.registerVault(PLUGIN, false);
 
         lockerAdapter = BVA(locker.vaultToAdapter(PLUGIN));

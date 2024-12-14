@@ -44,10 +44,8 @@ contract KodiakTest is BaseTest {
 
         vm.startPrank(THJ);
 
-        queen.setUpgradeOf(address(oldAdapter), address(newAdapter));
-
-        queen.setAdapterApproval(address(GAUGE), address(oldAdapter), true);
-        queen.setVaultAdapter(address(GAUGE), address(oldAdapter), address(LP_TOKEN));
+        queen.setAdapterForProtocol("KODIAK", address(oldAdapter));
+        queen.setVaultForProtocol("KODIAK", address(GAUGE), address(LP_TOKEN), true);
         locker.registerVault(address(GAUGE), false);
 
         lockerAdapter = BVA(locker.vaultToAdapter(address(GAUGE)));
@@ -67,11 +65,8 @@ contract KodiakTest is BaseTest {
     /*###############################################################
                             TESTS
     ###############################################################*/
-    /*
-        We want to test if upgrading from the old adapter to the new one
-        preserves not only the state of the adapter wrt Kodiak vault but also
-        allows us to add functionalities such as redeeming xKDK
-    */
+
+
     function test_upgradeWithSimpleUnstake(uint128 _amountToDeposit) public prankAsTHJ(false) {
         uint256 amountToDeposit = StdUtils.bound(uint256(_amountToDeposit), 1e20, type(uint128).max);
         
@@ -84,7 +79,7 @@ contract KodiakTest is BaseTest {
         );
         locker.stake(address(GAUGE), amountToDeposit);
 
-        // now we upgrade
+        queen.setUpgradeOf(address(oldAdapter), address(newAdapter));
         locker.upgradeAdapter(address(GAUGE));
 
         vm.warp(block.timestamp + 30 days);
@@ -95,6 +90,11 @@ contract KodiakTest is BaseTest {
         assertEq(LP_TOKEN.balanceOf(address(locker)), amountToDeposit);
     }
 
+    /*###############################################################
+        We test that the upgrade allows us to add functionalities for the
+        adapter while preserving the state of the adapter wrt Kodiak vault
+        leading to no losses of funds for the locker/user.
+    ###############################################################*/
     function test_upgradeWithXKDKRedeem(uint128 _amountToDeposit) public prankAsTHJ(false) {
         uint256 amountToDeposit = StdUtils.bound(uint256(_amountToDeposit), 1e20, type(uint128).max);
         
@@ -121,7 +121,7 @@ contract KodiakTest is BaseTest {
         vm.expectRevert(BVA.BaseVaultAdapter__NotImplemented.selector);
         locker.wildcard(address(GAUGE), 0, abi.encode(xkdkBalance, 15 days));
 
-        // now we upgrade
+        queen.setUpgradeOf(address(oldAdapter), address(newAdapter));
         locker.upgradeAdapter(address(GAUGE));
 
         // xKDK balance should have NOT changed
@@ -136,6 +136,43 @@ contract KodiakTest is BaseTest {
         locker.wildcard(address(GAUGE), 1, abi.encode(0));
 
         assertEq(KDK.balanceOf(address(locker)), kdkBalance + (xkdkBalance / 2));
+    }
+
+    /*###############################################################
+        Even if there is an upgrade possible, the locker should still work
+        using the old adapter.
+    ###############################################################*/
+    function test_lockerUsingOldAdapterShouldWork(uint128 _amountToDeposit) public prankAsTHJ(false) {
+        uint256 amountToDeposit = StdUtils.bound(uint256(_amountToDeposit), 1e20, type(uint128).max);
+        
+        StdCheats.deal(address(LP_TOKEN), address(locker), amountToDeposit);
+
+        bytes32 expectedKekId = keccak256(
+            abi.encodePacked(
+                address(lockerAdapter), block.timestamp, amountToDeposit, GAUGE.lockedLiquidityOf(address(lockerAdapter))
+            )
+        );
+        locker.stake(address(GAUGE), amountToDeposit);
+
+        queen.setUpgradeOf(address(oldAdapter), address(newAdapter));
+
+        vm.warp(block.timestamp + 30 days);
+        GAUGE.sync();
+
+        // now we unstake and see if we get our stake back
+        locker.unstake(address(GAUGE), uint256(expectedKekId));
+        assertEq(LP_TOKEN.balanceOf(address(locker)), amountToDeposit);
+    }
+
+    /*###############################################################
+        Registering a vault after an upgrade should result in being the latest
+        adapter being used.
+    ###############################################################*/
+    function test_registerVaultAfterUpgradeShouldUseLatestAdapter() public prankAsTHJ(false) {
+        queen.setUpgradeOf(address(oldAdapter), address(newAdapter));
+
+        locker.registerVault(address(GAUGE), true);
+        assertEq(locker.vaultToAdapter(address(GAUGE)).implementation(), address(newAdapter));
     }
 }
 

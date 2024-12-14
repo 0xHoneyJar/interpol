@@ -42,7 +42,7 @@ contract AdapterFactory {
     ) external returns (address adapter) {
         if (msg.sender != locker) revert AdapterFactory__CallerMustBeLocker();
 
-        (address logic, address token) = honeyQueen.vaultToAdapterParams(vault);
+        (address logic, address token) = honeyQueen.getAdapterParams(vault);
         
         // Validate the adapter deployment through HoneyQueen
         if (logic == address(0) || token == address(0)) {
@@ -51,7 +51,6 @@ contract AdapterFactory {
 
         bytes memory data = abi.encodeWithSelector(BaseVaultAdapter.initialize.selector, locker, vault, token);
         adapter = address(new ERC1967Proxy(logic, data));
-        //BaseVaultAdapter(adapter).initialize(locker, vault, token);
 
         emit AdapterCreated(logic, locker, vault, token, adapter);
     }

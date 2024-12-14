@@ -16,9 +16,9 @@ abstract contract BaseVaultAdapter {
     /*###############################################################
                             EVENTS
     ###############################################################*/
-    event Initialized(address locker, address vault, address stakingToken);
-    event FailedTransfer(address indexed locker, address indexed token, uint256 amount);
-    event Upgraded(address indexed from, address indexed to);
+    event Adapter__Initialized(address locker, address vault, address stakingToken);
+    event Adapter__FailedTransfer(address indexed locker, address indexed token, uint256 amount);
+    event Adapter__Upgraded(address indexed from, address indexed to);
     /*###############################################################
                             STORAGE
     ###############################################################*/
@@ -45,7 +45,7 @@ abstract contract BaseVaultAdapter {
     function upgrade(address newImplementation) external onlyLocker {
         address oldImplementation = ERC1967Utils.getImplementation();
         ERC1967Utils.upgradeToAndCall(newImplementation, "");
-        emit Upgraded(oldImplementation, newImplementation);
+        emit Adapter__Upgraded(oldImplementation, newImplementation);
     }
     /*###############################################################
                             VIEW/PURE

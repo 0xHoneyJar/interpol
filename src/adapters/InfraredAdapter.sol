@@ -42,7 +42,7 @@ contract InfraredAdapter is BaseVaultAdapter {
         // Ensure consistency by getting token from vault itself
         token = infraredVault.stakingToken();
 
-        emit Initialized(locker, _vault, token);
+        emit Adapter__Initialized(locker, _vault, token);
     }
     /*###############################################################
                             INTERNAL
@@ -87,7 +87,7 @@ contract InfraredAdapter is BaseVaultAdapter {
                 it can always be retrieved later because we use the balanceOf() function
             */
             try ERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
-                emit FailedTransfer(locker, rewardTokens[i], amounts[i]);
+                emit Adapter__FailedTransfer(locker, rewardTokens[i], amounts[i]);
                 amounts[i] = 0;
             }
         }

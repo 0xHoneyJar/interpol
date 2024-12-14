@@ -57,8 +57,8 @@ contract KodiakTest is BaseTest {
 
         vm.startPrank(THJ);
 
-        queen.setAdapterApproval(address(GAUGE), address(adapter), true);
-        queen.setVaultAdapter(address(GAUGE), address(adapter), address(LP_TOKEN));
+        queen.setAdapterForProtocol("KODIAK", address(adapter));
+        queen.setVaultForProtocol("KODIAK", address(GAUGE), address(LP_TOKEN), true);
         locker.registerVault(address(GAUGE), false);
 
         lockerAdapter = BVA(locker.vaultToAdapter(address(GAUGE)));

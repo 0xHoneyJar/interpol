@@ -14,6 +14,8 @@ import {IBGT} from "./utils/IBGT.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {Beekeeper} from "./Beekeeper.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract HoneyLocker is Ownable {
     /*###############################################################
                             ERRORS
@@ -81,7 +83,7 @@ contract HoneyLocker is Ownable {
         _;
     }
     /*###############################################################
-                            OWNER
+                            ADAPTERS MANAGEMENT
     ###############################################################*/
     /**
      * @notice              Registers a new vault adapter or overwrites an existing one
@@ -101,6 +103,14 @@ contract HoneyLocker is Ownable {
         vaultToAdapter[vault] = BVA(newAdapter);
     }
 
+    /**
+     * @notice              Upgrades an adapter to a new implementation
+     * @param vault         The address of the vault whose adapter should be upgraded
+     * @dev                 Only callable by owner
+     * @dev                 Will revert if upgrade is not authorized by HoneyQueen
+     * @dev                 The new implementation must be compatible with the old one
+     * @custom:emits        Upgraded event from BaseVaultAdapter
+     */
     function upgradeAdapter(address vault) external onlyOwner {
         BVA adapter = vaultToAdapter[vault];
         address authorizedLogic = HoneyQueen(honeyQueen).upgradeOf(adapter.implementation());
@@ -108,6 +118,9 @@ contract HoneyLocker is Ownable {
         adapter.upgrade(authorizedLogic);
     }
 
+    /*###############################################################
+                            OWNER
+    ###############################################################*/
     function setOperator(address _operator) external onlyOwner {
         operator = _operator;
     }

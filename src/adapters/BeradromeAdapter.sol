@@ -34,7 +34,7 @@ contract BeradromeAdapter is BaseVaultAdapter {
         locker = _locker;
         beradromePlugin = IBeradromePlugin(_vault);
         token = beradromePlugin.getToken();
-        emit Initialized(locker, _vault, token);
+        emit Adapter__Initialized(locker, _vault, token);
     }
     /*###############################################################
                             EXTERNAL
@@ -62,7 +62,7 @@ contract BeradromeAdapter is BaseVaultAdapter {
                 it can always be retrieved later because we use the balanceOf() function
             */
             try ERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
-                emit FailedTransfer(locker, rewardTokens[i], amounts[i]);
+                emit Adapter__FailedTransfer(locker, rewardTokens[i], amounts[i]);
                 amounts[i] = 0;
             }
         }

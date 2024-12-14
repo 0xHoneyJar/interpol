@@ -37,7 +37,7 @@ contract BGTStationAdapter is BaseVaultAdapter {
         // the locker will be the one receiving the rewards
         bgtStationGauge.setOperator(_locker);
 
-        emit Initialized(locker, _vault, _stakingToken);
+        emit Adapter__Initialized(locker, _vault, _stakingToken);
     }
     /*###############################################################
                             EXTERNAL

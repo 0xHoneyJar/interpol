@@ -39,8 +39,8 @@ contract BGTStationTest is BaseTest {
 
         vm.startPrank(THJ);
 
-        queen.setAdapterApproval(GAUGE, address(adapter), true);
-        queen.setVaultAdapter(GAUGE, address(adapter), address(LP_TOKEN));
+        queen.setAdapterForProtocol("INFRARED", address(adapter));
+        queen.setVaultForProtocol("INFRARED", GAUGE, address(LP_TOKEN), true);
         locker.registerVault(GAUGE, false);
 
         lockerAdapter = BVA(locker.vaultToAdapter(GAUGE));

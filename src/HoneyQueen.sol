@@ -10,38 +10,35 @@ contract HoneyQueen is Ownable {
     ###############################################################*/
     error HoneyQueen__AdapterNotApproved();
     error HoneyQueen__VaultNotApproved();
+    error HoneyQueen__AdapterAlreadyExists();
+    error HoneyQueen__InvalidProtocol();
+    error HoneyQueen__AdapterNotSet();
     /*###############################################################
                             EVENTS
     ###############################################################*/
     event HoneyQueen__AdapterApproved(address indexed vault, address adapter, bool approved);
     event HoneyQueen__VaultAdapterSet(address indexed vault, address adapter);
+    event HoneyQueen__AdapterUpgraded(string indexed protocol, address indexed fromLogic, address toLogic);
     /*###############################################################
                             STRUCTS
     ###############################################################*/
-    struct AdapterParams {
-        address logic;
-        address token;
-    }
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    // adapter = logic of adapter
-    mapping(address vault => mapping(address adapter => bool approved)) public isAdapterForVaultApproved;
+    mapping(string protocol => address adapter)         internal    adapterOfProtocol;
+    // have to build a reverse mapping to allow lockers to query
+    mapping(address adapter => string protocol)         internal    protocolOfAdapter;
+    mapping(address vault => string protocol)           internal    protocolOfVault;
+    mapping(address vault => address token)             internal    tokenOfVault;
+    
     // this is for cases where gauges give you a NFT to represent your staking position
-    mapping(address token => bool blocked)              public isTokenBlocked;
-    mapping(address token => bool isRewardToken)        public isRewardToken;
-    // tracks the latest adapter for a vault
-    mapping(address vault => AdapterParams params)      public vaultToAdapterParams;
-    address                                             public adapterFactory;
-    address                                             public beekeeper;
-    uint256                                             public protocolFees;
+    mapping(address token => bool blocked)              public      isTokenBlocked;
+    mapping(address token => bool isRewardToken)        public      isRewardToken;
+    address                                             public      adapterFactory;
+    address                                             public      beekeeper;
+    uint256                                             public      protocolFees;
     // authorized upgrades for proxies from logic to logic
-    mapping(address fromLogic => address toLogic)       public upgradeOf;
-    /* 
-        tracks all vaults associated to an adapter, for a given protocol, therefore array of vaults
-        there should only be ONE adapter at anytime
-    */
-    mapping(address adapter => address[] vaults)        public adapterVaults;
+    mapping(address fromLogic => address toLogic)       public      upgradeOf;
     
     /*###############################################################
                             CONSTRUCTOR
@@ -52,39 +49,56 @@ contract HoneyQueen is Ownable {
     }
 
     /*###############################################################
-                            OWNER FUNCTIONS
+                            ADAPTERS MANAGEMENT
     ###############################################################*/
     /**
-     * @notice          Approves or revokes an adapter implementation for a vault
-     * @param vault     The vault address
+     * @notice          Adds a new adapter implementation for a protocol
+     * @param protocol  The protocol name
      * @param adapter   The adapter implementation address
-     * @param approved  Whether the adapter should be approved
+     * @dev             It should NOT be possible to set a new adapter, therefore an upgrade,
+                        for a protocol that already has one because that should be done in the
+                        appropriate function setUpgradeOf
      */
-    function setAdapterApproval(
+    function setAdapterForProtocol(string calldata protocol, address adapter) external onlyOwner {
+        if (adapterOfProtocol[protocol] != address(0)) revert HoneyQueen__AdapterAlreadyExists();
+        adapterOfProtocol[protocol] = adapter;
+        protocolOfAdapter[adapter] = protocol;
+    }
+    /**
+     * @notice          Approves or revokes a vault for a protocol
+     * @param protocol  The protocol name
+     * @param vault     The vault address
+     * @param approved  Whether the vault should be approved
+     */
+    function setVaultForProtocol(
+        string calldata protocol,
         address vault,
-        address adapter,
+        address token,
         bool approved
     ) external onlyOwner {
-        isAdapterForVaultApproved[vault][adapter] = approved;
-        emit HoneyQueen__AdapterApproved(vault, adapter, approved);
-    }
-
-    /**
-     * @notice          Sets the adapter for a vault that will be used 
-                        to be cloned by the AdapterFactory
-     * @param vault     The vault address
-     * @param adapter   The adapter address
-     * @param token     The token address
-     */
-    function setVaultAdapter(address vault, address adapter, address token) external onlyOwner {
-        vaultToAdapterParams[vault] = AdapterParams(adapter, token);
-        emit HoneyQueen__VaultAdapterSet(vault, adapter);
+        if (adapterOfProtocol[protocol] == address(0)) revert HoneyQueen__AdapterNotSet();
+        if (approved) {
+            protocolOfVault[vault] = protocol;
+            tokenOfVault[vault] = token;
+        } else {
+            delete protocolOfVault[vault];
+        }
     }
 
     function setUpgradeOf(address fromLogic, address toLogic) external onlyOwner {
         upgradeOf[fromLogic] = toLogic;
+
+        // update the mappings
+        string memory protocol = protocolOfAdapter[fromLogic];
+        protocolOfAdapter[toLogic] = protocol;
+        adapterOfProtocol[protocol] = toLogic;
+
+        emit HoneyQueen__AdapterUpgraded(protocol, fromLogic, toLogic);
     }
 
+    /*###############################################################
+                            OWNER MANAGEMENT
+    ###############################################################*/
     function setTokenBlocked(address token, bool blocked) external onlyOwner {
         isTokenBlocked[token] = blocked;
     }
@@ -108,25 +122,17 @@ contract HoneyQueen is Ownable {
     /*###############################################################
                             EXTERNAL FUNCTIONS
     ###############################################################*/
-    /**
-     * @notice Validates an adapter deployment
-     * @dev Called by AdapterFactory before creating a new adapter
-     * @param logic The adapter implementation to validate
-     * @param vault The vault address the adapter will interact with
-     * @return _ Whether the adapter deployment is valid
-     */
-    function validateAdapterDeployment(
-        address logic,
-        address vault
-    ) external view returns (bool) {
-        if (msg.sender != adapterFactory) return false;
-        
-        return isAdapterForVaultApproved[vault][logic];
-    }
     /*###############################################################
                             READ FUNCTIONS
     ###############################################################*/
     function computeFees(uint256 amount) public view returns (uint256) {
         return FPML.mulDivUp(amount, protocolFees, 10000);
+    }
+
+    function getAdapterParams(address vault) public view returns (address, address) {
+        string memory protocol = protocolOfVault[vault];
+        address logic = adapterOfProtocol[protocol];
+        address token = tokenOfVault[vault];
+        return (logic, token);
     }
 }

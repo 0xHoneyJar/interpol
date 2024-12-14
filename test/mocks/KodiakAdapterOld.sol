@@ -67,7 +67,7 @@ contract KodiakAdapterOld is BaseVaultAdapter {
         locker = _locker;
         kodiakFarm = IKodiakFarm(_vault);
         token = kodiakFarm.stakingToken();
-        emit Initialized(locker, _vault, token);
+        emit Adapter__Initialized(locker, _vault, token);
     }
     /*###############################################################
                             EXTERNAL
@@ -95,7 +95,7 @@ contract KodiakAdapterOld is BaseVaultAdapter {
                 it can always be retrieved later because we use the balanceOf() function
             */
             try ERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
-                emit FailedTransfer(locker, rewardTokens[i], amounts[i]);
+                emit Adapter__FailedTransfer(locker, rewardTokens[i], amounts[i]);
                 amounts[i] = 0;
             }
         }
