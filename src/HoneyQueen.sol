@@ -64,7 +64,8 @@ contract HoneyQueen is Ownable {
     }
 
     /**
-     * @notice          Sets the adapter for a vault
+     * @notice          Sets the adapter for a vault that will be used 
+                        to be cloned by the AdapterFactory
      * @param vault     The vault address
      * @param adapter   The adapter address
      * @param token     The token address
