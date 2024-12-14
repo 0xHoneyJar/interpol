@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+
+import {HoneyQueen} from "../HoneyQueen.sol";
+
 abstract contract BaseVaultAdapter {
     /*###############################################################
                             ERRORS
@@ -8,16 +12,18 @@ abstract contract BaseVaultAdapter {
     error BaseVaultAdapter__AlreadyInitialized();
     error BaseVaultAdapter__NotAuthorized();
     error BaseVaultAdapter__NotImplemented();
+    error BaseVaultAdapter__NotAuthorizedUpgrade();
     /*###############################################################
                             EVENTS
     ###############################################################*/
     event Initialized(address locker, address vault, address stakingToken);
     event FailedTransfer(address indexed locker, address indexed token, uint256 amount);
+    event Upgraded(address indexed from, address indexed to);
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    address public token;   // LP token
-    address public locker;
+    address public              token;   // LP token
+    address public              locker;
     /*###############################################################
                             MODIFIERS
     ###############################################################*/
@@ -34,6 +40,14 @@ abstract contract BaseVaultAdapter {
     function claim() external virtual returns (address[] memory rewardTokens, uint256[] memory earned);
     function wildcard(uint8 func, bytes calldata args) external virtual;
     /*###############################################################
+                            PROXY LOGIC
+    ###############################################################*/
+    function upgrade(address newImplementation) external onlyLocker {
+        address oldImplementation = ERC1967Utils.getImplementation();
+        ERC1967Utils.upgradeToAndCall(newImplementation, "");
+        emit Upgraded(oldImplementation, newImplementation);
+    }
+    /*###############################################################
                             VIEW/PURE
     ###############################################################*/
     function stakingToken() external view virtual returns (address);
@@ -41,6 +55,9 @@ abstract contract BaseVaultAdapter {
     function earned() external view virtual returns (address[] memory rewardTokens, uint256[] memory amounts);
     function version() external pure virtual returns (uint256) {
         return 1;
+    }
+    function implementation() external view returns (address) {
+        return ERC1967Utils.getImplementation();
     }
 }
 

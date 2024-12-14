@@ -35,7 +35,13 @@ contract HoneyQueen is Ownable {
     address                                             public adapterFactory;
     address                                             public beekeeper;
     uint256                                             public protocolFees;
-
+    // authorized upgrades for proxies from logic to logic
+    mapping(address fromLogic => address toLogic)       public upgradeOf;
+    /* 
+        tracks all vaults associated to an adapter, for a given protocol, therefore array of vaults
+        there should only be ONE adapter at anytime
+    */
+    mapping(address adapter => address[] vaults)        public adapterVaults;
     
     /*###############################################################
                             CONSTRUCTOR
@@ -73,6 +79,10 @@ contract HoneyQueen is Ownable {
     function setVaultAdapter(address vault, address adapter, address token) external onlyOwner {
         vaultToAdapterParams[vault] = AdapterParams(adapter, token);
         emit HoneyQueen__VaultAdapterSet(vault, adapter);
+    }
+
+    function setUpgradeOf(address fromLogic, address toLogic) external onlyOwner {
+        upgradeOf[fromLogic] = toLogic;
     }
 
     function setTokenBlocked(address token, bool blocked) external onlyOwner {

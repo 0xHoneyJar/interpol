@@ -39,7 +39,7 @@ contract KodiakTest is BaseTest {
     ERC20           public constant KDK             = ERC20(0xfd27998fa0eaB1A6372Db14Afd4bF7c4a58C5364);
     XKDK            public constant xKDK            = XKDK(0x414B50157a5697F14e91417C5275A7496DcF429D);
     ERC20           public constant LP_TOKEN        = ERC20(0xE5A2ab5D2fb268E5fF43A5564e44c3309609aFF9); // YEET-WBERA
-    IKodiakFarm      public constant GAUGE           = IKodiakFarm(0xbdEE3F788a5efDdA1FcFe6bfe7DbbDa5690179e6);
+    IKodiakFarm     public constant GAUGE           = IKodiakFarm(0xbdEE3F788a5efDdA1FcFe6bfe7DbbDa5690179e6);
     ERC721          public constant KODIAKV3        = ERC721(0xC0568C6E9D5404124c8AA9EfD955F3f14C8e64A6);
     KodiakV3Gauge   public kodiakV3Gauge;
     
@@ -78,14 +78,10 @@ contract KodiakTest is BaseTest {
                             TESTS
     ###############################################################*/
 
-  function test_stake(uint32 _amountToDeposit, uint128 _expiration, bool _useOperator) external prankAsTHJ(_useOperator) {
-        address user = _useOperator ? operator : THJ;
+  function test_stake(uint32 _amountToDeposit, bool _useOperator) external prankAsTHJ(_useOperator) {
         uint256 amountToDeposit = StdUtils.bound(uint256(_amountToDeposit), 1, type(uint32).max);
         
-        StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
-
-        LP_TOKEN.approve(address(locker), amountToDeposit);
-        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, uint256(_expiration));
+        StdCheats.deal(address(LP_TOKEN), address(locker), amountToDeposit);
 
         bytes32 expectedKekId = keccak256(
             abi.encodePacked(
@@ -100,17 +96,12 @@ contract KodiakTest is BaseTest {
 
     function test_unstakeSingle(
         uint128 _amountToDeposit,
-        uint128 _expiration,
         bool _useOperator
     ) external prankAsTHJ(_useOperator) {
-        address user = _useOperator ? operator : THJ;
         // too low amount results in the withdrawal failing because of how Kodiak works
         uint256 amountToDeposit = StdUtils.bound(uint256(_amountToDeposit), 1e20, type(uint128).max);
         
-        StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
-
-        LP_TOKEN.approve(address(locker), amountToDeposit);
-        locker.depositAndLock(address(LP_TOKEN), amountToDeposit, uint256(_expiration));
+        StdCheats.deal(address(LP_TOKEN), address(locker), amountToDeposit);
 
         bytes32 expectedKekId = keccak256(
             abi.encodePacked(

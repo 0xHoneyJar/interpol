@@ -27,6 +27,7 @@ contract HoneyLocker is Ownable {
     error HoneyLocker__WithdrawalFailed();
     error HoneyLocker__CannotBeLPToken();
     error HoneyLocker__TokenBlocked();
+    error HoneyLocker__NotAuthorizedUpgrade();
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -98,6 +99,13 @@ contract HoneyLocker is Ownable {
         address newAdapter = AdapterFactory(honeyQueen.adapterFactory()).createAdapter(address(this), vault);
         
         vaultToAdapter[vault] = BVA(newAdapter);
+    }
+
+    function upgradeAdapter(address vault) external onlyOwner {
+        BVA adapter = vaultToAdapter[vault];
+        address authorizedLogic = HoneyQueen(honeyQueen).upgradeOf(adapter.implementation());
+        if(authorizedLogic == address(0)) revert HoneyLocker__NotAuthorizedUpgrade();
+        adapter.upgrade(authorizedLogic);
     }
 
     function setOperator(address _operator) external onlyOwner {

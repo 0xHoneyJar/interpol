@@ -7,6 +7,10 @@ evm_version = "shanghai"
 
 fs_permissions = [{ access = "read-write", path = "./script/config.json" }]
 
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
+]
+
 [rpc_endpoints]
 bArtio = "https://bartio.rpc.berachain.com/"
 

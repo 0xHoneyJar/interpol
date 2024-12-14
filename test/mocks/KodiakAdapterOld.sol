@@ -1,0 +1,142 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import {ERC20} from "solady/tokens/ERC20.sol";
+import {DynamicArrayLib as DAL} from "solady/utils/DynamicArrayLib.sol";
+
+import {BaseVaultAdapter} from "../../src/adapters/BaseVaultAdapter.sol";
+
+interface IKodiakFarm {
+    function stakeLocked(uint256 liquidity, uint256 secs) external;
+    function withdrawLocked(bytes32 kek_id) external;
+    function getReward() external returns (uint256[] memory);
+    function getAllRewardTokens() external view returns (address[] memory);
+    function lock_time_for_max_multiplier() external view returns (uint256);
+    function xKdk() external view returns (address);
+    function kdk() external view returns (address);
+    function stakingToken() external view returns (address);
+    function earned(address account) external view returns (uint256[] memory);
+    function xKdkPercentage() external view returns (uint256);
+    function lockedLiquidityOf(address account) external view returns (uint256);
+    function sync() external;
+
+    event StakeLocked(
+        address indexed user,
+        uint256 amount,
+        uint256 secs,
+        bytes32 kek_id,
+        address source_address
+    );
+    event WithdrawLocked(
+        address indexed user,
+        uint256 amount,
+        bytes32 kek_id,
+        address destination_address
+    );
+    event RewardPaid(
+        address indexed user,
+        uint256 reward,
+        address token_address,
+        address destination_address
+    );
+}
+
+interface XKDK {
+    function redeem(uint256,uint256) external;
+    function finalizeRedeem(uint256) external;
+    function balanceOf(address account) external view returns (uint256);
+}
+
+contract KodiakAdapterOld is BaseVaultAdapter {
+    using DAL for address[];
+    using DAL for uint256[];
+    using DAL for DAL.DynamicArray;
+    /*###############################################################
+                            STORAGE
+    ###############################################################*/
+    IKodiakFarm public kodiakFarm;
+    /*###############################################################
+                            INITIALIZATION
+    ###############################################################*/
+    function initialize(
+        address _locker,
+        address _vault,
+        address _stakingToken
+    ) external override {
+        if (locker != address(0)) revert BaseVaultAdapter__AlreadyInitialized();
+        locker = _locker;
+        kodiakFarm = IKodiakFarm(_vault);
+        token = kodiakFarm.stakingToken();
+        emit Initialized(locker, _vault, token);
+    }
+    /*###############################################################
+                            EXTERNAL
+    ###############################################################*/
+    function stake(uint256 amount) external override onlyLocker {
+        ERC20(token).transferFrom(locker, address(this), amount);
+        ERC20(token).approve(address(kodiakFarm), amount);
+        kodiakFarm.stakeLocked(amount, kodiakFarm.lock_time_for_max_multiplier());
+    }
+
+    function unstake(uint256 kekIdAsUint) external override onlyLocker {
+        kodiakFarm.withdrawLocked(bytes32(kekIdAsUint));
+        uint256 amount = ERC20(token).balanceOf(address(this));
+        ERC20(token).transfer(locker, amount);
+    }
+
+    function claim() external override onlyLocker returns (address[] memory, uint256[] memory) {
+        address[] memory rewardTokens = kodiakFarm.getAllRewardTokens();
+        uint256[] memory amounts = new uint256[](rewardTokens.length);
+        kodiakFarm.getReward();
+        for (uint256 i; i < rewardTokens.length; i++) {
+            amounts[i] = ERC20(rewardTokens[i]).balanceOf(address(this));
+            /*
+                we skip the transfer, to not block any other rewards
+                it can always be retrieved later because we use the balanceOf() function
+            */
+            try ERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
+                emit FailedTransfer(locker, rewardTokens[i], amounts[i]);
+                amounts[i] = 0;
+            }
+        }
+        return (rewardTokens, amounts);
+    }
+
+    // Do not implement xkdk redeem/finalizeRedeem
+    function wildcard(uint8 func, bytes calldata args) external override onlyLocker {
+        revert BaseVaultAdapter__NotImplemented();
+    }
+    /*###############################################################
+                            VIEW
+    ###############################################################*/
+    function stakingToken() external view override returns (address) {
+        return token;
+    }
+
+    function vault() external view override returns (address) {
+        return address(kodiakFarm);
+    }
+
+    function earned() external view override returns (address[] memory, uint256[] memory) {
+        DAL.DynamicArray memory rewardTokens = kodiakFarm.getAllRewardTokens().wrap();
+        DAL.DynamicArray memory amounts = kodiakFarm.earned(address(this)).wrap();
+        address kdk = kodiakFarm.kdk();
+        uint256 xKDKAmount;
+        /*
+            To have an accurate result, we must reproduce the logic of the rewards payout
+            meaning that a chunk of kdk goes as xKDK
+        */
+        for (uint256 i; i < rewardTokens.length(); i++) {
+            if (rewardTokens.getAddress(i) == kdk) {
+                uint256 amount = amounts.getUint256(i);
+                xKDKAmount = amount * kodiakFarm.xKdkPercentage() / 100e18;
+                amounts.set(i, amount - xKDKAmount);
+            }
+        }
+        rewardTokens.p(kodiakFarm.xKdk());
+        amounts.p(xKDKAmount);
+        // resize arrays to include xKDK as a reward
+        return (rewardTokens.asAddressArray(), amounts.asUint256Array());
+    }
+}
+

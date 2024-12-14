@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {LibClone} from "solady/utils/LibClone.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {BaseVaultAdapter} from "./adapters/BaseVaultAdapter.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
@@ -48,8 +49,9 @@ contract AdapterFactory {
             revert AdapterFactory__InvalidAdapter();
         }
 
-        adapter = LibClone.clone(logic);
-        BaseVaultAdapter(adapter).initialize(locker, vault, token);
+        bytes memory data = abi.encodeWithSelector(BaseVaultAdapter.initialize.selector, locker, vault, token);
+        adapter = address(new ERC1967Proxy(logic, data));
+        //BaseVaultAdapter(adapter).initialize(locker, vault, token);
 
         emit AdapterCreated(logic, locker, vault, token, adapter);
     }
