@@ -11,7 +11,6 @@ import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {BeradromeAdapter, IBeradromeGauge} from "../src/adapters/BeradromeAdapter.sol";
 import {BaseVaultAdapter as BVA} from "../src/adapters/BaseVaultAdapter.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
-import {Constants} from "../src/Constants.sol";
 
 contract BeradromeTest is BaseTest {    
     /*###############################################################

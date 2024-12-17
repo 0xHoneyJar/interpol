@@ -12,7 +12,6 @@ import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {KodiakAdapter, IKodiakFarm, XKDK} from "../src/adapters/KodiakAdapter.sol";
 import {KodiakAdapterOld} from "./mocks/KodiakAdapterOld.sol";
 import {BaseVaultAdapter as BVA} from "../src/adapters/BaseVaultAdapter.sol";
-import {Constants} from "../src/Constants.sol";
 
 
 

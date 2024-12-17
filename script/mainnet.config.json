@@ -1,0 +1,14 @@
+{
+  "treasury": "0x4A8c9a29b23c4eAC0D235729d5e0D035258CDFA7",
+  "BGT": "0xbDa130737BDd9618301681329bF2e46A016ff9Ad",
+  "beekeeper": "",
+  "honeyqueen": "",
+  "lockerFactory": "",
+  "adapterFactory": "",
+  "adapters" : {
+    "BERADROME": "",
+    "INFRARED": "",
+    "KODIAK": "",
+    "BGTSTATION": ""
+  }
+}

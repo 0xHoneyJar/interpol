@@ -11,7 +11,6 @@ import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {KodiakAdapter, IKodiakFarm, XKDK} from "../src/adapters/KodiakAdapter.sol";
 import {BaseVaultAdapter as BVA} from "../src/adapters/BaseVaultAdapter.sol";
-import {Constants} from "../src/Constants.sol";
 
 /*
     There are currently no "real" Kodiak gauges using KodiakV3

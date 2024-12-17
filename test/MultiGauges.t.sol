@@ -12,7 +12,6 @@ import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {BGTStationAdapter, IBGTStationGauge} from "../src/adapters/BGTStationAdapter.sol";
 import {BaseVaultAdapter as BVA} from "../src/adapters/BaseVaultAdapter.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
-import {Constants} from "../src/Constants.sol";
 
 contract MultiAdaptersTest is BaseTest {    
     /*###############################################################
@@ -31,10 +30,6 @@ contract MultiAdaptersTest is BaseTest {
     address public constant     GAUGE2          = 0x175e2429bCb92643255abCbCDF47Fff63F7990CC;
     // YEET-WBERA LP token
     ERC20   public constant     LP_TOKEN2       = ERC20(0xE5A2ab5D2fb268E5fF43A5564e44c3309609aFF9);
-
-
-    IBGT    public constant     BGT             = IBGT(Constants.BGT);
-
     /*###############################################################
                             SETUP
     ###############################################################*/

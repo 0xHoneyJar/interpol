@@ -11,13 +11,11 @@ import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {BGTStationAdapter} from "../src/adapters/BGTStationAdapter.sol";
 import {BaseVaultAdapter as BVA} from "../src/adapters/BaseVaultAdapter.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
-import {Constants} from "../src/Constants.sol";
 
 contract BGTTest is BaseTest {    
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
-    IBGT public constant BGT = IBGT(Constants.BGT);
     /*###############################################################
                             SETUP
     ###############################################################*/

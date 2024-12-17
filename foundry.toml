@@ -5,7 +5,7 @@ libs = ["lib"]
 # using thj dev address
 evm_version = "shanghai"
 
-fs_permissions = [{ access = "read-write", path = "./script/config.json" }]
+fs_permissions = [{ access = "read-write", path = "./script/" }]
 
 remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"

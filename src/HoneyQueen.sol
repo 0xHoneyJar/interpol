@@ -25,11 +25,13 @@ contract HoneyQueen is Ownable {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    mapping(string protocol => address adapter)         public    adapterOfProtocol;
+    address                                immutable    public      BGT;
+
+    mapping(string protocol => address adapter)         public      adapterOfProtocol;
     // have to build a reverse mapping to allow lockers to query
-    mapping(address adapter => string protocol)         public    protocolOfAdapter;
-    mapping(address vault => string protocol)           public    protocolOfVault;
-    mapping(address vault => address token)             public    tokenOfVault;
+    mapping(address adapter => string protocol)         public      protocolOfAdapter;
+    mapping(address vault => string protocol)           public      protocolOfVault;
+    mapping(address vault => address token)             public      tokenOfVault;
     
     // this is for cases where gauges give you a NFT to represent your staking position
     mapping(address token => bool blocked)              public      isTokenBlocked;
@@ -43,7 +45,8 @@ contract HoneyQueen is Ownable {
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
-    constructor(address _adapterFactory) {
+    constructor(address _BGT, address _adapterFactory) {
+        BGT = _BGT;
         adapterFactory = _adapterFactory;
         _initializeOwner(msg.sender);
     }

@@ -2,13 +2,16 @@
 pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
+import {ERC20} from "solady/tokens/ERC20.sol";
+import {console2} from "forge-std/console2.sol";
+
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {Beekeeper} from "../src/Beekeeper.sol";
 import {AdapterFactory} from "../src/AdapterFactory.sol";
 import {TokenReceiver} from "../src/utils/TokenReceiver.sol";
-import {ERC20} from "solady/tokens/ERC20.sol";
-import {console2} from "forge-std/console2.sol";
+import {IBGT} from "../src/utils/IBGT.sol";
+
 abstract contract BaseTest is Test, TokenReceiver {
     /*###############################################################
                             CONSTANTS
@@ -20,6 +23,8 @@ abstract contract BaseTest is Test, TokenReceiver {
     address internal referrer   = makeAddr("referrer");
     address internal treasury   = makeAddr("treasury");
     address internal operator   = makeAddr("operator");
+
+    IBGT    internal BGT        = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
@@ -39,7 +44,7 @@ abstract contract BaseTest is Test, TokenReceiver {
     function setUp() public virtual {
         vm.startPrank(THJ);
 
-        queen = new HoneyQueen(address(0)); // Temporary zero address
+        queen = new HoneyQueen(address(BGT), address(0)); // Temporary zero address
         beekeeper = new Beekeeper(THJ, THJTreasury);
         factory = new AdapterFactory(address(queen));
         locker = new HoneyLocker(address(queen), THJ, referrer, false);

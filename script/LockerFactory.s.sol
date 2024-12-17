@@ -1,27 +1,38 @@
-// // SPDX-License-Identifier: UNLICENSED
-// pragma solidity ^0.8.13;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.23;
 
-// import {Script, console} from "forge-std/Script.sol";
-// import {stdJson} from "forge-std/StdJson.sol";
-// import {LockerFactory} from "../src/LockerFactory.sol";
+import {Script, console} from "forge-std/Script.sol";
+import {stdJson} from "forge-std/StdJson.sol";
 
-// contract LockerFactoryDeploy is Script {
-//     using stdJson for string;
-//     function setUp() public {}
+import {LockerFactory} from "../src/LockerFactory.sol";
+import {Config} from "./Config.sol";
 
-//     function run() public {
-//         string memory json = vm.readFile("./script/config.json");
-//         address honeyQueen = json.readAddress("$.honeyqueen");
-//         uint256 pkey = vm.envUint("PRIVATE_KEY");
-//         address pubkey = vm.addr(pkey);
-//         vm.startBroadcast(pkey);
-//         LockerFactory factory = new LockerFactory(honeyQueen);
-//         vm.stopBroadcast();
+contract LockerFactoryDeploy is Script {
+    using stdJson for string;
 
-//         vm.writeJson(
-//             vm.toString(address(factory)),
-//             "./script/config.json",
-//             ".lockerFactory"
-//         );
-//     }
-// }
+    LockerFactory public factory;
+
+    function setUp() public {}
+
+    function run(bool isTestnet) public {
+        Config config = new Config(isTestnet);
+
+        string memory json = config.getConfig();
+        address honeyQueen = json.readAddress("$.honeyqueen");
+        uint256 pkey = vm.envUint("PRIVATE_KEY");
+        address pubkey = vm.addr(pkey);
+        vm.startBroadcast(pkey);
+        factory = new LockerFactory(honeyQueen);
+        vm.stopBroadcast();
+
+        vm.writeJson(
+            vm.toString(address(factory)),
+            config.getConfigFilename(),
+            ".lockerFactory"
+        );
+    }
+
+    function getLockerFactory() public view returns (LockerFactory) {
+        return factory;
+    }
+}

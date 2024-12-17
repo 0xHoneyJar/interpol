@@ -9,12 +9,9 @@ import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {BaseVaultAdapter as BVA} from "./adapters/BaseVaultAdapter.sol";
 import {AdapterFactory} from "./AdapterFactory.sol";
 import {IBGTStationGauge} from "./adapters/BGTStationAdapter.sol";
-import {Constants} from "./Constants.sol";
 import {IBGT} from "./utils/IBGT.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {Beekeeper} from "./Beekeeper.sol";
-
-import {console2} from "forge-std/console2.sol";
 
 contract HoneyLocker is Ownable {
     /*###############################################################
@@ -170,28 +167,28 @@ contract HoneyLocker is Ownable {
     function claimBGT(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator {
         BVA adapter = _getAdapter(vault);
         uint256 reward = IBGTStationGauge(vault).getReward(address(adapter));
-        emit HoneyLocker__Claimed(vault, Constants.BGT, reward);
+        emit HoneyLocker__Claimed(vault, honeyQueen.BGT(), reward);
     }
 
     function burnBGTForBERA(uint256 _amount) external onlyOwnerOrOperator {
-        IBGT(Constants.BGT).redeem(address(this), _amount);
+        IBGT(honeyQueen.BGT()).redeem(address(this), _amount);
         withdrawBERA(_amount);
     }
 
     function delegateBGT(uint128 amount, address validator) external onlyOwnerOrOperator {
-        IBGT(Constants.BGT).queueBoost(validator, amount);
+        IBGT(honeyQueen.BGT()).queueBoost(validator, amount);
     }
 
     function activateBoost(address validator) external onlyOwnerOrOperator {
-        IBGT(Constants.BGT).activateBoost(validator);
+        IBGT(honeyQueen.BGT()).activateBoost(validator);
     }
 
     function cancelQueuedBoost(uint128 amount, address validator) external onlyOwnerOrOperator {
-        IBGT(Constants.BGT).cancelBoost(validator, amount);
+        IBGT(honeyQueen.BGT()).cancelBoost(validator, amount);
     }
 
     function dropBoost(uint128 amount, address validator) external onlyOwnerOrOperator {
-        IBGT(Constants.BGT).dropBoost(validator, amount);
+        IBGT(honeyQueen.BGT()).dropBoost(validator, amount);
     }
     /*###############################################################
                             LP MANAGEMENT

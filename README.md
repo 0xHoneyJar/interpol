@@ -27,6 +27,30 @@ Beekeeper is a contract that manages fee distribution between referrers and the 
 
 ## How to deploy
 
+### Whole protocol
+
+```
+source .env && forge script script/Deploy.s.sol:DeployScript true  \
+--rpc-url $RPC_URL \
+--broadcast \
+--verify \
+--verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
+--etherscan-api-key verifyContract \
+--chain-id 80084 --legacy --slow --sig "run(bool)"
+```
+
+### Adapters
+
+```
+source .env && forge script script/Adapters.s.sol:AdaptersDeploy true  \
+--rpc-url $RPC_URL \
+--broadcast \
+--verify \
+--verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
+--etherscan-api-key verifyContract \
+--chain-id 80084 --legacy --slow --sig "run(bool)"
+```
+
 <!-- ### Beekeeper
 
 ```

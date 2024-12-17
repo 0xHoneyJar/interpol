@@ -12,7 +12,6 @@ import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {Beekeeper} from "../src/Beekeeper.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
-import {Constants} from "../src/Constants.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 
 contract BeekeeperTest is BaseTest {
@@ -20,7 +19,6 @@ contract BeekeeperTest is BaseTest {
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
-    IBGT public constant BGT = IBGT(Constants.BGT);
     /*###############################################################
                             SETUP
     ###############################################################*/

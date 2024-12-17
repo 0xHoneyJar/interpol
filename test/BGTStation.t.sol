@@ -11,7 +11,6 @@ import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {BGTStationAdapter, IBGTStationGauge} from "../src/adapters/BGTStationAdapter.sol";
 import {BaseVaultAdapter as BVA} from "../src/adapters/BaseVaultAdapter.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
-import {Constants} from "../src/Constants.sol";
 
 contract BGTStationTest is BaseTest {    
     /*###############################################################
@@ -24,7 +23,6 @@ contract BGTStationTest is BaseTest {
     address     public constant GAUGE       = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
     // LBGT-WBERA LP token
     ERC20       public constant LP_TOKEN    = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
-    IBGT        public constant BGT         = IBGT(Constants.BGT);
     /*###############################################################
                             SETUP
     ###############################################################*/
@@ -218,7 +216,7 @@ contract BGTStationTest is BaseTest {
         uint256 earned = IBGTStationGauge(GAUGE).earned(address(lockerAdapter));
 
         vm.expectEmit(true, true, true, true, address(locker));
-        emit HoneyLocker.HoneyLocker__Claimed(address(GAUGE), Constants.BGT, earned);
+        emit HoneyLocker.HoneyLocker__Claimed(address(GAUGE), address(BGT), earned);
         locker.claimBGT(address(GAUGE));
 
         assertEq(BGT.unboostedBalanceOf(address(locker)), earned);
