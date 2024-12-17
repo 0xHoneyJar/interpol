@@ -30,12 +30,6 @@ contract HoneyLocker is Ownable {
     /*###############################################################
                             EVENTS
     ###############################################################*/
-    event HoneyLocker__VaultRegistered(
-        address indexed vault,
-        address indexed adapter,
-        address logic
-    );
-    
     event HoneyLocker__Deposited(address indexed LPToken, uint256 amountOrId);
     event HoneyLocker__LockedUntil(address indexed LPToken, uint256 expiration);
     event HoneyLocker__Withdrawn(address indexed LPToken, uint256 amountOrId);

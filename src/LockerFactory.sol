@@ -7,7 +7,7 @@ contract LockerFactory {
     /*###############################################################
                             EVENTS
     ###############################################################*/
-    event NewLocker(address indexed owner, address locker);
+    event LockerFactory__NewLocker(address indexed owner, address locker, address referrer, bool unlocked);
     /*###############################################################
                             STORAGE
     ###############################################################*/
@@ -34,7 +34,7 @@ contract LockerFactory {
         bool _unlocked
     ) external returns (address) {
         HoneyLocker locker = new HoneyLocker(HONEY_QUEEN, _owner, _referral, _unlocked);
-        emit NewLocker(_owner, address(locker));
+        emit LockerFactory__NewLocker(_owner, address(locker), _referral, _unlocked);
         return address(locker);
     }
 }
