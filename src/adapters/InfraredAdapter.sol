@@ -27,27 +27,22 @@ contract InfraredAdapter is BaseVaultAdapter {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    IInfraredVault public infraredVault;
     /*###############################################################
                             INITIALIZATION
     ###############################################################*/
     function initialize(
         address _locker,
-        address _vault,
-        address _stakingToken
+        address _honeyQueen
     ) external override {
         if (locker != address(0)) revert BaseVaultAdapter__AlreadyInitialized();
         locker = _locker;
-        infraredVault = IInfraredVault(_vault);
-        // Ensure consistency by getting token from vault itself
-        token = infraredVault.stakingToken();
-
-        emit Adapter__Initialized(locker, _vault, token);
+        honeyQueen = _honeyQueen;
     }
     /*###############################################################
                             INTERNAL
     ###############################################################*/
-    function _earned() internal view returns (address[] memory, uint256[] memory) {
+    function _earned(address vault) internal view returns (address[] memory, uint256[] memory) {
+        IInfraredVault infraredVault = IInfraredVault(vault);
         // we use 10 as very optimistic
         address[] memory rewardTokens = new address[](10);
         uint256[] memory amounts = new uint256[](10);
@@ -66,19 +61,27 @@ contract InfraredAdapter is BaseVaultAdapter {
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
-    function stake(uint256 amount) external override onlyLocker {
+    function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) {
+        IInfraredVault infraredVault = IInfraredVault(vault);
+        address token = infraredVault.stakingToken();
+
         ERC721(token).transferFrom(msg.sender, address(this), amount);
-        ERC721(token).approve(address(infraredVault), amount);
-        infraredVault.stake(amount);
+        ERC721(token).approve(vault, amount);
+        IInfraredVault(vault).stake(amount);
     }
 
-    function unstake(uint256 amount) external override onlyLocker {
+    function unstake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) {
+        IInfraredVault infraredVault = IInfraredVault(vault);
+        address token = infraredVault.stakingToken();
+
         infraredVault.withdraw(amount);
         ERC20(token).transfer(locker, amount);
     }
 
-    function claim() external override onlyLocker returns (address[] memory, uint256[] memory) {
-        (address[] memory rewardTokens, uint256[] memory amounts) = _earned();
+    function claim(address vault) external override onlyLocker isVaultValid(vault) returns (address[] memory, uint256[] memory) {
+        IInfraredVault infraredVault = IInfraredVault(vault);
+
+        (address[] memory rewardTokens, uint256[] memory amounts) = _earned(vault);
         infraredVault.getReward();
         for (uint256 i; i < rewardTokens.length; i++) {
             amounts[i] = ERC20(rewardTokens[i]).balanceOf(address(this));
@@ -94,22 +97,18 @@ contract InfraredAdapter is BaseVaultAdapter {
         return (rewardTokens, amounts);
     }
 
-    function wildcard(uint8 func, bytes calldata args) external override onlyLocker {
+    function wildcard(address vault, uint8 func, bytes calldata args) external override onlyLocker isVaultValid(vault) {
         revert BaseVaultAdapter__NotImplemented();
     }
     /*###############################################################
                             VIEW
     ###############################################################*/
-    function stakingToken() external view override returns (address) {
-        return token;
+    function stakingToken(address vault) external view override returns (address) {
+        return IInfraredVault(vault).stakingToken();
     }
 
-    function vault() external view override returns (address) {
-        return address(infraredVault);
-    }
-
-    function earned() external view override returns (address[] memory, uint256[] memory) {
-        return _earned();
+    function earned(address vault) external view override returns (address[] memory, uint256[] memory) {
+        return _earned(vault);
     }
 }
 

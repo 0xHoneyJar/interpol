@@ -40,9 +40,9 @@ contract BeradromeTest is BaseTest {
 
         queen.setAdapterForProtocol("BERADROME", address(adapter));
         queen.setVaultForProtocol("BERADROME", PLUGIN, address(LP_TOKEN), true);
-        locker.registerVault(PLUGIN, false);
+        locker.registerAdapter("BERADROME");
 
-        lockerAdapter = BVA(locker.vaultToAdapter(PLUGIN));
+        lockerAdapter = BVA(locker.adapterOfProtocol("BERADROME"));
 
         vm.stopPrank();
 
@@ -95,7 +95,7 @@ contract BeradromeTest is BaseTest {
         // Simulate some time passing to accrue rewards
         vm.warp(block.timestamp + 7 days);
 
-        (address[] memory rewardTokens, uint256[] memory earned) = lockerAdapter.earned();
+        (address[] memory rewardTokens, uint256[] memory earned) = lockerAdapter.earned(address(PLUGIN));
 
         for (uint256 i; i < rewardTokens.length; i++) {
             vm.expectEmit(true, true, false, true, address(locker));

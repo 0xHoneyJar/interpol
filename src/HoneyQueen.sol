@@ -25,11 +25,11 @@ contract HoneyQueen is Ownable {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    mapping(string protocol => address adapter)         internal    adapterOfProtocol;
+    mapping(string protocol => address adapter)         public    adapterOfProtocol;
     // have to build a reverse mapping to allow lockers to query
-    mapping(address adapter => string protocol)         internal    protocolOfAdapter;
-    mapping(address vault => string protocol)           internal    protocolOfVault;
-    mapping(address vault => address token)             internal    tokenOfVault;
+    mapping(address adapter => string protocol)         public    protocolOfAdapter;
+    mapping(address vault => string protocol)           public    protocolOfVault;
+    mapping(address vault => address token)             public    tokenOfVault;
     
     // this is for cases where gauges give you a NFT to represent your staking position
     mapping(address token => bool blocked)              public      isTokenBlocked;
@@ -134,5 +134,9 @@ contract HoneyQueen is Ownable {
         address logic = adapterOfProtocol[protocol];
         address token = tokenOfVault[vault];
         return (logic, token);
+    }
+
+    function isVaultValidForAdapter(address adapter, address vault) public view returns (bool) {
+        return adapterOfProtocol[protocolOfVault[vault]] == adapter;
     }
 }

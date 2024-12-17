@@ -54,37 +54,40 @@ contract KodiakAdapterOld is BaseVaultAdapter {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    IKodiakFarm public kodiakFarm;
     /*###############################################################
                             INITIALIZATION
     ###############################################################*/
     function initialize(
         address _locker,
-        address _vault,
-        address _stakingToken
+        address _honeyQueen
     ) external override {
         if (locker != address(0)) revert BaseVaultAdapter__AlreadyInitialized();
         locker = _locker;
-        kodiakFarm = IKodiakFarm(_vault);
-        token = kodiakFarm.stakingToken();
-        emit Adapter__Initialized(locker, _vault, token);
+        honeyQueen = _honeyQueen;
     }
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
-    function stake(uint256 amount) external override onlyLocker {
+    function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) {
+        IKodiakFarm kodiakFarm = IKodiakFarm(vault);
+        address token = kodiakFarm.stakingToken();
+
         ERC20(token).transferFrom(locker, address(this), amount);
         ERC20(token).approve(address(kodiakFarm), amount);
         kodiakFarm.stakeLocked(amount, kodiakFarm.lock_time_for_max_multiplier());
     }
 
-    function unstake(uint256 kekIdAsUint) external override onlyLocker {
+    function unstake(address vault, uint256 kekIdAsUint) external override onlyLocker isVaultValid(vault) {
+        IKodiakFarm kodiakFarm = IKodiakFarm(vault);
+        address token = kodiakFarm.stakingToken();
+
         kodiakFarm.withdrawLocked(bytes32(kekIdAsUint));
         uint256 amount = ERC20(token).balanceOf(address(this));
         ERC20(token).transfer(locker, amount);
     }
 
-    function claim() external override onlyLocker returns (address[] memory, uint256[] memory) {
+    function claim(address vault) external override onlyLocker isVaultValid(vault) returns (address[] memory, uint256[] memory) {
+        IKodiakFarm kodiakFarm = IKodiakFarm(vault);
         address[] memory rewardTokens = kodiakFarm.getAllRewardTokens();
         uint256[] memory amounts = new uint256[](rewardTokens.length);
         kodiakFarm.getReward();
@@ -103,21 +106,17 @@ contract KodiakAdapterOld is BaseVaultAdapter {
     }
 
     // Do not implement xkdk redeem/finalizeRedeem
-    function wildcard(uint8 func, bytes calldata args) external override onlyLocker {
+    function wildcard(address vault, uint8 func, bytes calldata args) external override onlyLocker isVaultValid(vault) {
         revert BaseVaultAdapter__NotImplemented();
     }
     /*###############################################################
                             VIEW
     ###############################################################*/
-    function stakingToken() external view override returns (address) {
-        return token;
+    function stakingToken(address vault) external view override returns (address) {
+        return IKodiakFarm(vault).stakingToken();
     }
-
-    function vault() external view override returns (address) {
-        return address(kodiakFarm);
-    }
-
-    function earned() external view override returns (address[] memory, uint256[] memory) {
+    function earned(address vault) external view override returns (address[] memory, uint256[] memory) {
+        IKodiakFarm kodiakFarm = IKodiakFarm(vault);
         DAL.DynamicArray memory rewardTokens = kodiakFarm.getAllRewardTokens().wrap();
         DAL.DynamicArray memory amounts = kodiakFarm.earned(address(this)).wrap();
         address kdk = kodiakFarm.kdk();

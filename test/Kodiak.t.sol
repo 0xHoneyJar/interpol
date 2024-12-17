@@ -59,9 +59,9 @@ contract KodiakTest is BaseTest {
 
         queen.setAdapterForProtocol("KODIAK", address(adapter));
         queen.setVaultForProtocol("KODIAK", address(GAUGE), address(LP_TOKEN), true);
-        locker.registerVault(address(GAUGE), false);
+        locker.registerAdapter("KODIAK");
 
-        lockerAdapter = BVA(locker.vaultToAdapter(address(GAUGE)));
+        lockerAdapter = BVA(locker.adapterOfProtocol("KODIAK"));
 
         vm.stopPrank();
 
@@ -134,7 +134,7 @@ contract KodiakTest is BaseTest {
         vm.warp(block.timestamp + 30 days);
         GAUGE.sync();
 
-        (address[] memory rewardTokens, uint256[] memory earned) = lockerAdapter.earned();
+        (address[] memory rewardTokens, uint256[] memory earned) = lockerAdapter.earned(address(GAUGE));
 
         // always skip xKDK because it won't be emitted
         for (uint256 i; i < rewardTokens.length - 1; i++) {

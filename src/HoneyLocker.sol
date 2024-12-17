@@ -49,7 +49,7 @@ contract HoneyLocker is Ownable {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    mapping(address vault => BVA adapter)           public              vaultToAdapter;
+    mapping(string protocol => BVA adapter)         public              adapterOfProtocol;
     HoneyQueen                                      public immutable    honeyQueen;
 
     mapping(address LPToken => uint256 expiration)  public expirations;
@@ -71,7 +71,7 @@ contract HoneyLocker is Ownable {
                             MODIFIERS
     ###############################################################*/
     modifier onlyValidAdapter(address vault) {
-        if (address(vaultToAdapter[vault]) == address(0)) revert HoneyLocker__AdapterNotFound();
+        if (address(_getAdapter(vault)) == address(0)) revert HoneyLocker__AdapterNotFound();
         _;
     }
     modifier onlyOwnerOrOperator() {
@@ -85,34 +85,25 @@ contract HoneyLocker is Ownable {
     /*###############################################################
                             ADAPTERS MANAGEMENT
     ###############################################################*/
-    /**
-     * @notice              Registers a new vault adapter or overwrites an existing one
-     * @param vault         The address of the vault to register
-     * @param overwrite     Whether to overwrite an existing adapter
-     *
-     * @dev                 Creates a new adapter instance through the factory and maps it to the vault
-     * @dev                 Will revert if adapter already exists and overwrite is false
-     * @dev                 Only callable by owner
-     */
-    function registerVault(address vault, bool overwrite) external onlyOwner {
-        BVA adapter = vaultToAdapter[vault];
-        if (address(adapter) != address(0) && !overwrite) revert HoneyLocker__AdapterAlreadyRegistered();
+    function registerAdapter(string calldata protocol) external onlyOwner {
+        BVA adapter = adapterOfProtocol[protocol];
+        if (address(adapter) != address(0)) revert HoneyLocker__AdapterAlreadyRegistered();
 
-        address newAdapter = AdapterFactory(honeyQueen.adapterFactory()).createAdapter(address(this), vault);
+        address newAdapter = AdapterFactory(honeyQueen.adapterFactory()).createAdapter(address(this), protocol);
         
-        vaultToAdapter[vault] = BVA(newAdapter);
+        adapterOfProtocol[protocol] = BVA(newAdapter);
     }
 
     /**
-     * @notice              Upgrades an adapter to a new implementation
-     * @param vault         The address of the vault whose adapter should be upgraded
+     * @notice              Upgrades an adapter implementation for a protocol to a new version
+     * @param protocol      The protocol name whose adapter should be upgraded
      * @dev                 Only callable by owner
      * @dev                 Will revert if upgrade is not authorized by HoneyQueen
      * @dev                 The new implementation must be compatible with the old one
-     * @custom:emits        Upgraded event from BaseVaultAdapter
+     * @custom:emits        Adapter__Upgraded event from BaseVaultAdapter with old and new implementation addresses
      */
-    function upgradeAdapter(address vault) external onlyOwner {
-        BVA adapter = vaultToAdapter[vault];
+    function upgradeAdapter(string calldata protocol) external onlyOwner {
+        BVA adapter = adapterOfProtocol[protocol];
         address authorizedLogic = HoneyQueen(honeyQueen).upgradeOf(adapter.implementation());
         if(authorizedLogic == address(0)) revert HoneyLocker__NotAuthorizedUpgrade();
         adapter.upgrade(authorizedLogic);
@@ -130,36 +121,42 @@ contract HoneyLocker is Ownable {
     }
 
     /*###############################################################
+                            INTERNAL
+    ###############################################################*/
+    function _getAdapter(address vault) internal view returns (BVA adapter) {
+        return adapterOfProtocol[honeyQueen.protocolOfVault(vault)];
+    }
+    /*###############################################################
                             VAULT MANAGEMENT
     ###############################################################*/
     function stake(address vault, uint256 amount) external onlyValidAdapter(vault) onlyOwnerOrOperator {
-        BVA adapter = vaultToAdapter[vault];
-        address token = adapter.stakingToken();
+        BVA adapter = _getAdapter(vault);
+        address token = adapter.stakingToken(vault);
 
         ERC721(token).approve(address(adapter), amount);
-        adapter.stake(amount);
+        adapter.stake(vault, amount);
 
         emit HoneyLocker__Staked(vault, token, amount);
     }
 
     function unstake(address vault, uint256 amount) external onlyValidAdapter(vault) onlyOwnerOrOperator {
-        BVA adapter = vaultToAdapter[vault];
-        adapter.unstake(amount);
+        BVA adapter = _getAdapter(vault);
+        adapter.unstake(vault, amount);
 
-        emit HoneyLocker__Unstaked(vault, adapter.stakingToken(), amount);
+        emit HoneyLocker__Unstaked(vault, adapter.stakingToken(vault), amount);
     }
 
     function claim(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator {
-        BVA adapter = vaultToAdapter[vault];
-        (address[] memory rewardTokens, uint256[] memory earned) = adapter.claim();
+        BVA adapter = _getAdapter(vault);
+        (address[] memory rewardTokens, uint256[] memory earned) = adapter.claim(vault);
         for (uint256 i; i < rewardTokens.length; i++) {
             emit HoneyLocker__Claimed(vault, rewardTokens[i], earned[i]);
         }
     }
     
     function wildcard(address vault, uint8 func, bytes calldata args) external onlyValidAdapter(vault) onlyOwnerOrOperator {
-        BVA adapter = vaultToAdapter[vault];
-        adapter.wildcard(func, args);
+        BVA adapter = _getAdapter(vault);
+        adapter.wildcard(vault, func, args);
     }
     /*###############################################################
                             BGT MANAGEMENT
@@ -171,7 +168,7 @@ contract HoneyLocker is Ownable {
 
     */
     function claimBGT(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator {
-        BVA adapter = vaultToAdapter[vault];
+        BVA adapter = _getAdapter(vault);
         uint256 reward = IBGTStationGauge(vault).getReward(address(adapter));
         emit HoneyLocker__Claimed(vault, Constants.BGT, reward);
     }

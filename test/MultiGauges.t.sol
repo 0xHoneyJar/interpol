@@ -19,8 +19,7 @@ contract MultiAdaptersTest is BaseTest {
                             STATE VARIABLES
     ###############################################################*/
     BGTStationAdapter   public adapter;
-    BVA                 public lockerAdapter1;
-    BVA                 public lockerAdapter2;
+    BVA                 public lockerAdapter;
 
 
     // LBGT-WBERA gauge
@@ -52,19 +51,15 @@ contract MultiAdaptersTest is BaseTest {
         queen.setAdapterForProtocol("BGTSTATION", address(adapter));
 
         queen.setVaultForProtocol("BGTSTATION", GAUGE1, address(LP_TOKEN1), true);
-        locker.registerVault(GAUGE1, false);
-        lockerAdapter1 = BVA(locker.vaultToAdapter(GAUGE1));
-
         queen.setVaultForProtocol("BGTSTATION", GAUGE2, address(LP_TOKEN2), true);
-        locker.registerVault(GAUGE2, false);
-        lockerAdapter2 = BVA(locker.vaultToAdapter(GAUGE2));
+        locker.registerAdapter("BGTSTATION");
+        lockerAdapter = BVA(locker.adapterOfProtocol("BGTSTATION"));
 
         vm.stopPrank();
 
-        vm.label(address(lockerAdapter1), "BGTStationAdapter");
+        vm.label(address(lockerAdapter), "BGTStationAdapter");
         vm.label(address(GAUGE1), "LBGT-WBERA Gauge");
         vm.label(address(LP_TOKEN1), "LBGT-WBERA LP Token");
-        vm.label(address(lockerAdapter2), "YEETIONAdapter");
         vm.label(address(GAUGE2), "YEET-WBERA Gauge");
         vm.label(address(LP_TOKEN2), "YEET-WBERA LP Token");
     }
@@ -74,9 +69,8 @@ contract MultiAdaptersTest is BaseTest {
     ###############################################################*/
 
     /*###############################################################
-        We test that the locker works with multiple adapters for the same protocol
+        We test that the locker works with multiple vaults for the same protocol
         but for different gauges.
-        We do it with a simple staking operation.
     ###############################################################*/
     function test_LockerWorksWithMultipleAdaptersForSameProtocol(
         uint64 _amountToDeposit1,
@@ -88,25 +82,31 @@ contract MultiAdaptersTest is BaseTest {
         StdCheats.deal(address(LP_TOKEN1), address(locker), amountToDeposit1);
         StdCheats.deal(address(LP_TOKEN2), address(locker), amountToDeposit2);
 
-        assertEq(address(locker.vaultToAdapter(GAUGE1)), address(lockerAdapter1));
-        assertEq(address(locker.vaultToAdapter(GAUGE2)), address(lockerAdapter2));
-
         vm.expectEmit(true, false, false, true, address(GAUGE1));
-        emit IBGTStationGauge.Staked(address(lockerAdapter1), amountToDeposit1);
+        emit IBGTStationGauge.Staked(address(lockerAdapter), amountToDeposit1);
         vm.expectEmit(true, true, false, true, address(locker));
         emit HoneyLocker.HoneyLocker__Staked(address(GAUGE1), address(LP_TOKEN1), amountToDeposit1);
         locker.stake(address(GAUGE1), amountToDeposit1);
 
         vm.expectEmit(true, false, false, true, address(GAUGE2));
-        emit IBGTStationGauge.Staked(address(lockerAdapter2), amountToDeposit2);
+        emit IBGTStationGauge.Staked(address(lockerAdapter), amountToDeposit2);
         vm.expectEmit(true, true, false, true, address(locker));
         emit HoneyLocker.HoneyLocker__Staked(address(GAUGE2), address(LP_TOKEN2), amountToDeposit2);
         locker.stake(address(GAUGE2), amountToDeposit2);
 
         assertEq(LP_TOKEN1.balanceOf(address(locker)), 0);
-        assertEq(LP_TOKEN1.balanceOf(address(lockerAdapter1)), 0);
+        assertEq(LP_TOKEN1.balanceOf(address(lockerAdapter)), 0);
         assertEq(LP_TOKEN2.balanceOf(address(locker)), 0);
-        assertEq(LP_TOKEN2.balanceOf(address(lockerAdapter2)), 0);
+        assertEq(LP_TOKEN2.balanceOf(address(lockerAdapter)), 0);
+
+        // unstake from both gauges and check balance
+        locker.unstake(address(GAUGE1), amountToDeposit1);
+        locker.unstake(address(GAUGE2), amountToDeposit2);
+
+        assertEq(LP_TOKEN1.balanceOf(address(locker)), amountToDeposit1);
+        assertEq(LP_TOKEN1.balanceOf(address(lockerAdapter)), 0);
+        assertEq(LP_TOKEN2.balanceOf(address(locker)), amountToDeposit2);
+        assertEq(LP_TOKEN2.balanceOf(address(lockerAdapter)), 0);
     }
 }
 

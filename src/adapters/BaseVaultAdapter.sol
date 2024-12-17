@@ -13,17 +13,17 @@ abstract contract BaseVaultAdapter {
     error BaseVaultAdapter__NotAuthorized();
     error BaseVaultAdapter__NotImplemented();
     error BaseVaultAdapter__NotAuthorizedUpgrade();
+    error BaseVaultAdapter__InvalidVault();
     /*###############################################################
                             EVENTS
     ###############################################################*/
-    event Adapter__Initialized(address locker, address vault, address stakingToken);
     event Adapter__FailedTransfer(address indexed locker, address indexed token, uint256 amount);
     event Adapter__Upgraded(address indexed from, address indexed to);
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    address public              token;   // LP token
-    address public              locker;
+    address     public              locker;
+    address     internal            honeyQueen;
     /*###############################################################
                             MODIFIERS
     ###############################################################*/
@@ -31,14 +31,18 @@ abstract contract BaseVaultAdapter {
         if (msg.sender != locker) revert BaseVaultAdapter__NotAuthorized();
         _;
     }
+    modifier isVaultValid(address vault) {
+        if (!HoneyQueen(honeyQueen).isVaultValidForAdapter(ERC1967Utils.getImplementation(), vault)) revert BaseVaultAdapter__InvalidVault();
+        _;
+    }
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
-    function initialize(address locker, address vault, address stakingToken) external virtual;
-    function stake(uint256 amount) external virtual;
-    function unstake(uint256 amount) external virtual;
-    function claim() external virtual returns (address[] memory rewardTokens, uint256[] memory earned);
-    function wildcard(uint8 func, bytes calldata args) external virtual;
+    function initialize(address locker, address _honeyQueen) external virtual;
+    function stake(address vault, uint256 amount) external virtual;
+    function unstake(address vault, uint256 amount) external virtual;
+    function claim(address vault) external virtual returns (address[] memory rewardTokens, uint256[] memory earned);
+    function wildcard(address vault, uint8 func, bytes calldata args) external virtual;
     /*###############################################################
                             PROXY LOGIC
     ###############################################################*/
@@ -50,9 +54,8 @@ abstract contract BaseVaultAdapter {
     /*###############################################################
                             VIEW/PURE
     ###############################################################*/
-    function stakingToken() external view virtual returns (address);
-    function vault() external view virtual returns (address);
-    function earned() external view virtual returns (address[] memory rewardTokens, uint256[] memory amounts);
+    function stakingToken(address vault) external view virtual returns (address);
+    function earned(address vault) external view virtual returns (address[] memory rewardTokens, uint256[] memory amounts);
     function version() external pure virtual returns (uint256) {
         return 1;
     }

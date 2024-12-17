@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
+
+import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
 
 interface IBeradromePlugin {
     function depositFor(address account, uint256 amount) external;
@@ -21,36 +22,37 @@ contract BeradromeAdapter is BaseVaultAdapter {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    IBeradromePlugin public beradromePlugin;
     /*###############################################################
                             INITIALIZATION
     ###############################################################*/
     function initialize(
         address _locker,
-        address _vault,
-        address _stakingToken
+        address _honeyQueen
     ) external override {
         if (locker != address(0)) revert BaseVaultAdapter__AlreadyInitialized();
         locker = _locker;
-        beradromePlugin = IBeradromePlugin(_vault);
-        token = beradromePlugin.getToken();
-        emit Adapter__Initialized(locker, _vault, token);
+        honeyQueen = _honeyQueen;
     }
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
-    function stake(uint256 amount) external override onlyLocker {
+    function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) {
+        IBeradromePlugin beradromePlugin = IBeradromePlugin(vault);
+        address token = beradromePlugin.getToken();
         ERC20(token).transferFrom(locker, address(this), amount);
         ERC20(token).approve(address(beradromePlugin), amount);
         beradromePlugin.depositFor(address(this), amount);
     }
 
-    function unstake(uint256 amount) external override onlyLocker {
+    function unstake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) {
+        IBeradromePlugin beradromePlugin = IBeradromePlugin(vault);
+        address token = beradromePlugin.getToken();
         beradromePlugin.withdrawTo(address(this), amount);
         ERC20(token).transfer(locker, amount);
     }
 
-    function claim() external override onlyLocker returns (address[] memory, uint256[] memory) {
+    function claim(address vault) external override onlyLocker isVaultValid(vault) returns (address[] memory, uint256[] memory) {
+        IBeradromePlugin beradromePlugin = IBeradromePlugin(vault);
         IBeradromeGauge gauge = IBeradromeGauge(beradromePlugin.getGauge());
         address[] memory rewardTokens = gauge.getRewardTokens();
         uint256[] memory amounts = new uint256[](rewardTokens.length);
@@ -69,21 +71,18 @@ contract BeradromeAdapter is BaseVaultAdapter {
         return (rewardTokens, amounts);
     }
 
-    function wildcard(uint8 func, bytes calldata args) external override onlyLocker {
+    function wildcard(address vault, uint8 func, bytes calldata args) external override onlyLocker isVaultValid(vault) {
         revert BaseVaultAdapter__NotImplemented();
     }
     /*###############################################################
                             VIEW
     ###############################################################*/
-    function stakingToken() external view override returns (address) {
-        return token;
+    function stakingToken(address vault) external view override returns (address) {
+        return IBeradromePlugin(vault).getToken();
     }
-
-    function vault() external view override returns (address) {
-        return address(beradromePlugin);
-    }
-
-    function earned() external view override returns (address[] memory, uint256[] memory) {
+    
+    function earned(address vault) external view override returns (address[] memory, uint256[] memory) {
+        IBeradromePlugin beradromePlugin = IBeradromePlugin(vault);
         IBeradromeGauge gauge = IBeradromeGauge(beradromePlugin.getGauge());
         address[] memory rewardTokens = gauge.getRewardTokens();
         uint256[] memory amounts = new uint256[](rewardTokens.length);

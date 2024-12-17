@@ -41,9 +41,9 @@ contract BGTStationTest is BaseTest {
 
         queen.setAdapterForProtocol("INFRARED", address(adapter));
         queen.setVaultForProtocol("INFRARED", GAUGE, address(LP_TOKEN), true);
-        locker.registerVault(GAUGE, false);
+        locker.registerAdapter("INFRARED");
 
-        lockerAdapter = BVA(locker.vaultToAdapter(GAUGE));
+        lockerAdapter = BVA(locker.adapterOfProtocol("INFRARED"));
 
         vm.stopPrank();
 
@@ -101,7 +101,7 @@ contract BGTStationTest is BaseTest {
         vm.warp(block.timestamp + 10 days);
 
         // get reward tokens and earned
-        (address[] memory rewardTokens, uint256[] memory earned) = lockerAdapter.earned();
+        (address[] memory rewardTokens, uint256[] memory earned) = lockerAdapter.earned(address(GAUGE));
 
         for (uint256 i; i < rewardTokens.length; i++) {
             // special case if iRed token because as of now, 13th December, it's not transferable
