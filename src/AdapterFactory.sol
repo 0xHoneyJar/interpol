@@ -17,7 +17,8 @@ contract AdapterFactory {
     /*###############################################################
                             EVENTS
     ###############################################################*/
-    event AdapterCreated(
+    event AdapterFactory__AdapterCreated(
+        string indexed protocol,
         address indexed logic,
         address locker,
         address adapter
@@ -43,9 +44,10 @@ contract AdapterFactory {
                             INTERNAL
     ###############################################################*/
     function _createAdapter(address locker, address logic) internal returns (address adapter) {
+        string memory protocol = honeyQueen.protocolOfAdapter(logic);
         bytes memory data = abi.encodeWithSelector(BaseVaultAdapter.initialize.selector, locker, honeyQueen);
         adapter = address(new ERC1967Proxy(logic, data));
-        emit AdapterCreated(logic, locker, adapter);
+        emit AdapterFactory__AdapterCreated(protocol, logic, locker, adapter);
     }
     /*###############################################################
                             EXTERNAL

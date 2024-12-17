@@ -15,7 +15,7 @@ contract Beekeeper is Ownable {
     /*###############################################################
                             EVENTS
     ###############################################################*/
-    event FeesDistributed(address indexed recipient, address indexed token, uint256 amount);
+    event Beekeeper__FeesDistributed(address indexed recipient, address indexed token, uint256 amount);
     /*###############################################################
                             STORAGE
     ###############################################################*/
@@ -86,7 +86,7 @@ contract Beekeeper is Ownable {
         // if not an authorized referrer, send everything to treasury
         if (!isReferrer[_referrer]) {
             isBera ? STL.safeTransferETH(treasury, _amount) : STL.safeTransfer(_token, treasury, _amount);
-            emit FeesDistributed(treasury, _token, _amount);
+            emit Beekeeper__FeesDistributed(treasury, _token, _amount);
             return;
         }
         // use the referrer fee override if it exists, otherwise use the original referrer
@@ -102,7 +102,7 @@ contract Beekeeper is Ownable {
             STL.safeTransfer(_token, treasury, _amount - referrerFee);
         }
 
-        emit FeesDistributed(referrer, _token, referrerFee);
-        emit FeesDistributed(treasury, _token, _amount - referrerFee);
+        emit Beekeeper__FeesDistributed(referrer, _token, referrerFee);
+        emit Beekeeper__FeesDistributed(treasury, _token, _amount - referrerFee);
     }
 }

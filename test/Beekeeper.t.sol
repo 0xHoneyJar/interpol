@@ -48,9 +48,9 @@ contract BeekeeperTest is BaseTest {
         (uint256 pythonTreasuryFees, uint256 pythonReferrerFees, uint256 pythonWithdrawn) = abi.decode(res, (uint256, uint256, uint256));
 
         vm.expectEmit(true, true, false, false, address(beekeeper));
-        emit Beekeeper.FeesDistributed(referrer, address(0), pythonReferrerFees);
+        emit Beekeeper.Beekeeper__FeesDistributed(referrer, address(0), pythonReferrerFees);
         vm.expectEmit(true, true, false, false, address(beekeeper));
-        emit Beekeeper.FeesDistributed(THJTreasury, address(0), pythonTreasuryFees);
+        emit Beekeeper.Beekeeper__FeesDistributed(THJTreasury, address(0), pythonTreasuryFees);
         vm.expectEmit(true, false, false, false, address(locker));
         emit HoneyLocker.HoneyLocker__Withdrawn(address(0), pythonWithdrawn);
 
@@ -83,9 +83,9 @@ contract BeekeeperTest is BaseTest {
         (uint256 pythonTreasuryFees, uint256 pythonReferrerFees, uint256 pythonWithdrawn) = abi.decode(res, (uint256, uint256, uint256));
 
         vm.expectEmit(true, true, false, false, address(beekeeper));
-        emit Beekeeper.FeesDistributed(referrer, address(token), pythonReferrerFees);
+        emit Beekeeper.Beekeeper__FeesDistributed(referrer, address(token), pythonReferrerFees);
         vm.expectEmit(true, true, false, false, address(beekeeper));
-        emit Beekeeper.FeesDistributed(THJTreasury, address(token), pythonTreasuryFees);
+        emit Beekeeper.Beekeeper__FeesDistributed(THJTreasury, address(token), pythonTreasuryFees);
         vm.expectEmit(true, false, false, false, address(locker));
         emit HoneyLocker.HoneyLocker__Withdrawn(address(token), pythonWithdrawn);
 
@@ -120,7 +120,7 @@ contract BeekeeperTest is BaseTest {
         (uint256 pythonTreasuryFees, uint256 pythonReferrerFees, uint256 pythonWithdrawn) = abi.decode(res, (uint256, uint256, uint256));
 
         vm.expectEmit(true, true, false, false, address(beekeeper));
-        emit Beekeeper.FeesDistributed(newReferrer, address(0), pythonReferrerFees);
+        emit Beekeeper.Beekeeper__FeesDistributed(newReferrer, address(0), pythonReferrerFees);
 
         vm.prank(_useOperator ? operator : THJ);
         locker.withdrawBERA(amount);
@@ -151,7 +151,7 @@ contract BeekeeperTest is BaseTest {
         (uint256 pythonTreasuryFees, uint256 pythonReferrerFees, uint256 pythonWithdrawn) = abi.decode(res, (uint256, uint256, uint256));
 
         vm.expectEmit(true, true, false, false, address(beekeeper));
-        emit Beekeeper.FeesDistributed(referrer, address(0), pythonReferrerFees);
+        emit Beekeeper.Beekeeper__FeesDistributed(referrer, address(0), pythonReferrerFees);
 
         vm.prank(_useOperator ? operator : THJ);
         locker.withdrawBERA(amount);

@@ -43,6 +43,13 @@ contract HoneyLocker is Ownable {
     event HoneyLocker__Staked(address indexed vault, address indexed LPToken, uint256 amountOrId);
     event HoneyLocker__Unstaked(address indexed vault, address indexed LPToken, uint256 amountOrId);
     event HoneyLocker__Claimed(address indexed vault, address indexed rewardToken, uint256 amount);
+    event HoneyLocker__Wildcard(address indexed vault, uint8 indexed func, bytes args);
+
+    event HoneyLocker__OperatorSet(address indexed operator);
+    event HoneyLocker__TreasurySet(address indexed treasury);
+
+    event HoneyLocker__AdapterRegistered(string indexed protocol, address adapter);
+    event HoneyLocker__AdapterUpgraded(string indexed protocol, address newImplementation);
     /*###############################################################
                             STORAGE
     ###############################################################*/
@@ -89,6 +96,8 @@ contract HoneyLocker is Ownable {
         address newAdapter = AdapterFactory(honeyQueen.adapterFactory()).createAdapter(address(this), protocol);
         
         adapterOfProtocol[protocol] = BVA(newAdapter);
+
+        emit HoneyLocker__AdapterRegistered(protocol, newAdapter);
     }
 
     /**
@@ -104,6 +113,7 @@ contract HoneyLocker is Ownable {
         address authorizedLogic = HoneyQueen(honeyQueen).upgradeOf(adapter.implementation());
         if(authorizedLogic == address(0)) revert HoneyLocker__NotAuthorizedUpgrade();
         adapter.upgrade(authorizedLogic);
+        emit HoneyLocker__AdapterUpgraded(protocol, authorizedLogic);
     }
 
     /*###############################################################
@@ -111,10 +121,12 @@ contract HoneyLocker is Ownable {
     ###############################################################*/
     function setOperator(address _operator) external onlyOwner {
         operator = _operator;
+        emit HoneyLocker__OperatorSet(_operator);
     }
 
     function setTreasury(address _treasury) external onlyOwner {
         treasury = _treasury;
+        emit HoneyLocker__TreasurySet(_treasury);
     }
 
     /*###############################################################
@@ -154,6 +166,7 @@ contract HoneyLocker is Ownable {
     function wildcard(address vault, uint8 func, bytes calldata args) external onlyValidAdapter(vault) onlyOwnerOrOperator {
         BVA adapter = _getAdapter(vault);
         adapter.wildcard(vault, func, args);
+        emit HoneyLocker__Wildcard(vault, func, args);
     }
     /*###############################################################
                             BGT MANAGEMENT
@@ -255,6 +268,7 @@ contract HoneyLocker is Ownable {
     function withdrawERC721(address _token, uint256 _id) external onlyUnblockedTokens(_token) onlyOwnerOrOperator {
         if (expirations[_token] != 0) revert HoneyLocker__CannotBeLPToken();
         ERC721(_token).safeTransferFrom(address(this), recipient(), _id);
+        emit HoneyLocker__Withdrawn(_token, _id);
     }
 
     function withdrawERC1155(address _token, uint256 _id, uint256 _amount, bytes calldata _data)
@@ -264,6 +278,7 @@ contract HoneyLocker is Ownable {
     {
         if (expirations[_token] != 0) revert HoneyLocker__CannotBeLPToken();
         ERC1155(_token).safeTransferFrom(address(this), recipient(), _id, _amount, _data);
+        emit HoneyLocker__Withdrawn(_token, _id);
     }
     /*###############################################################
                             VIEW LOGIC
