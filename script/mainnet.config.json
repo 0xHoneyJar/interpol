@@ -5,6 +5,7 @@
   "honeyqueen": "",
   "lockerFactory": "",
   "adapterFactory": "",
+  "lockerImplementation": "",
   "adapters" : {
     "BERADROME": "",
     "INFRARED": "",

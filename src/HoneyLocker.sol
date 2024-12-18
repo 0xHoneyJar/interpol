@@ -57,7 +57,6 @@ contract HoneyLocker is Ownable {
     address                                         public  referrer;
     address                                         public  treasury;            
     address                                         public  operator;       
-    
     /*###############################################################
                             INITIALIZER
     ###############################################################*/

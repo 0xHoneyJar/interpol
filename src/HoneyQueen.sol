@@ -10,7 +10,6 @@ contract HoneyQueen is Ownable {
     ###############################################################*/
     error HoneyQueen__AdapterNotApproved();
     error HoneyQueen__VaultNotApproved();
-    error HoneyQueen__AdapterAlreadyExists();
     error HoneyQueen__InvalidProtocol();
     error HoneyQueen__AdapterNotSet();
     /*###############################################################
@@ -64,7 +63,6 @@ contract HoneyQueen is Ownable {
                         appropriate function upgradeOfAdapter
      */
     function setAdapterForProtocol(string calldata protocol, address adapter) external onlyOwner {
-        if (adapterOfProtocol[protocol] != address(0)) revert HoneyQueen__AdapterAlreadyExists();
         adapterOfProtocol[protocol] = adapter;
         protocolOfAdapter[adapter] = protocol;
     }
