@@ -22,7 +22,7 @@ contract LockerFactoryDeploy is Script {
         uint256 pkey = vm.envUint("PRIVATE_KEY");
         address pubkey = vm.addr(pkey);
         vm.startBroadcast(pkey);
-        factory = new LockerFactory(honeyQueen);
+        factory = new LockerFactory(honeyQueen, pubkey);
         vm.stopBroadcast();
 
         vm.writeJson(

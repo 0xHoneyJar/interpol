@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {LibClone} from "solady/utils/LibClone.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {BaseVaultAdapter} from "./adapters/BaseVaultAdapter.sol";
@@ -52,10 +51,7 @@ contract AdapterFactory {
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
-    function createAdapter(
-        address locker,
-        string calldata protocol
-    ) external onlyLocker(locker) returns (address adapter) {
+    function createAdapter(address locker, string calldata protocol) external onlyLocker(locker) returns (address adapter) {
         address logic = honeyQueen.adapterOfProtocol(protocol);
         
         // Validate the adapter deployment through HoneyQueen

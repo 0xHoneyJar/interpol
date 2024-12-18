@@ -78,7 +78,7 @@ contract UpgradesTest is BaseTest {
         );
         locker.stake(address(GAUGE), amountToDeposit);
 
-        queen.setUpgradeOf(address(oldAdapter), address(newAdapter));
+        queen.setUpgradeOfAdapter(address(oldAdapter), address(newAdapter));
         locker.upgradeAdapter("KODIAK");
 
         vm.warp(block.timestamp + 30 days);
@@ -120,7 +120,7 @@ contract UpgradesTest is BaseTest {
         vm.expectRevert(BVA.BaseVaultAdapter__NotImplemented.selector);
         locker.wildcard(address(GAUGE), 0, abi.encode(xkdkBalance, 15 days));
 
-        queen.setUpgradeOf(address(oldAdapter), address(newAdapter));
+        queen.setUpgradeOfAdapter(address(oldAdapter), address(newAdapter));
         locker.upgradeAdapter("KODIAK");
 
         // xKDK balance should have NOT changed
@@ -153,7 +153,7 @@ contract UpgradesTest is BaseTest {
         );
         locker.stake(address(GAUGE), amountToDeposit);
 
-        queen.setUpgradeOf(address(oldAdapter), address(newAdapter));
+        queen.setUpgradeOfAdapter(address(oldAdapter), address(newAdapter));
 
         vm.warp(block.timestamp + 30 days);
 
@@ -166,9 +166,9 @@ contract UpgradesTest is BaseTest {
         adapter being used.
     ###############################################################*/
     function test_registerVaultAfterUpgradeShouldUseLatestAdapter() public prankAsTHJ(false) {
-        queen.setUpgradeOf(address(oldAdapter), address(newAdapter));
+        queen.setUpgradeOfAdapter(address(oldAdapter), address(newAdapter));
 
-        locker = new HoneyLocker(address(queen), THJ, referrer, false);
+        locker = HoneyLocker(lockerFactory.createLocker(THJ, referrer, false));
 
         locker.registerAdapter("KODIAK");
         assertEq(address(locker.adapterOfProtocol("KODIAK").implementation()), address(newAdapter));

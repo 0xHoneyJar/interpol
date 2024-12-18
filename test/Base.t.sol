@@ -6,6 +6,7 @@ import {ERC20} from "solady/tokens/ERC20.sol";
 import {console2} from "forge-std/console2.sol";
 
 import {HoneyLocker} from "../src/HoneyLocker.sol";
+import {LockerFactory} from "../src/LockerFactory.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {Beekeeper} from "../src/Beekeeper.sol";
 import {AdapterFactory} from "../src/AdapterFactory.sol";
@@ -30,9 +31,10 @@ abstract contract BaseTest is Test, TokenReceiver {
     ###############################################################*/
     HoneyLocker     public locker;
     HoneyQueen      public queen;
-    AdapterFactory  public factory;
+    AdapterFactory  public adapterFactory;
     Beekeeper       public beekeeper;
-    
+    LockerFactory   public lockerFactory;
+
     string          public RPC_URL;
 
     constructor() {
@@ -44,14 +46,20 @@ abstract contract BaseTest is Test, TokenReceiver {
     function setUp() public virtual {
         vm.startPrank(THJ);
 
+        HoneyLocker lockerImplementation = new HoneyLocker();
+
         queen = new HoneyQueen(address(BGT), address(0)); // Temporary zero address
         beekeeper = new Beekeeper(THJ, THJTreasury);
-        factory = new AdapterFactory(address(queen));
-        locker = new HoneyLocker(address(queen), THJ, referrer, false);
+        adapterFactory = new AdapterFactory(address(queen));
+        lockerFactory = new LockerFactory(address(queen), THJ);
+
+        lockerFactory.setLockerImplementation(address(lockerImplementation));
+
+        locker = HoneyLocker(lockerFactory.createLocker(THJ, referrer, false));
 
         locker.setOperator(operator);
 
-        queen.setAdapterFactory(address(factory));
+        queen.setAdapterFactory(address(adapterFactory));
         queen.setBeekeeper(address(beekeeper));
         queen.setProtocolFees(200);
 
@@ -61,7 +69,7 @@ abstract contract BaseTest is Test, TokenReceiver {
 
         // Label addresses for better trace output
         vm.label(address(queen), "HoneyQueen");
-        vm.label(address(factory), "AdapterFactory");
+        vm.label(address(adapterFactory), "AdapterFactory");
         vm.label(address(locker), "HoneyLocker");
         vm.label(address(beekeeper), "Beekeeper");
         vm.label(THJ, "THJ");

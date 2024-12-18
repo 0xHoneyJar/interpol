@@ -5,6 +5,7 @@ import {ERC721} from "solady/tokens/ERC721.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
 import {BaseVaultAdapter as BVA} from "./adapters/BaseVaultAdapter.sol";
 import {AdapterFactory} from "./AdapterFactory.sol";
@@ -44,22 +45,24 @@ contract HoneyLocker is Ownable {
 
     event HoneyLocker__AdapterRegistered(string indexed protocol, address adapter);
     event HoneyLocker__AdapterUpgraded(string indexed protocol, address newImplementation);
+    event HoneyLocker__Upgraded(address oldImplementation, address newImplementation);
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    mapping(string protocol => BVA adapter)         public              adapterOfProtocol;
-    HoneyQueen                                      public immutable    honeyQueen;
+    HoneyQueen                                      public  honeyQueen;
+    mapping(string protocol => BVA adapter)         public  adapterOfProtocol;
 
-    mapping(address LPToken => uint256 expiration)  public expirations;
-    bool                                            public unlocked;
-    address                                         public referrer;
-    address                                         public treasury;            
-    address                                         public operator;       
+    mapping(address LPToken => uint256 expiration)  public  expirations;
+    bool                                            public  unlocked;
+    address                                         public  referrer;
+    address                                         public  treasury;            
+    address                                         public  operator;       
     
     /*###############################################################
-                            CONSTRUCTOR
+                            INITIALIZER
     ###############################################################*/
-    constructor(address _honeyQueen, address _owner, address _referrer, bool _unlocked) {
+    function initialize(address _honeyQueen, address _owner, address _referrer, bool _unlocked) external {
+        require(address(honeyQueen) == address(0) && _honeyQueen != address(0));
         honeyQueen = HoneyQueen(_honeyQueen);
         _initializeOwner(_owner);
         unlocked = _unlocked;
@@ -104,7 +107,7 @@ contract HoneyLocker is Ownable {
      */
     function upgradeAdapter(string calldata protocol) external onlyOwner {
         BVA adapter = adapterOfProtocol[protocol];
-        address authorizedLogic = HoneyQueen(honeyQueen).upgradeOf(adapter.implementation());
+        address authorizedLogic = HoneyQueen(honeyQueen).upgradeOfAdapter(adapter.implementation());
         if(authorizedLogic == address(0)) revert HoneyLocker__NotAuthorizedUpgrade();
         adapter.upgrade(authorizedLogic);
         emit HoneyLocker__AdapterUpgraded(protocol, authorizedLogic);
@@ -123,6 +126,13 @@ contract HoneyLocker is Ownable {
         emit HoneyLocker__TreasurySet(_treasury);
     }
 
+    function upgradeLocker() external onlyOwner {
+        address oldImplementation = ERC1967Utils.getImplementation();
+        address authorizedLogic = HoneyQueen(honeyQueen).upgradeOfLocker(oldImplementation);
+        if(authorizedLogic == address(0)) revert HoneyLocker__NotAuthorizedUpgrade();
+        ERC1967Utils.upgradeToAndCall(authorizedLogic, "");
+        emit HoneyLocker__Upgraded(oldImplementation, authorizedLogic);
+    }
     /*###############################################################
                             INTERNAL
     ###############################################################*/
@@ -282,6 +292,12 @@ contract HoneyLocker is Ownable {
     /// @return address The address of the recipient (either treasury or owner)
     function recipient() public view returns (address) {
         return treasury == address(0) ? owner() : treasury;
+    }
+    function version() external pure virtual returns (uint256) {
+        return 1;
+    }
+    function implementation() external view returns (address) {
+        return ERC1967Utils.getImplementation();
     }
     /*###############################################################
                             PUBLIC LOGIC

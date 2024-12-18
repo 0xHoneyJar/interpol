@@ -19,6 +19,7 @@ contract HoneyQueen is Ownable {
     event HoneyQueen__AdapterApproved(address indexed vault, address adapter, bool approved);
     event HoneyQueen__VaultAdapterSet(address indexed vault, address adapter);
     event HoneyQueen__AdapterUpgraded(string indexed protocol, address indexed fromLogic, address toLogic);
+    event HoneyQueen__LockerUpgraded(address indexed fromLogic, address toLogic);
     /*###############################################################
                             STRUCTS
     ###############################################################*/
@@ -40,8 +41,8 @@ contract HoneyQueen is Ownable {
     address                                             public      beekeeper;
     uint256                                             public      protocolFees;
     // authorized upgrades for proxies from logic to logic
-    mapping(address fromLogic => address toLogic)       public      upgradeOf;
-    
+    mapping(address fromLogic => address toLogic)       public      upgradeOfAdapter;
+    mapping(address fromLogic => address toLogic)       public      upgradeOfLocker;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -60,7 +61,7 @@ contract HoneyQueen is Ownable {
      * @param adapter   The adapter implementation address
      * @dev             It should NOT be possible to set a new adapter, therefore an upgrade,
                         for a protocol that already has one because that should be done in the
-                        appropriate function setUpgradeOf
+                        appropriate function upgradeOfAdapter
      */
     function setAdapterForProtocol(string calldata protocol, address adapter) external onlyOwner {
         if (adapterOfProtocol[protocol] != address(0)) revert HoneyQueen__AdapterAlreadyExists();
@@ -88,8 +89,8 @@ contract HoneyQueen is Ownable {
         }
     }
 
-    function setUpgradeOf(address fromLogic, address toLogic) external onlyOwner {
-        upgradeOf[fromLogic] = toLogic;
+    function setUpgradeOfAdapter(address fromLogic, address toLogic) external onlyOwner {
+        upgradeOfAdapter[fromLogic] = toLogic;
 
         // update the mappings
         string memory protocol = protocolOfAdapter[fromLogic];
@@ -97,6 +98,14 @@ contract HoneyQueen is Ownable {
         adapterOfProtocol[protocol] = toLogic;
 
         emit HoneyQueen__AdapterUpgraded(protocol, fromLogic, toLogic);
+    }
+
+    /*###############################################################
+                            LOCKERS MANAGEMENT
+    ###############################################################*/
+    function setUpgradeOfLocker(address fromLogic, address toLogic) external onlyOwner {
+        upgradeOfLocker[fromLogic] = toLogic;
+        emit HoneyQueen__LockerUpgraded(fromLogic, toLogic);
     }
 
     /*###############################################################
@@ -121,7 +130,6 @@ contract HoneyQueen is Ownable {
     function setProtocolFees(uint256 _protocolFees) external onlyOwner {
         protocolFees = _protocolFees;
     }
-
     /*###############################################################
                             EXTERNAL FUNCTIONS
     ###############################################################*/

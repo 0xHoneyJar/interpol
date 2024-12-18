@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+
 import {HoneyLocker} from "./HoneyLocker.sol";
 
-contract LockerFactory {
+contract LockerFactory is Ownable {
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -11,12 +14,20 @@ contract LockerFactory {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    address internal immutable HONEY_QUEEN;
+    address internal immutable  HONEY_QUEEN;
+    address internal            lockerImplementation;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
-    constructor(address _honeyQueen) {
+    constructor(address _honeyQueen, address _owner) {
         HONEY_QUEEN = _honeyQueen;
+        _initializeOwner(_owner);
+    }
+    /*###############################################################
+                            OWNER
+    ###############################################################*/
+    function setLockerImplementation(address _lockerImplementation) external onlyOwner {
+        lockerImplementation = _lockerImplementation;
     }
     /*###############################################################
                             EXTERNAL
@@ -32,9 +43,10 @@ contract LockerFactory {
         address _owner,
         address _referral,
         bool _unlocked
-    ) external returns (address) {
-        HoneyLocker locker = new HoneyLocker(HONEY_QUEEN, _owner, _referral, _unlocked);
-        emit LockerFactory__NewLocker(_owner, address(locker), _referral, _unlocked);
-        return address(locker);
+    ) external returns (address payable) {
+        bytes memory data = abi.encodeWithSelector(HoneyLocker.initialize.selector, HONEY_QUEEN, _owner, _referral, _unlocked);
+        address locker = address(new ERC1967Proxy(lockerImplementation, data));
+        emit LockerFactory__NewLocker(_owner, locker, _referral, _unlocked);
+        return payable(locker);
     }
 }
