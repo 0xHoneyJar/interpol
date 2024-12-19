@@ -7,6 +7,7 @@ interface IBGT {
     event ActivateBoost(address indexed sender, address indexed validator, uint128 amount);
     event DropBoost(address indexed sender, address indexed validator, uint128 amount);
     
+    function balanceOf(address account) external view returns (uint256);
     function redeem(address receiver, uint256 amount) external;
     function queueBoost(address validator, uint128 amount) external;
     function cancelBoost(address validator, uint128 amount) external;
@@ -15,4 +16,5 @@ interface IBGT {
     function unboostedBalanceOf(address account) external view returns (uint256);
     function boosted(address account, address validator) external view returns (uint128);
     function boostedQueue(address account, address validator) external view returns (uint32 blockNumberLast, uint128 balance);
+    function queuedBoost(address account) external view returns (uint128);
 }

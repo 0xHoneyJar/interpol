@@ -52,6 +52,9 @@ contract HoneyLocker is Ownable {
     HoneyQueen                                      public  honeyQueen;
     mapping(string protocol => BVA adapter)         public  adapterOfProtocol;
 
+    mapping(address LPToken => uint256 staked)      public  totalLPStaked;
+    mapping(address vault   => uint256 staked)      public  vaultLPStaked;
+
     mapping(address LPToken => uint256 expiration)  public  expirations;
     bool                                            public  unlocked;
     address                                         public  referrer;
@@ -148,14 +151,22 @@ contract HoneyLocker is Ownable {
         ERC721(token).approve(address(adapter), amount);
         adapter.stake(vault, amount);
 
+        totalLPStaked[token] += amount;
+        vaultLPStaked[vault] += amount;
+
         emit HoneyLocker__Staked(vault, token, amount);
     }
 
     function unstake(address vault, uint256 amount) external onlyValidAdapter(vault) onlyOwnerOrOperator {
         BVA adapter = _getAdapter(vault);
+        address token = adapter.stakingToken(vault);
+
         adapter.unstake(vault, amount);
 
-        emit HoneyLocker__Unstaked(vault, adapter.stakingToken(vault), amount);
+        totalLPStaked[token] -= amount;
+        vaultLPStaked[vault] -= amount;
+
+        emit HoneyLocker__Unstaked(vault, token, amount);
     }
 
     function claim(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator {
