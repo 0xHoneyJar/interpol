@@ -50,7 +50,5 @@ contract RoycoInterpolScript is Script {
         locker.transferOwnership(address(roycoInterpolVault));
 
         vm.stopBroadcast();
-
-        vm.writeJson(vm.toString(address(beekeeper)), config.getConfigFilename(), ".beekeeper");
     }
 }
