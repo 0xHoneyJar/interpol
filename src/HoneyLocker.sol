@@ -233,7 +233,10 @@ contract HoneyLocker is Ownable {
         emit HoneyLocker__LockedUntil(_LPToken, _expiration);
     }
 
-    function withdrawLPToken(address _LPToken, uint256 _amountOrId) external onlyOwnerOrOperator {
+    function withdrawLPToken(address _LPToken, uint256 _amountOrId) external
+    onlyUnblockedTokens(_LPToken)
+    onlyOwnerOrOperator 
+    {
         // if (HONEY_QUEEN.isRewardToken(_LPToken)) revert HasToBeLPToken();
         //if (expirations[_LPToken] == 0) revert HoneyLocker__HasToBeLPToken();
         if (block.timestamp < expirations[_LPToken]) revert HoneyLocker__NotExpiredYet();
@@ -292,7 +295,7 @@ contract HoneyLocker is Ownable {
     function recipient() public view returns (address) {
         return treasury == address(0) ? owner() : treasury;
     }
-    function version() external pure virtual returns (uint256) {
+    function version() external pure returns (uint256) {
         return 1;
     }
     function implementation() external view returns (address) {
