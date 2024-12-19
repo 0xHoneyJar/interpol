@@ -7,6 +7,7 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {RoycoInterpolVault} from "../../src/collabs/RoycoInterpolVault.sol";
 import {HoneyQueen} from "../../src/HoneyQueen.sol";
 import {LockerFactory} from "../../src/LockerFactory.sol";
+import {HoneyLocker} from "../../src/HoneyLocker.sol";
 import {Config} from "../Config.sol";
 
 import {IBGTStationGauge} from "../../src/adapters/BGTStationAdapter.sol";
@@ -39,15 +40,15 @@ contract RoycoInterpolScript is Script {
 
         address locker = lockerFactory.createLocker(pubkey, address(0), true);
         roycoInterpolVault = new RoycoInterpolVault(locker, asset, vault, BGT, validator);
-        locker.setOperator(sfOperator);
+        HoneyLocker(payable(locker)).setOperator(sfOperator);
 
         // Assume the deployer is the owner of HoneyQueen
         // if not, set the vault for the protocol elsewhere
         queen.setVaultForProtocol("BGTSTATION", vault, IBGTStationGauge(BGT).STAKE_TOKEN(), true);
 
-        locker.registerAdapter("BGTSTATION");
+        HoneyLocker(payable(locker)).registerAdapter("BGTSTATION");
 
-        locker.transferOwnership(address(roycoInterpolVault));
+        HoneyLocker(payable(locker)).transferOwnership(address(roycoInterpolVault));
 
         vm.stopBroadcast();
     }
