@@ -27,6 +27,10 @@ contract RoycoInterpolScript is Script {
     function setUp() public {}
 
     function run(bool isTestnet) public {
+        if (asset == address(0) || vault == address(0) || validator == address(0) || sfOperator == address(0)) {
+            revert("Missing parameters");
+        }
+        
         Config config = new Config(isTestnet);
 
         string memory json = config.getConfig();
