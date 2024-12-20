@@ -18,16 +18,16 @@ contract RoycoInterpolScript is Script {
     RoycoInterpolVault public roycoInterpolVault;
 
     // <----- DEFINE ----->
-    address public asset;
-    address public vault;
-    address public validator;
-    address public sfOperator;
+    address public asset = 0x015fd589F4f1A33ce4487E12714e1B15129c9329;
+    address public vault = 0x7D949A79259d55Da7da18EF947468B6E0b34f5cf;
+    bytes   public validator = hex"49e7CF782fB697CDAe1046D45778C8aE3D7eC644";
+    address public sfOperator = 0x16B58D5e5f78a85463fa6D7EcFf1aa010ab37E97;
     // <----- DEFINE ----->
 
     function setUp() public {}
 
     function run(bool isTestnet) public {
-        if (asset == address(0) || vault == address(0) || validator == address(0) || sfOperator == address(0)) {
+        if (asset == address(0) || vault == address(0) || sfOperator == address(0)) {
             revert("Missing parameters");
         }
         
@@ -43,7 +43,8 @@ contract RoycoInterpolScript is Script {
         vm.startBroadcast(pkey);
 
         address locker = lockerFactory.createLocker(pubkey, address(0), true);
-        roycoInterpolVault = new RoycoInterpolVault(locker, asset, vault, BGT, validator);
+        roycoInterpolVault = new RoycoInterpolVault(locker, asset, vault, BGT);
+        roycoInterpolVault.setValidator(validator);
         HoneyLocker(payable(locker)).setOperator(sfOperator);
 
         // Assume the deployer is the owner of HoneyQueen
@@ -51,6 +52,7 @@ contract RoycoInterpolScript is Script {
         queen.setVaultForProtocol("BGTSTATION", vault, IBGTStationGauge(BGT).STAKE_TOKEN(), true);
 
         HoneyLocker(payable(locker)).registerAdapter("BGTSTATION");
+        HoneyLocker(payable(locker)).wildcard(vault, 0, "");
 
         HoneyLocker(payable(locker)).transferOwnership(address(roycoInterpolVault));
 

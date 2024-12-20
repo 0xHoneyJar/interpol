@@ -5,20 +5,36 @@ import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.so
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 
 import {HoneyLocker} from "../HoneyLocker.sol";
 import {IBGTStationGauge} from "../adapters/BGTStationAdapter.sol";
-import {IBGT} from "../utils/IBGT.sol";
 
-contract RoycoInterpolVault is ERC4626 {
+interface IBGT {
+    function balanceOf(address account) external view returns (uint256);
+    function queueBoost(bytes calldata pubkey, uint128 amount) external;
+    function queueDropBoost(bytes calldata pubkey, uint128 amount) external;
+    function activateBoost(address user, bytes calldata pubkey) external returns (bool);
+    function dropBoost(address user, bytes calldata pubkey) external returns (bool);
+    function cancelBoost(bytes calldata pubkey, uint128 amount) external;
+    function cancelDropBoost(bytes calldata pubkey, uint128 amount) external;
+    function boosted(address account, bytes calldata pubkey) external view returns (uint128);
+    function boosts(address account) external view returns (uint128);
+    function boostees(bytes calldata pubkey) external view returns (uint128);
+    function normalizedBoost(bytes calldata pubkey) external view returns (uint256);
+    function queuedBoost(address account) external view returns (uint128);
+}
+
+contract RoycoInterpolVault is ERC4626, Ownable {
     /*###############################################################
                             STATE
     ###############################################################*/
     HoneyLocker public immutable    locker;
     address     public immutable    LPToken;        // LP token re-deposited by S&F operator
     address     public immutable    vault;
-    address     public immutable    validator;      // validator S&F will delegate BGT to
     IBGT        public immutable    BGT;
+
+    bytes       public              validator;
 
     uint256                         assetSelector;  // 0: asset, 1: LPToken ; 2: BGT
     /*###############################################################
@@ -28,8 +44,7 @@ contract RoycoInterpolVault is ERC4626 {
         address _locker,
         address _asset,
         address _vault,
-        address _BGT,
-        address _validator
+        address _BGT
     )
     ERC4626(IERC20(_asset))
     ERC20("RoycoInterpolVault", "ROYCO-INTERPOL") {
@@ -38,6 +53,11 @@ contract RoycoInterpolVault is ERC4626 {
         LPToken = IBGTStationGauge(_BGT).STAKE_TOKEN();
         vault = _vault;
         BGT = IBGT(_BGT);
+    }
+    /*###############################################################
+                            OWNER
+    ###############################################################*/
+    function setValidator(bytes memory _validator) public onlyOwner {
         validator = _validator;
     }
     /*###############################################################
@@ -73,17 +93,7 @@ contract RoycoInterpolVault is ERC4626 {
         // get BGT (burned for BERA)
         assetSelector = 2;
         uint128 BGTToWithdraw = uint128(previewRedeem(_shares));
-        {
-            address adapter = address(locker.adapterOfProtocol("BGTSTATION"));
-            (,uint128 queuedBGT) = BGT.boostedQueue(adapter, validator);
-
-            uint128 BGTToCancel = BGTToWithdraw > queuedBGT ? queuedBGT : BGTToWithdraw;
-            uint128 BGTToDrop = BGTToWithdraw - BGTToCancel;
-
-            if (BGTToCancel > 0) BGT.cancelBoost(validator, BGTToCancel);
-            if (BGTToDrop > 0) BGT.dropBoost(validator, BGTToDrop);
-            locker.burnBGTForBERA(BGTToWithdraw);
-        }
+        locker.burnBGTForBERA(BGTToWithdraw);
         assetSelector = 0;
 
         // burn part
