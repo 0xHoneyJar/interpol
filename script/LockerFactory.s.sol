@@ -38,6 +38,9 @@ contract LockerFactoryDeploy is Script {
             config.getConfigFilename(),
             ".lockerImplementation"
         );
+
+        console.log("LockerFactory deployed at", address(factory));
+        console.log("LockerImplementation deployed at", address(lockerImplementation));
     }
 
     function getLockerFactory() public view returns (LockerFactory) {

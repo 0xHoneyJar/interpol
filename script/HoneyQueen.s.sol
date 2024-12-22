@@ -27,6 +27,7 @@ contract HoneyQueenDeploy is Script {
         vm.stopBroadcast();
 
         vm.writeJson(vm.toString(address(queen)), config.getConfigFilename(), ".honeyqueen");
+        console.log("HoneyQueen deployed at", address(queen));
     }
 
     function getHoneyQueen() public view returns (HoneyQueen) {

@@ -31,6 +31,7 @@ contract AdapterFactoryDeploy is Script {
             config.getConfigFilename(),
             ".adapterFactory"
         );
+        console.log("AdapterFactory deployed at", address(factory));
     }
 
     function getAdapterFactory() public view returns (AdapterFactory) {

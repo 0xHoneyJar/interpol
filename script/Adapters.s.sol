@@ -64,5 +64,9 @@ contract AdaptersDeploy is Script {
             config.getConfigFilename(),
             ".adapters.BERADROME"
         );
+        console.log("BGTStation deployed at", address(bgtsAdapter));
+        console.log("Infrared deployed at", address(infraredAdapter));
+        console.log("Kodiak deployed at", address(kodiakAdapter));
+        console.log("Beradrome deployed at", address(beradromeAdapter));
     }
 }

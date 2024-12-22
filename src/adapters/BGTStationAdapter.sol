@@ -16,6 +16,7 @@ interface IBGTStationGauge {
     function setOperator(address operator) external;
     function earned(address account) external view returns (uint256);
     function STAKE_TOKEN() external view returns (address);
+    function REWARD_TOKEN() external view returns (address);
 }
 
 contract BGTStationAdapter is BaseVaultAdapter {
@@ -75,7 +76,15 @@ contract BGTStationAdapter is BaseVaultAdapter {
     }
 
     function earned(address vault) external view override returns (address[] memory, uint256[] memory) {
-        revert BaseVaultAdapter__NotImplemented();
+        address rewardToken = IBGTStationGauge(vault).REWARD_TOKEN();
+        uint256 earned = IBGTStationGauge(vault).earned(locker);
+
+        address[] memory rewardTokens = new address[](1);
+        uint256[] memory amounts = new uint256[](1);
+        
+        rewardTokens[0] = rewardToken;
+        amounts[0] = earned;
+        return (rewardTokens, amounts);
     }
 }
 

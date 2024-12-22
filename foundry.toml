@@ -5,6 +5,8 @@ libs = ["lib"]
 # using thj dev address
 evm_version = "shanghai"
 
+solc = "0.8.23"
+
 fs_permissions = [{ access = "read-write", path = "./script/" }]
 
 remappings = [

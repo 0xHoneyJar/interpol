@@ -27,6 +27,7 @@ contract BeekeeperDeploy is Script {
         vm.stopBroadcast();
 
         vm.writeJson(vm.toString(address(beekeeper)), config.getConfigFilename(), ".beekeeper");
+        console.log("Beekeeper deployed at", address(beekeeper));
     }
 
     function getBeekeeper() public view returns (Beekeeper) {

@@ -78,12 +78,12 @@ contract HoneyQueen is Ownable {
         address token,
         bool approved
     ) external onlyOwner {
-        if (adapterOfProtocol[protocol] == address(0)) revert HoneyQueen__AdapterNotSet();
         if (approved) {
             protocolOfVault[vault] = protocol;
             tokenOfVault[vault] = token;
         } else {
             delete protocolOfVault[vault];
+            delete tokenOfVault[vault];
         }
     }
 
