@@ -38,7 +38,7 @@ abstract contract BaseTest is Test, TokenReceiver {
     string          public RPC_URL;
 
     constructor() {
-        RPC_URL = vm.envOr(string("RPC_URL"), string("https://bartio.rpc.berachain.com/"));
+        RPC_URL = vm.envOr(string("RPC_URL_TEST"), string("https://bartio.rpc.berachain.com/"));
     }
     /*###############################################################
                             SETUP

@@ -64,7 +64,8 @@ contract KodiakTest is BaseTest {
 
         vm.stopPrank();
 
-        vm.label(address(adapter), "KodiakAdapter");
+        vm.label(address(adapter), "KodiakAdapter Logic");
+        vm.label(address(lockerAdapter), "KodiakAdapter Locker");
         vm.label(address(GAUGE), "Kodiak Gauge");
         vm.label(address(LP_TOKEN), "Kodiak LP Token");
         vm.label(address(KODIAKV3), "KodiakV3");

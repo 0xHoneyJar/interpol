@@ -61,21 +61,23 @@ contract InfraredAdapter is BaseVaultAdapter {
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
-    function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) {
+    function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) returns (uint256) {
         IInfraredVault infraredVault = IInfraredVault(vault);
         address token = infraredVault.stakingToken();
 
         ERC721(token).transferFrom(msg.sender, address(this), amount);
         ERC721(token).approve(vault, amount);
         IInfraredVault(vault).stake(amount);
+        return amount;
     }
 
-    function unstake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) {
+    function unstake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) returns (uint256) {
         IInfraredVault infraredVault = IInfraredVault(vault);
         address token = infraredVault.stakingToken();
 
         infraredVault.withdraw(amount);
         ERC20(token).transfer(locker, amount);
+        return amount;
     }
 
     function claim(address vault) external override onlyLocker isVaultValid(vault) returns (address[] memory, uint256[] memory) {

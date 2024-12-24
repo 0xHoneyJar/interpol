@@ -68,22 +68,24 @@ contract KodiakAdapterOld is BaseVaultAdapter {
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
-    function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) {
+    function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) returns (uint256) {
         IKodiakFarm kodiakFarm = IKodiakFarm(vault);
         address token = kodiakFarm.stakingToken();
 
         ERC20(token).transferFrom(locker, address(this), amount);
         ERC20(token).approve(address(kodiakFarm), amount);
         kodiakFarm.stakeLocked(amount, kodiakFarm.lock_time_for_max_multiplier());
+        return amount;
     }
 
-    function unstake(address vault, uint256 kekIdAsUint) external override onlyLocker isVaultValid(vault) {
+    function unstake(address vault, uint256 kekIdAsUint) external override onlyLocker isVaultValid(vault) returns (uint256) {
         IKodiakFarm kodiakFarm = IKodiakFarm(vault);
         address token = kodiakFarm.stakingToken();
 
         kodiakFarm.withdrawLocked(bytes32(kekIdAsUint));
         uint256 amount = ERC20(token).balanceOf(address(this));
         ERC20(token).transfer(locker, amount);
+        return amount;
     }
 
     function claim(address vault) external override onlyLocker isVaultValid(vault) returns (address[] memory, uint256[] memory) {

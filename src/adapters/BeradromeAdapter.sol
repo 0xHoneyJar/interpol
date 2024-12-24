@@ -36,19 +36,21 @@ contract BeradromeAdapter is BaseVaultAdapter {
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
-    function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) {
+    function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) returns (uint256) {
         IBeradromePlugin beradromePlugin = IBeradromePlugin(vault);
         address token = beradromePlugin.getToken();
         ERC20(token).transferFrom(locker, address(this), amount);
         ERC20(token).approve(address(beradromePlugin), amount);
         beradromePlugin.depositFor(address(this), amount);
+        return amount;
     }
 
-    function unstake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) {
+    function unstake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) returns (uint256) {
         IBeradromePlugin beradromePlugin = IBeradromePlugin(vault);
         address token = beradromePlugin.getToken();
         beradromePlugin.withdrawTo(address(this), amount);
         ERC20(token).transfer(locker, amount);
+        return amount;
     }
 
     function claim(address vault) external override onlyLocker isVaultValid(vault) returns (address[] memory, uint256[] memory) {

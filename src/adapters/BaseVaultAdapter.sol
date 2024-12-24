@@ -39,8 +39,8 @@ abstract contract BaseVaultAdapter {
                             EXTERNAL
     ###############################################################*/
     function initialize(address locker, address _honeyQueen) external virtual;
-    function stake(address vault, uint256 amount) external virtual;
-    function unstake(address vault, uint256 amount) external virtual;
+    function stake(address vault, uint256 amount) external virtual returns (uint256);
+    function unstake(address vault, uint256 amount) external virtual returns (uint256);
     function claim(address vault) external virtual returns (address[] memory rewardTokens, uint256[] memory earned);
     function wildcard(address vault, uint8 func, bytes calldata args) external virtual;
     /*###############################################################

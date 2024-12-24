@@ -149,24 +149,24 @@ contract HoneyLocker is Ownable {
         address token = adapter.stakingToken(vault);
 
         ERC721(token).approve(address(adapter), amount);
-        adapter.stake(vault, amount);
+        uint256 staked = adapter.stake(vault, amount);
 
-        totalLPStaked[token] += amount;
-        vaultLPStaked[vault] += amount;
+        totalLPStaked[token] += staked;
+        vaultLPStaked[vault] += staked;
 
-        emit HoneyLocker__Staked(vault, token, amount);
+        emit HoneyLocker__Staked(vault, token, staked);
     }
 
     function unstake(address vault, uint256 amount) external onlyValidAdapter(vault) onlyOwnerOrOperator {
         BVA adapter = _getAdapter(vault);
         address token = adapter.stakingToken(vault);
 
-        adapter.unstake(vault, amount);
+        uint256 unstaked = adapter.unstake(vault, amount);
 
-        totalLPStaked[token] -= amount;
-        vaultLPStaked[vault] -= amount;
+        totalLPStaked[token] -= unstaked;
+        vaultLPStaked[vault] -= unstaked;
 
-        emit HoneyLocker__Unstaked(vault, token, amount);
+        emit HoneyLocker__Unstaked(vault, token, unstaked);
     }
 
     function claim(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator {
