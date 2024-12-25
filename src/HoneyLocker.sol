@@ -306,8 +306,8 @@ contract HoneyLocker is Ownable {
     function recipient() public view returns (address) {
         return treasury == address(0) ? owner() : treasury;
     }
-    function version() external pure returns (uint256) {
-        return 1;
+    function version() external pure returns (string memory) {
+        return "1.0";
     }
     function implementation() external view returns (address) {
         return ERC1967Utils.getImplementation();

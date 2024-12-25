@@ -56,9 +56,7 @@ abstract contract BaseVaultAdapter {
     ###############################################################*/
     function stakingToken(address vault) external view virtual returns (address);
     function earned(address vault) external view virtual returns (address[] memory rewardTokens, uint256[] memory amounts);
-    function version() external pure virtual returns (uint256) {
-        return 1;
-    }
+    function version() external pure virtual returns (string memory);
     function implementation() external view returns (address) {
         return ERC1967Utils.getImplementation();
     }

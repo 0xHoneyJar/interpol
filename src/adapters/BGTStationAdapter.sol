@@ -95,5 +95,10 @@ contract BGTStationAdapter is BaseVaultAdapter {
         amounts[0] = earnedAmount;
         return (rewardTokens, amounts);
     }
+
+
+    function version() external pure override returns (string memory) {
+        return "1.0";
+    }
 }
 

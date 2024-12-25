@@ -93,4 +93,8 @@ contract BeradromeAdapter is BaseVaultAdapter {
         }
         return (rewardTokens, amounts);
     }
+
+    function version() external pure override returns (string memory) {
+        return "1.0";
+    }
 }

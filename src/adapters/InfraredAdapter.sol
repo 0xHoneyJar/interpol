@@ -112,5 +112,10 @@ contract InfraredAdapter is BaseVaultAdapter {
     function earned(address vault) external view override returns (address[] memory, uint256[] memory) {
         return _earned(vault);
     }
+
+
+    function version() external pure override returns (string memory) {
+        return "1.0";
+    }
 }
 

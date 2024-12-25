@@ -139,5 +139,9 @@ contract KodiakAdapterOld is BaseVaultAdapter {
         // resize arrays to include xKDK as a reward
         return (rewardTokens.asAddressArray(), amounts.asUint256Array());
     }
+
+    function version() external pure override returns (string memory) {
+        return "1.0";
+    }
 }
 
