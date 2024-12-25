@@ -113,7 +113,6 @@ contract InfraredAdapter is BaseVaultAdapter {
         return _earned(vault);
     }
 
-
     function version() external pure override returns (string memory) {
         return "1.0";
     }
