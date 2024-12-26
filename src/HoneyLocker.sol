@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {ERC20} from "solady/tokens/ERC20.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
@@ -273,11 +274,8 @@ contract HoneyLocker is Ownable {
         if (expirations[_token] != 0) revert HoneyLocker__CannotBeLPToken();
         Beekeeper beekeeper = Beekeeper(honeyQueen.beekeeper());
         uint256 fees = honeyQueen.computeFees(_amount);
-        // self approval to be compliant with ERC20 transferFrom
-        ERC721(_token).approve(address(this), _amount);
-        // use ERC721 transferFrom because same signature for ERC20 and doesn't expect a return value
-        ERC721(_token).transferFrom(address(this), recipient(), _amount - fees);
-        ERC721(_token).transferFrom(address(this), address(beekeeper), fees);
+        ERC20(_token).transfer(recipient(), _amount - fees);
+        ERC20(_token).transfer(address(beekeeper), fees);
         beekeeper.distributeFees(referrer, _token, fees);
         emit HoneyLocker__Withdrawn(_token, _amount - fees);
     }
