@@ -58,9 +58,6 @@ contract HoneyQueen is Ownable {
      * @notice          Adds a new adapter implementation for a protocol
      * @param protocol  The protocol name
      * @param adapter   The adapter implementation address
-     * @dev             It should NOT be possible to set a new adapter, therefore an upgrade,
-                        for a protocol that already has one because that should be done in the
-                        appropriate function upgradeOfAdapter
      */
     function setAdapterForProtocol(string calldata protocol, address adapter) external onlyOwner {
         adapterOfProtocol[protocol] = adapter;
