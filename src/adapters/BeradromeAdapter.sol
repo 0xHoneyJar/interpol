@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {ERC20} from "solady/tokens/ERC20.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {IRelaxedERC20} from "../utils/RelaxedERC20.sol";
 import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
 
 interface IBeradromePlugin {
@@ -39,8 +40,8 @@ contract BeradromeAdapter is BaseVaultAdapter {
     function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) returns (uint256) {
         IBeradromePlugin beradromePlugin = IBeradromePlugin(vault);
         address token = beradromePlugin.getToken();
-        ERC20(token).transferFrom(locker, address(this), amount);
-        ERC20(token).approve(address(beradromePlugin), amount);
+        SafeERC20.safeTransferFrom(IERC20(token), locker, address(this), amount);
+        SafeERC20.forceApprove(IERC20(token), address(beradromePlugin), amount);
         beradromePlugin.depositFor(address(this), amount);
         return amount;
     }
@@ -49,7 +50,7 @@ contract BeradromeAdapter is BaseVaultAdapter {
         IBeradromePlugin beradromePlugin = IBeradromePlugin(vault);
         address token = beradromePlugin.getToken();
         beradromePlugin.withdrawTo(address(this), amount);
-        ERC20(token).transfer(locker, amount);
+        SafeERC20.safeTransfer(IERC20(token), locker, amount);
         return amount;
     }
 
@@ -60,12 +61,12 @@ contract BeradromeAdapter is BaseVaultAdapter {
         uint256[] memory amounts = new uint256[](rewardTokens.length);
         gauge.getReward(address(this));
         for (uint256 i; i < rewardTokens.length; i++) {
-            amounts[i] = ERC20(rewardTokens[i]).balanceOf(address(this));
+            amounts[i] = IERC20(rewardTokens[i]).balanceOf(address(this));
             /*
                 we skip the transfer, to not block any other rewards
                 it can always be retrieved later because we use the balanceOf() function
             */
-            try ERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
+            try IRelaxedERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
                 emit Adapter__FailedTransfer(locker, rewardTokens[i], amounts[i]);
                 amounts[i] = 0;
             }

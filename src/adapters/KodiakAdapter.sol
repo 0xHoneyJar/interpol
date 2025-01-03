@@ -3,7 +3,9 @@ pragma solidity ^0.8.23;
 
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {DynamicArrayLib as DAL} from "solady/utils/DynamicArrayLib.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {IRelaxedERC20} from "../utils/RelaxedERC20.sol";
 import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
 
 interface IKodiakFarm {
@@ -72,8 +74,8 @@ contract KodiakAdapter is BaseVaultAdapter {
         IKodiakFarm kodiakFarm = IKodiakFarm(vault);
         address token = kodiakFarm.stakingToken();
 
-        ERC20(token).transferFrom(locker, address(this), amount);
-        ERC20(token).approve(address(kodiakFarm), amount);
+        SafeERC20.safeTransferFrom(IERC20(token), locker, address(this), amount);
+        SafeERC20.forceApprove(IERC20(token), address(kodiakFarm), amount);
         kodiakFarm.stakeLocked(amount, kodiakFarm.lock_time_for_max_multiplier());
         return amount;
     }
@@ -83,8 +85,8 @@ contract KodiakAdapter is BaseVaultAdapter {
         address token = kodiakFarm.stakingToken();
 
         kodiakFarm.withdrawLocked(bytes32(kekIdAsUint));
-        uint256 amount = ERC20(token).balanceOf(address(this));
-        ERC20(token).transfer(locker, amount);
+        uint256 amount = IERC20(token).balanceOf(address(this));
+        SafeERC20.safeTransfer(IERC20(token), locker, amount);
         return amount;
     }
 
@@ -95,12 +97,12 @@ contract KodiakAdapter is BaseVaultAdapter {
         uint256[] memory amounts = new uint256[](rewardTokens.length);
         kodiakFarm.getReward();
         for (uint256 i; i < rewardTokens.length; i++) {
-            amounts[i] = ERC20(rewardTokens[i]).balanceOf(address(this));
+            amounts[i] = IERC20(rewardTokens[i]).balanceOf(address(this));
             /*
                 we skip the transfer, to not block any other rewards
                 it can always be retrieved later because we use the balanceOf() function
             */
-            try ERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
+            try IRelaxedERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
                 emit Adapter__FailedTransfer(locker, rewardTokens[i], amounts[i]);
                 amounts[i] = 0;
             }
@@ -117,7 +119,7 @@ contract KodiakAdapter is BaseVaultAdapter {
         } else if (func == 1) {
             (uint256 index) = abi.decode(args, (uint256));
             xKdk.finalizeRedeem(index);
-            ERC20(kodiakFarm.kdk()).transfer(locker, ERC20(kodiakFarm.kdk()).balanceOf(address(this)));
+            IRelaxedERC20(kodiakFarm.kdk()).transfer(locker, ERC20(kodiakFarm.kdk()).balanceOf(address(this)));
         }
     }
     /*###############################################################

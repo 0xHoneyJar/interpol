@@ -3,7 +3,9 @@ pragma solidity ^0.8.23;
 
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {IRelaxedERC20} from "../utils/RelaxedERC20.sol";
 import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
 
 interface IBGTStationGauge {
@@ -48,8 +50,8 @@ contract BGTStationAdapter is BaseVaultAdapter {
             _hasSetOperator[vault] = true;
         }
 
-        ERC721(token).transferFrom(msg.sender, address(this), amount);
-        ERC721(token).approve(address(bgtStationGauge), amount);
+        SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
+        SafeERC20.forceApprove(IERC20(token), address(bgtStationGauge), amount);
         bgtStationGauge.stake(amount);
         return amount;
     }
@@ -59,7 +61,7 @@ contract BGTStationAdapter is BaseVaultAdapter {
         address token = bgtStationGauge.STAKE_TOKEN();
 
         bgtStationGauge.withdraw(amount);
-        ERC20(token).transfer(locker, amount);
+        SafeERC20.safeTransfer(IERC20(token), locker, amount);
         return amount;
     }
 

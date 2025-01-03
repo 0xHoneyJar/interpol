@@ -66,6 +66,8 @@ contract BGTStationTest is BaseTest {
         - balance is updated
     */
     function test_singleDeposit(uint256 amountToDeposit, uint256 expiration, bool _useOperator) external prankAsTHJ(_useOperator) {
+        expiration = StdUtils.bound(expiration, 1, type(uint256).max - 1);
+
         address user = _useOperator ? operator : THJ;
         StdCheats.deal(address(LP_TOKEN), user, amountToDeposit);
 
@@ -86,13 +88,17 @@ contract BGTStationTest is BaseTest {
         - balance is updated
         - expiration is updated
     */
-    function test_multipleDeposits(uint32[4] memory amounts, uint128[4] memory expirations, bool _useOperator) external prankAsTHJ(_useOperator) {
+    function test_multipleDeposits(uint32[4] memory amounts, uint256[4] memory expirations, bool _useOperator) external prankAsTHJ(_useOperator) {
+        for (uint i = 0; i < expirations.length; i++) {
+            expirations[i] = StdUtils.bound(expirations[i], 1, type(uint256).max - 1);
+        }
+
         uint runningBalance;
         address user = _useOperator ? operator : THJ;
 
         // mint, deposit the first amount
         uint256 amount = uint256(amounts[0]);
-        uint256 expiration = uint256(expirations[0]);
+        uint256 expiration = expirations[0];
 
         runningBalance += amount;
         StdCheats.deal(address(LP_TOKEN), user, amount);
@@ -130,7 +136,7 @@ contract BGTStationTest is BaseTest {
         - withdrawal is successful
     */
     function test_singleWithdrawal(uint256 amountTDeposit, uint256 expiration, bool _useOperator) external prankAsTHJ(_useOperator) {
-        expiration = StdUtils.bound(expiration, 0, type(uint256).max - 1);
+        expiration = StdUtils.bound(expiration, 1, type(uint256).max - 1);
         address user = _useOperator ? operator : THJ;
         StdCheats.deal(address(LP_TOKEN), user, amountTDeposit);
 

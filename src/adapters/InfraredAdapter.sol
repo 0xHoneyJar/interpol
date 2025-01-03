@@ -5,7 +5,9 @@ pragma solidity ^0.8.23;
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {DynamicArrayLib as DAL} from "solady/utils/DynamicArrayLib.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {IRelaxedERC20} from "../utils/RelaxedERC20.sol";
 import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
 
 interface IInfraredVault {
@@ -65,8 +67,8 @@ contract InfraredAdapter is BaseVaultAdapter {
         IInfraredVault infraredVault = IInfraredVault(vault);
         address token = infraredVault.stakingToken();
 
-        ERC721(token).transferFrom(msg.sender, address(this), amount);
-        ERC721(token).approve(vault, amount);
+        SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
+        SafeERC20.forceApprove(IERC20(token), vault, amount);
         IInfraredVault(vault).stake(amount);
         return amount;
     }
@@ -76,7 +78,7 @@ contract InfraredAdapter is BaseVaultAdapter {
         address token = infraredVault.stakingToken();
 
         infraredVault.withdraw(amount);
-        ERC20(token).transfer(locker, amount);
+        SafeERC20.safeTransfer(IERC20(token), locker, amount);
         return amount;
     }
 
@@ -86,12 +88,12 @@ contract InfraredAdapter is BaseVaultAdapter {
         (address[] memory rewardTokens, uint256[] memory amounts) = _earned(vault);
         infraredVault.getReward();
         for (uint256 i; i < rewardTokens.length; i++) {
-            amounts[i] = ERC20(rewardTokens[i]).balanceOf(address(this));
+            amounts[i] = IERC20(rewardTokens[i]).balanceOf(address(this));
             /*
                 we skip the transfer, to not block any other rewards
                 it can always be retrieved later because we use the balanceOf() function
             */
-            try ERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
+            try IRelaxedERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
                 emit Adapter__FailedTransfer(locker, rewardTokens[i], amounts[i]);
                 amounts[i] = 0;
             }

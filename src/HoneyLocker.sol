@@ -6,6 +6,7 @@ import {ERC721} from "solady/tokens/ERC721.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
 import {BaseVaultAdapter as BVA} from "./adapters/BaseVaultAdapter.sol";
@@ -29,6 +30,7 @@ contract HoneyLocker is Ownable {
     error HoneyLocker__CannotBeLPToken();
     error HoneyLocker__TokenBlocked();
     error HoneyLocker__NotAuthorizedUpgrade();
+    error HoneyLocker__ExpirationMustBeGreaterThanZero();
     /*###############################################################
                             EVENTS
     ###############################################################*/
@@ -230,7 +232,7 @@ contract HoneyLocker is Ownable {
     /// @custom:emits       Deposited event with the LP token address and amount or ID deposited
     /// @custom:emits       LockedUntil event with the LP token address and expiration timestamp
     function depositAndLock(address _LPToken, uint256 _amountOrId, uint256 _expiration) external onlyOwnerOrOperator {
-
+        if (_expiration == 0) revert HoneyLocker__ExpirationMustBeGreaterThanZero();
         if (!unlocked && expirations[_LPToken] != 0 && _expiration < expirations[_LPToken]) {
             revert HoneyLocker__ExpirationNotMatching();
         }
@@ -274,8 +276,8 @@ contract HoneyLocker is Ownable {
         if (expirations[_token] != 0) revert HoneyLocker__CannotBeLPToken();
         Beekeeper beekeeper = Beekeeper(honeyQueen.beekeeper());
         uint256 fees = honeyQueen.computeFees(_amount);
-        ERC20(_token).transfer(recipient(), _amount - fees);
-        ERC20(_token).transfer(address(beekeeper), fees);
+        SafeERC20.safeTransfer(IERC20(_token), recipient(), _amount - fees);
+        SafeERC20.safeTransfer(IERC20(_token), address(beekeeper), fees);
         beekeeper.distributeFees(referrer, _token, fees);
         emit HoneyLocker__Withdrawn(_token, _amount - fees);
     }
