@@ -170,6 +170,35 @@ contract KodiakTest is BaseTest {
         assertEq(KDK.balanceOf(address(locker)), xkdkBalance / 2);
     }
 
+    function test_unstakeDoSShouldFail(
+        bool _useOperator
+    ) external prankAsTHJ(_useOperator) {
+        // too low amount results in the withdrawal failing because of how Kodiak works
+        uint256 amountToDeposit = 1000e18;
+
+        StdCheats.deal(address(LP_TOKEN), address(locker), amountToDeposit);
+
+        bytes32 expectedKekId = keccak256(
+            abi.encodePacked(
+                address(lockerAdapter),
+                block.timestamp,
+                amountToDeposit,
+                GAUGE.lockedLiquidityOf(address(lockerAdapter))
+            )
+        );
+
+        locker.stake(address(GAUGE), amountToDeposit);
+
+        vm.warp(block.timestamp + 30 days);
+        GAUGE.sync();
+
+        StdCheats.deal(address(LP_TOKEN), address(lockerAdapter), 1);
+ 
+        locker.unstake(address(GAUGE), uint256(expectedKekId));
+
+        assertEq(LP_TOKEN.balanceOf(address(locker)), amountToDeposit + 1);
+    }
+
     // function test_depositV3() external prankAsTHJ {
     //     uint256 nftId = 6658;
 

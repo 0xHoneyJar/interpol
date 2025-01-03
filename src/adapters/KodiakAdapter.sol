@@ -56,6 +56,7 @@ contract KodiakAdapter is BaseVaultAdapter {
     /*###############################################################
                             STORAGE
     ###############################################################*/
+    mapping(bytes32 kekId => uint256 amount) amounts;
     /*###############################################################
                             INITIALIZATION
     ###############################################################*/
@@ -96,7 +97,16 @@ contract KodiakAdapter is BaseVaultAdapter {
 
         SafeERC20.safeTransferFrom(IERC20(token), locker, address(this), amount);
         SafeERC20.forceApprove(IERC20(token), address(kodiakFarm), amount);
+        bytes32 expectedKekId = keccak256(
+            abi.encodePacked(
+                address(this),
+                block.timestamp,
+                amount,
+                kodiakFarm.lockedLiquidityOf(address(this))
+            )
+        );
         kodiakFarm.stakeLocked(amount, kodiakFarm.lock_time_for_max_multiplier());
+        amounts[expectedKekId] = amount;
         return amount;
     }
 
@@ -106,9 +116,11 @@ contract KodiakAdapter is BaseVaultAdapter {
 
         kodiakFarm.withdrawLocked(bytes32(kekIdAsUint));
         _transferRewards(vault);
-        uint256 amount = IERC20(token).balanceOf(address(this));
-        SafeERC20.safeTransfer(IERC20(token), locker, amount);
-        return amount;
+        uint256 unstakedAmount = amounts[bytes32(kekIdAsUint)];
+        uint256 balance = IERC20(token).balanceOf(address(this));
+        delete amounts[bytes32(kekIdAsUint)];
+        SafeERC20.safeTransfer(IERC20(token), locker, balance);
+        return unstakedAmount;
     }
 
     function claim(address vault) external override onlyLocker isVaultValid(vault) returns (address[] memory, uint256[] memory) {
