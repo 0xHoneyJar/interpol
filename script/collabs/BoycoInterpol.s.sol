@@ -3,8 +3,9 @@ pragma solidity ^0.8.23;
 
 import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-import {RoycoInterpolVault} from "../../src/collabs/RoycoInterpolVault.sol";
+import {BoycoInterpolVault} from "../../src/collabs/boyco/BoycoInterpolVault.sol";
 import {HoneyQueen} from "../../src/HoneyQueen.sol";
 import {LockerFactory} from "../../src/LockerFactory.sol";
 import {HoneyLocker} from "../../src/HoneyLocker.sol";
@@ -12,10 +13,10 @@ import {Config} from "../Config.sol";
 
 import {IBGTStationGauge} from "../../src/adapters/BGTStationAdapter.sol";
 
-contract RoycoInterpolScript is Script {
+contract BoycoInterpolScript is Script {
     using stdJson for string;
 
-    RoycoInterpolVault public roycoInterpolVault;
+    BoycoInterpolVault public boycoInterpolVault;
 
     // <----- DEFINE ----->
     address public asset = 0x015fd589F4f1A33ce4487E12714e1B15129c9329;
@@ -43,8 +44,13 @@ contract RoycoInterpolScript is Script {
         vm.startBroadcast(pkey);
 
         address locker = lockerFactory.createLocker(pubkey, address(0), true);
-        roycoInterpolVault = new RoycoInterpolVault(locker, asset, vault, BGT);
-        roycoInterpolVault.setValidator(validator);
+        boycoInterpolVault = BoycoInterpolVault(payable(
+            Upgrades.deployUUPSProxy(
+                "BoycoInterpolVault.sol",
+                abi.encodeCall(BoycoInterpolVault.initialize, (pubkey, locker, asset, vault))
+            )
+        ));
+        boycoInterpolVault.setValidator(validator);
         HoneyLocker(payable(locker)).setOperator(sfOperator);
 
         // Assume the deployer is the owner of HoneyQueen
@@ -54,7 +60,7 @@ contract RoycoInterpolScript is Script {
         HoneyLocker(payable(locker)).registerAdapter("BGTSTATION");
         HoneyLocker(payable(locker)).wildcard(vault, 0, "");
 
-        HoneyLocker(payable(locker)).transferOwnership(address(roycoInterpolVault));
+        HoneyLocker(payable(locker)).transferOwnership(address(boycoInterpolVault));
 
         vm.stopBroadcast();
     }

@@ -221,14 +221,14 @@ contract HoneyLocker is Ownable {
     /*###############################################################
                             LP MANAGEMENT
     ###############################################################*/
-    /// @notice Deposits and locks LP tokens in the HoneyLocker
-    /// @dev Only the owner or migrating vault can call this function
-    /// @param _LPToken The address of the LP token to deposit and lock
-    /// @param _amountOrId The amount or ID of the LP token to deposit
-    /// @param _expiration The expiration timestamp for the lock
-    /// @custom:throws ExpirationNotMatching if the new expiration is less than the existing one for non-unlocked tokens
-    /// @custom:emits Deposited event with the LP token address and amount or ID deposited
-    /// @custom:emits LockedUntil event with the LP token address and expiration timestamp
+    /// @notice             Deposits and locks LP tokens in the HoneyLocker
+    /// @dev                Only the owner or migrating vault can call this function
+    /// @param _LPToken     The address of the LP token to deposit and lock
+    /// @param _amountOrId  The amount or ID of the LP token to deposit
+    /// @param _expiration  The expiration timestamp for the lock
+    /// @custom:throws      ExpirationNotMatching if the new expiration is less than the existing one for non-unlocked tokens
+    /// @custom:emits       Deposited event with the LP token address and amount or ID deposited
+    /// @custom:emits       LockedUntil event with the LP token address and expiration timestamp
     function depositAndLock(address _LPToken, uint256 _amountOrId, uint256 _expiration) external onlyOwnerOrOperator {
 
         if (!unlocked && expirations[_LPToken] != 0 && _expiration < expirations[_LPToken]) {

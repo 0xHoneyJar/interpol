@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+
+import {HoneyLocker} from "../../HoneyLocker.sol";
+import {IBGTStationGauge} from "../../adapters/BGTStationAdapter.sol";
+
+contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, Ownable {
+    using Math for uint256;
+    /*###############################################################
+                            STATE
+    ###############################################################*/
+    bytes       public                  validator;
+    uint256     public                  totalSupplied;  // total usdc supplied through the bridge
+
+    /*
+        We expect this vault to be the owner of the locker (and therefore the default recipient)
+        while the S&F operator is the operator of the locker.
+    */
+    HoneyLocker public        locker;         // locker deployed for this vault
+    address     public        LPToken;        // LP token re-deposited by S&F operator
+    address     public        vault;          // BGT Station vault
+
+    address     public        asset;
+    address     public        henlo;
+    /*###############################################################
+                            INITIALIZER
+    ###############################################################*/
+    function initialize(
+        address _owner,
+        address _locker,
+        address _asset,
+        address _vault
+    ) external initializer {
+        ERC20Upgradeable.__ERC20_init("BoycoInterpolVault", "BOYCO-INTERPOL");
+        _initializeOwner(_owner);
+        // this vault should be the owner of the locker
+        locker = HoneyLocker(payable(_locker));
+        LPToken = IBGTStationGauge(_vault).STAKE_TOKEN();
+        vault = _vault;
+        asset = _asset;
+    }
+    /*###############################################################
+                            OWNER
+    ###############################################################*/
+    function setValidator(bytes memory _validator) public onlyOwner {
+        validator = _validator;
+    }
+    function setHenlo(address _henlo) public onlyOwner {
+        henlo = _henlo;
+    }
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    /*###############################################################
+                            VIEW FUNCTIONS
+    ###############################################################*/
+    /*###############################################################
+                            EXTERNAL
+    ###############################################################*/
+    function deposit(uint256 _assets, address _receiver) public returns (uint256) {
+        uint256 shares = _assets.mulDiv(totalSupply() + 1, totalSupplied + 1, Math.Rounding.Floor);
+        STL.safeTransferFrom(asset, msg.sender, address(this), _assets);
+        _mint(_receiver, shares);
+
+        IERC20(asset).approve(address(locker), _assets);
+        locker.depositAndLock(asset, _assets, 1);
+        return shares;
+    }
+
+    function redeem(uint256 _shares, address _receiver) public returns (uint256) {
+        uint256 LPBalance = locker.totalLPStaked(LPToken);
+        uint256 henloBalance = IERC20(henlo).balanceOf(address(this));
+        // also require that this vault has been set as the treasury in the locker
+        uint256 LPToWithdraw = _shares.mulDiv(LPBalance + 1, totalSupply() + 1, Math.Rounding.Floor);
+        uint256 henloToWithdraw = _shares.mulDiv(henloBalance + 1, totalSupply() + 1, Math.Rounding.Floor);
+
+        _burn(msg.sender, _shares);
+
+        locker.unstake(vault, LPToWithdraw);
+        locker.withdrawLPToken(LPToken, LPToWithdraw);
+        
+        STL.safeTransfer(LPToken, _receiver, LPToWithdraw);
+        STL.safeTransfer(henlo, _receiver, henloToWithdraw);
+
+        return LPBalance;
+    }
+
+    receive() external payable {}
+}

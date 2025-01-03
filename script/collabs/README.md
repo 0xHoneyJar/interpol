@@ -1,9 +1,9 @@
 ## How to deploy
 
-### Royco
+### Boyco
 
 ```
-source .env && forge script script/collabs/RoycoInterpol.s.sol:RoycoInterpolScript true  \
+source .env && forge script script/collabs/BoycoInterpol.s.sol:BoycoInterpolScript true  \
 --rpc-url $RPC_URL \
 --broadcast \
 --verify \
