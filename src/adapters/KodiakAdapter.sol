@@ -68,6 +68,26 @@ contract KodiakAdapter is BaseVaultAdapter {
         honeyQueen = _honeyQueen;
     }
     /*###############################################################
+                            INTERNAL
+    ###############################################################*/
+    function _transferRewards(address vault) internal returns (address[] memory, uint256[] memory) {
+        IKodiakFarm kodiakFarm = IKodiakFarm(vault);
+        address[] memory rewardTokens = kodiakFarm.getAllRewardTokens();
+        uint256[] memory amounts = new uint256[](rewardTokens.length);
+        for (uint256 i; i < rewardTokens.length; i++) {
+            amounts[i] = IERC20(rewardTokens[i]).balanceOf(address(this));
+            /*
+                we skip the transfer, to not block any other rewards
+                it can always be retrieved later because we use the balanceOf() function
+            */
+            try IRelaxedERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
+                emit Adapter__FailedTransfer(locker, rewardTokens[i], amounts[i]);
+                amounts[i] = 0;
+            }
+        }
+        return (rewardTokens, amounts);
+    }
+    /*###############################################################
                             EXTERNAL
     ###############################################################*/
     function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) returns (uint256) {
@@ -85,6 +105,7 @@ contract KodiakAdapter is BaseVaultAdapter {
         address token = kodiakFarm.stakingToken();
 
         kodiakFarm.withdrawLocked(bytes32(kekIdAsUint));
+        _transferRewards(vault);
         uint256 amount = IERC20(token).balanceOf(address(this));
         SafeERC20.safeTransfer(IERC20(token), locker, amount);
         return amount;
@@ -93,21 +114,9 @@ contract KodiakAdapter is BaseVaultAdapter {
     function claim(address vault) external override onlyLocker isVaultValid(vault) returns (address[] memory, uint256[] memory) {
         IKodiakFarm kodiakFarm = IKodiakFarm(vault);
 
-        address[] memory rewardTokens = kodiakFarm.getAllRewardTokens();
-        uint256[] memory amounts = new uint256[](rewardTokens.length);
-        kodiakFarm.getReward();
-        for (uint256 i; i < rewardTokens.length; i++) {
-            amounts[i] = IERC20(rewardTokens[i]).balanceOf(address(this));
-            /*
-                we skip the transfer, to not block any other rewards
-                it can always be retrieved later because we use the balanceOf() function
-            */
-            try IRelaxedERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
-                emit Adapter__FailedTransfer(locker, rewardTokens[i], amounts[i]);
-                amounts[i] = 0;
-            }
-        }
-        return (rewardTokens, amounts);
+        try kodiakFarm.getReward() {} catch {} // can still distribute rewards even if the call fails
+
+        return _transferRewards(vault);
     }
 
     function wildcard(address vault, uint8 func, bytes calldata args) external override onlyLocker isVaultValid(vault) {
