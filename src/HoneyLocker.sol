@@ -235,7 +235,7 @@ contract HoneyLocker is Ownable {
             revert HoneyLocker__ExpirationNotMatching();
         }
 
-        expirations[_LPToken] = unlocked ? 0 : _expiration;
+        expirations[_LPToken] = unlocked ? 1 : _expiration;
 
         // using transferFrom from ERC721 because same signature for ERC20
         // with the difference that ERC721 doesn't expect a return value
@@ -249,8 +249,8 @@ contract HoneyLocker is Ownable {
     onlyUnblockedTokens(_LPToken)
     onlyOwnerOrOperator 
     {
-        // if (HONEY_QUEEN.isRewardToken(_LPToken)) revert HasToBeLPToken();
-        //if (expirations[_LPToken] == 0) revert HoneyLocker__HasToBeLPToken();
+        if (honeyQueen.isRewardToken(_LPToken)) revert HoneyLocker__HasToBeLPToken();
+        if (expirations[_LPToken] == 0) revert HoneyLocker__HasToBeLPToken();
         if (block.timestamp < expirations[_LPToken]) revert HoneyLocker__NotExpiredYet();
 
         // self approval only needed for ERC20, try/catch in case it's an ERC721

@@ -11,6 +11,7 @@ import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {BGTStationAdapter, IBGTStationGauge} from "../src/adapters/BGTStationAdapter.sol";
 import {BaseVaultAdapter as BVA} from "../src/adapters/BaseVaultAdapter.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
+import {MockERC20} from "./mocks/MockERC20.sol";
 
 contract BGTStationTest is BaseTest {    
     /*###############################################################
@@ -223,5 +224,15 @@ contract BGTStationTest is BaseTest {
         assertEq(BGT.unboostedBalanceOf(address(lockerAdapter)), 0);
         assertEq(BGT.unboostedBalanceOf(THJ), 0);
     }
+
+    function test_cannotWithdrawRewardThroughLPWithdrawFunction() external prankAsTHJ(false) {
+        MockERC20 rewardToken = new MockERC20();
+        // deal some to locker
+        rewardToken.mint(address(locker), 100 ether);
+        // try to withdraw thrugh LP withdraw function
+        vm.expectRevert(HoneyLocker.HoneyLocker__HasToBeLPToken.selector);
+        locker.withdrawLPToken(address(rewardToken), 1);
+    }
 }
+
 

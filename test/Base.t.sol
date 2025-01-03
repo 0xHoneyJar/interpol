@@ -17,15 +17,15 @@ abstract contract BaseTest is Test, TokenReceiver {
     /*###############################################################
                             CONSTANTS
     ###############################################################*/
-    address internal THJ        = makeAddr("THJ");
-    address internal THJTreasury = makeAddr("THJTreasury");
-    address internal validator  = 0x4A8c9a29b23c4eAC0D235729d5e0D035258CDFA7;
+    address internal THJ            = makeAddr("THJ");
+    address internal THJTreasury    = makeAddr("THJTreasury");
+    address internal validator      = 0x4A8c9a29b23c4eAC0D235729d5e0D035258CDFA7;
 
-    address internal referrer   = makeAddr("referrer");
-    address internal treasury   = makeAddr("treasury");
-    address internal operator   = makeAddr("operator");
+    address internal referrer       = makeAddr("referrer");
+    address internal treasury       = makeAddr("treasury");
+    address internal operator       = makeAddr("operator");
 
-    IBGT    internal BGT        = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
+    IBGT    internal BGT            = IBGT(0xbDa130737BDd9618301681329bF2e46A016ff9Ad);
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
