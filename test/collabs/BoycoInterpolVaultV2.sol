@@ -10,10 +10,10 @@ import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
 
-import {HoneyLocker} from "../../HoneyLocker.sol";
-import {IBGTStationGauge} from "../../adapters/BGTStationAdapter.sol";
+import {HoneyLocker} from "../../src/HoneyLocker.sol";
+import {IBGTStationGauge} from "../../src/adapters/BGTStationAdapter.sol";
 
-contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, Ownable {
+contract BoycoInterpolVaultV2 is ERC20Upgradeable, UUPSUpgradeable, Ownable {
     using Math for uint256;
     /*###############################################################
                             STATE
@@ -32,7 +32,10 @@ contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, Ownable {
     address     public        asset;
     address     public        henlo;
 
-    uint256[50] __gap;
+    mapping(address => uint256) public something;
+    uint256 public something2;
+
+    uint256[48] __gap;
     /*###############################################################
                             INITIALIZER
     ###############################################################*/
@@ -94,6 +97,10 @@ contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, Ownable {
         STL.safeTransfer(henlo, _receiver, henloToWithdraw);
 
         return LPBalance;
+    }
+
+    function emergency() public pure returns (uint256) {
+        return 100;
     }
 
     receive() external payable {}
