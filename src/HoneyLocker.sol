@@ -293,7 +293,6 @@ contract HoneyLocker is Ownable {
         onlyUnblockedTokens(_token)
         onlyOwnerOrOperator
     {
-        if (expirations[_token] != 0) revert HoneyLocker__CannotBeLPToken();
         ERC1155(_token).safeTransferFrom(address(this), recipient(), _id, _amount, _data);
         emit HoneyLocker__Withdrawn(_token, _id);
     }
