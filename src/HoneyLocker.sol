@@ -16,8 +16,9 @@ import {IBGTStationGauge} from "./adapters/BGTStationAdapter.sol";
 import {IBGT} from "./utils/IBGT.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {Beekeeper} from "./Beekeeper.sol";
+import {TokenReceiver} from "./utils/TokenReceiver.sol";
 
-contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable {
+contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
     /*###############################################################
                             ERRORS
     ###############################################################*/

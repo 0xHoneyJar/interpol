@@ -68,7 +68,7 @@ contract BoycoTest is BaseTest {
         // Configure locker
         HoneyLocker(payable(locker)).setOperator(_boycoInterpolVault);
         HoneyLocker(payable(locker)).registerAdapter("BGTSTATION");
-        HoneyLocker(payable(locker)).wildcard(vault, 0, "");
+        //HoneyLocker(payable(locker)).wildcard(vault, 0, "");
         HoneyLocker(payable(locker)).transferOwnership(address(sfOperator));
 
         vm.stopPrank();
@@ -115,7 +115,7 @@ contract BoycoTest is BaseTest {
         LP_TOKEN.approve(address(locker), LPAmount);
         locker.depositAndLock(address(LP_TOKEN), LPAmount, 1);
         locker.stake(vault, LPAmount);
-        
+
         vm.stopPrank();
 
         assertEq(locker.totalLPStaked(address(LP_TOKEN)), LPAmount);

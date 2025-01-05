@@ -6,8 +6,9 @@ import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.s
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 
 import {HoneyQueen} from "../HoneyQueen.sol";
+import {TokenReceiver} from "../utils/TokenReceiver.sol";
 
-abstract contract BaseVaultAdapter is UUPSUpgradeable {
+abstract contract BaseVaultAdapter is UUPSUpgradeable, TokenReceiver {
     /*###############################################################
                             ERRORS
     ###############################################################*/
@@ -26,7 +27,7 @@ abstract contract BaseVaultAdapter is UUPSUpgradeable {
     ###############################################################*/
     address     public              locker;
     address     internal            honeyQueen;
-    
+
     uint256[50] __gap;
     /*###############################################################
                             MODIFIERS
