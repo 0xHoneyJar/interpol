@@ -80,10 +80,7 @@ contract BGTStationAdapter is BaseVaultAdapter {
     }
 
     function wildcard(address vault, uint8 func, bytes calldata args) external override onlyLocker isVaultValid(vault) {
-        IBGTStationGauge bgtStationGauge = IBGTStationGauge(vault);
-        if (func == 0) {
-            bgtStationGauge.setOperator(locker);
-        }
+        revert BaseVaultAdapter__NotImplemented();
     }
     /*###############################################################
                             VIEW

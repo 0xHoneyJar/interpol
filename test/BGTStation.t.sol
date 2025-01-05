@@ -44,7 +44,7 @@ contract BGTStationTest is BaseTest {
         queen.setVaultForProtocol("BGTSTATION", GAUGE, address(LP_TOKEN), true);
         locker.registerAdapter("BGTSTATION");
 
-        locker.wildcard(address(GAUGE), 0, "");
+        //locker.wildcard(address(GAUGE), 0, "");
 
         lockerAdapter = BVA(locker.adapterOfProtocol("BGTSTATION"));
 
