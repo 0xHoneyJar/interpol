@@ -57,6 +57,8 @@ contract KodiakAdapter is BaseVaultAdapter {
                             STORAGE
     ###############################################################*/
     mapping(bytes32 kekId => uint256 amount) amounts;
+
+    uint256 public lockTime;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -100,6 +102,7 @@ contract KodiakAdapter is BaseVaultAdapter {
     function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) returns (uint256) {
         IKodiakFarm kodiakFarm = IKodiakFarm(vault);
         address token = kodiakFarm.stakingToken();
+        uint256 duration = lockTime > 0 ? lockTime : kodiakFarm.lock_time_for_max_multiplier();
 
         SafeERC20.safeTransferFrom(IERC20(token), locker, address(this), amount);
         SafeERC20.forceApprove(IERC20(token), address(kodiakFarm), amount);
@@ -111,7 +114,7 @@ contract KodiakAdapter is BaseVaultAdapter {
                 kodiakFarm.lockedLiquidityOf(address(this))
             )
         );
-        kodiakFarm.stakeLocked(amount, kodiakFarm.lock_time_for_max_multiplier());
+        kodiakFarm.stakeLocked(amount, duration);
         amounts[expectedKekId] = amount;
         return amount;
     }
@@ -147,6 +150,9 @@ contract KodiakAdapter is BaseVaultAdapter {
             (uint256 index) = abi.decode(args, (uint256));
             xKdk.finalizeRedeem(index);
             IRelaxedERC20(kodiakFarm.kdk()).transfer(locker, ERC20(kodiakFarm.kdk()).balanceOf(address(this)));
+        } else if (func == 2) {
+            (uint256 duration) = abi.decode(args, (uint256));
+            lockTime = duration;
         }
     }
     /*###############################################################
