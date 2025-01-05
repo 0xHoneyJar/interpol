@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
-import {SafeTransferLib as STL} from "@openzeppelin/contracts/utils/SafeTransferLib.sol";
+import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 
 import {HoneyQueen} from "../HoneyQueen.sol";
 

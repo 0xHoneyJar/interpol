@@ -231,7 +231,11 @@ contract HoneyLocker is Ownable {
     /// @custom:throws      ExpirationNotMatching if the new expiration is less than the existing one for non-unlocked tokens
     /// @custom:emits       Deposited event with the LP token address and amount or ID deposited
     /// @custom:emits       LockedUntil event with the LP token address and expiration timestamp
-    function depositAndLock(address _LPToken, uint256 _amountOrId, uint256 _expiration) external onlyOwnerOrOperator {
+    function depositAndLock(address _LPToken, uint256 _amountOrId, uint256 _expiration)
+    external
+    onlyOwnerOrOperator
+    onlyUnblockedTokens(_LPToken) 
+    {
         if (_expiration == 0) revert HoneyLocker__ExpirationMustBeGreaterThanZero();
         if (!unlocked && expirations[_LPToken] != 0 && _expiration < expirations[_LPToken]) {
             revert HoneyLocker__ExpirationNotMatching();
@@ -247,7 +251,8 @@ contract HoneyLocker is Ownable {
         emit HoneyLocker__LockedUntil(_LPToken, _expiration);
     }
 
-    function withdrawLPToken(address _LPToken, uint256 _amountOrId) external
+    function withdrawLPToken(address _LPToken, uint256 _amountOrId)
+    external
     onlyUnblockedTokens(_LPToken)
     onlyOwnerOrOperator 
     {
