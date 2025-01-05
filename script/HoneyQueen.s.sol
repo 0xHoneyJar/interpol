@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {Config} from "./Config.sol";
@@ -23,7 +24,8 @@ contract HoneyQueenDeploy is Script {
         uint256 pkey = vm.envUint("PRIVATE_KEY");
         address pubkey = vm.addr(pkey);
         vm.startBroadcast(pkey);
-        queen = new HoneyQueen(BGT, address(0)); // Temporary zero address
+        bytes memory queenInitData = abi.encodeWithSelector(HoneyQueen.initialize.selector, pubkey, BGT, address(0));
+        queen = HoneyQueen(Upgrades.deployUUPSProxy("HoneyQueen", queenInitData));
         vm.stopBroadcast();
 
         vm.writeJson(vm.toString(address(queen)), config.getConfigFilename(), ".honeyqueen");

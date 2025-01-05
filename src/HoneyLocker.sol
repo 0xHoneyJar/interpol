@@ -66,6 +66,8 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
     address                                         public  referrer;
     address                                         public  treasury;            
     address                                         public  operator;
+
+    uint256[50] __gap;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/

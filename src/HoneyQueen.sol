@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-import {Ownable} from "solady/auth/Ownable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
 
-contract HoneyQueen is Ownable {
+contract HoneyQueen is UUPSUpgradeable, OwnableUpgradeable {
     /*###############################################################
                             ERRORS
     ###############################################################*/
@@ -25,7 +27,7 @@ contract HoneyQueen is Ownable {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    address                                immutable    public      BGT;
+    address                                             public      BGT;
 
     mapping(string protocol => address adapter)         public      adapterOfProtocol;
     // have to build a reverse mapping to allow lockers to query
@@ -42,15 +44,27 @@ contract HoneyQueen is Ownable {
     // authorized upgrades for proxies from logic to logic
     mapping(address fromLogic => address toLogic)       public      upgradeOfAdapter;
     mapping(address fromLogic => address toLogic)       public      upgradeOfLocker;
+
+    uint256[50] __gap;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
-    constructor(address _BGT, address _adapterFactory) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+    /*###############################################################
+                            INITIALIZER
+    ###############################################################*/
+    function initialize(address _owner, address _BGT, address _adapterFactory) external initializer {
         BGT = _BGT;
         adapterFactory = _adapterFactory;
-        _initializeOwner(msg.sender);
+        __Ownable_init(_owner);
     }
-
+    /*###############################################################
+                            PROXY MANAGEMENT
+    ###############################################################*/
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
     /*###############################################################
                             ADAPTERS MANAGEMENT
     ###############################################################*/
@@ -102,7 +116,6 @@ contract HoneyQueen is Ownable {
         upgradeOfLocker[fromLogic] = toLogic;
         emit HoneyQueen__LockerUpgraded(fromLogic, toLogic);
     }
-
     /*###############################################################
                             OWNER MANAGEMENT
     ###############################################################*/
@@ -144,5 +157,13 @@ contract HoneyQueen is Ownable {
 
     function isVaultValidForAdapter(address adapter, address vault) public view returns (bool) {
         return adapterOfProtocol[protocolOfVault[vault]] == adapter;
+    }
+
+    function version() external pure returns (string memory) {
+        return "1.0";
+    }
+
+    function getImplementation() external view returns (address) {
+        return ERC1967Utils.getImplementation();
     }
 }

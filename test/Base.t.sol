@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {console2} from "forge-std/console2.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {LockerFactory} from "../src/LockerFactory.sol";
@@ -47,8 +48,11 @@ abstract contract BaseTest is Test, TokenReceiver {
         vm.startPrank(THJ);
 
         HoneyLocker lockerImplementation = new HoneyLocker();
+        address queenImplementation = address(new HoneyQueen());
 
-        queen = new HoneyQueen(address(BGT), address(0)); // Temporary zero address
+        bytes memory queenInitData = abi.encodeWithSelector(HoneyQueen.initialize.selector, THJ, address(BGT), address(0));
+
+        queen = HoneyQueen(address(new ERC1967Proxy(queenImplementation, queenInitData)));
         beekeeper = new Beekeeper(THJ, THJTreasury);
         adapterFactory = new AdapterFactory(address(queen));
         lockerFactory = new LockerFactory(address(queen), THJ);
