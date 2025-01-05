@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import {SafeTransferLib as STL} from "@openzeppelin/contracts/utils/SafeTransferLib.sol";
 
 import {HoneyQueen} from "../HoneyQueen.sol";
 
@@ -43,6 +44,10 @@ abstract contract BaseVaultAdapter {
     function unstake(address vault, uint256 amount) external virtual returns (uint256);
     function claim(address vault) external virtual returns (address[] memory rewardTokens, uint256[] memory earned);
     function wildcard(address vault, uint8 func, bytes calldata args) external virtual;
+    
+    function rescueERC20(address token) external virtual {
+        STL.safeTransferAll(token, locker);
+    }
     /*###############################################################
                             PROXY LOGIC
     ###############################################################*/
