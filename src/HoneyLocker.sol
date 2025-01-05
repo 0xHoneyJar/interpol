@@ -4,9 +4,10 @@ pragma solidity ^0.8.23;
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
-import {Ownable} from "solady/auth/Ownable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
 import {BaseVaultAdapter as BVA} from "./adapters/BaseVaultAdapter.sol";
@@ -16,13 +17,14 @@ import {IBGT} from "./utils/IBGT.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {Beekeeper} from "./Beekeeper.sol";
 
-contract HoneyLocker is Ownable {
+contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable {
     /*###############################################################
                             ERRORS
     ###############################################################*/
     error HoneyLocker__AdapterAlreadyRegistered();
     error HoneyLocker__AdapterNotFound();
 
+    error HoneyLocker__NotAuthorized();
     error HoneyLocker__ExpirationNotMatching();
     error HoneyLocker__HasToBeLPToken();
     error HoneyLocker__NotExpiredYet();
@@ -62,14 +64,23 @@ contract HoneyLocker is Ownable {
     bool                                            public  unlocked;
     address                                         public  referrer;
     address                                         public  treasury;            
-    address                                         public  operator;       
+    address                                         public  operator;
+    /*###############################################################
+                            CONSTRUCTOR
+    ###############################################################*/
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }       
     /*###############################################################
                             INITIALIZER
     ###############################################################*/
-    function initialize(address _honeyQueen, address _owner, address _referrer, bool _unlocked) external {
-        require(address(honeyQueen) == address(0) && _honeyQueen != address(0));
+    function initialize(address _honeyQueen, address _owner, address _referrer, bool _unlocked)
+    external
+    initializer 
+    {
+        __Ownable_init(_owner);
         honeyQueen = HoneyQueen(_honeyQueen);
-        _initializeOwner(_owner);
         unlocked = _unlocked;
         referrer = _referrer;
     }
@@ -81,7 +92,7 @@ contract HoneyLocker is Ownable {
         _;
     }
     modifier onlyOwnerOrOperator() {
-        if (msg.sender != owner() && msg.sender != operator) revert Unauthorized();
+        if (msg.sender != owner() && msg.sender != operator) revert HoneyLocker__NotAuthorized();
         _;
     }
     modifier onlyUnblockedTokens(address _token) {
@@ -135,12 +146,13 @@ contract HoneyLocker is Ownable {
         address oldImplementation = ERC1967Utils.getImplementation();
         address authorizedLogic = HoneyQueen(honeyQueen).upgradeOfLocker(oldImplementation);
         if(authorizedLogic == address(0)) revert HoneyLocker__NotAuthorizedUpgrade();
-        ERC1967Utils.upgradeToAndCall(authorizedLogic, "");
+        upgradeToAndCall(authorizedLogic, "");
         emit HoneyLocker__Upgraded(oldImplementation, authorizedLogic);
     }
     /*###############################################################
                             INTERNAL
     ###############################################################*/
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
     function _getAdapter(address vault) internal view returns (BVA adapter) {
         return adapterOfProtocol[honeyQueen.protocolOfVault(vault)];
     }

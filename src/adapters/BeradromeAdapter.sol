@@ -24,13 +24,19 @@ contract BeradromeAdapter is BaseVaultAdapter {
                             STORAGE
     ###############################################################*/
     /*###############################################################
+                            CONSTRUCTOR
+    ###############################################################*/
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+    /*###############################################################
                             INITIALIZATION
     ###############################################################*/
     function initialize(
         address _locker,
         address _honeyQueen
-    ) external override {
-        if (locker != address(0)) revert BaseVaultAdapter__AlreadyInitialized();
+    ) external override initializer {
         locker = _locker;
         honeyQueen = _honeyQueen;
     }

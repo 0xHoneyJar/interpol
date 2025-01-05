@@ -5,15 +5,15 @@ import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.so
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
-import {Ownable} from "solady/auth/Ownable.sol";
 import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
 
 import {HoneyLocker} from "../../src/HoneyLocker.sol";
 import {IBGTStationGauge} from "../../src/adapters/BGTStationAdapter.sol";
 
-contract BoycoInterpolVaultV2 is ERC20Upgradeable, UUPSUpgradeable, Ownable {
+contract BoycoInterpolVaultV2 is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgradeable {
     using Math for uint256;
     /*###############################################################
                             STATE
@@ -46,7 +46,7 @@ contract BoycoInterpolVaultV2 is ERC20Upgradeable, UUPSUpgradeable, Ownable {
         address _vault
     ) external initializer {
         ERC20Upgradeable.__ERC20_init("BoycoInterpolVault", "BOYCO-INTERPOL");
-        _initializeOwner(_owner);
+        __Ownable_init(_owner);
         // this vault should be the owner of the locker
         locker = HoneyLocker(payable(_locker));
         LPToken = IBGTStationGauge(_vault).STAKE_TOKEN();

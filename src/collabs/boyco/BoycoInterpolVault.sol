@@ -4,16 +4,16 @@ pragma solidity ^0.8.23;
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
-import {Ownable} from "solady/auth/Ownable.sol";
 import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
 
 import {HoneyLocker} from "../../HoneyLocker.sol";
 import {IBGTStationGauge} from "../../adapters/BGTStationAdapter.sol";
 
-contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, Ownable {
+contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgradeable {
     using Math for uint256;
     /*###############################################################
                             STATE
@@ -34,6 +34,13 @@ contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, Ownable {
 
     uint256[50] __gap;
     /*###############################################################
+                            CONSTRUCTOR
+    ###############################################################*/
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+    /*###############################################################
                             INITIALIZER
     ###############################################################*/
     function initialize(
@@ -43,7 +50,7 @@ contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, Ownable {
         address _vault
     ) external initializer {
         ERC20Upgradeable.__ERC20_init("BoycoInterpolVault", "BOYCO-INTERPOL");
-        _initializeOwner(_owner);
+        __Ownable_init(_owner);
         // this vault should be the owner of the locker
         locker = HoneyLocker(payable(_locker));
         LPToken = IBGTStationGauge(_vault).STAKE_TOKEN();

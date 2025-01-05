@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 
 import {HoneyQueen} from "../HoneyQueen.sol";
 
-abstract contract BaseVaultAdapter {
+abstract contract BaseVaultAdapter is UUPSUpgradeable {
     /*###############################################################
                             ERRORS
     ###############################################################*/
@@ -25,6 +26,8 @@ abstract contract BaseVaultAdapter {
     ###############################################################*/
     address     public              locker;
     address     internal            honeyQueen;
+    
+    uint256[50] __gap;
     /*###############################################################
                             MODIFIERS
     ###############################################################*/
@@ -53,9 +56,10 @@ abstract contract BaseVaultAdapter {
     ###############################################################*/
     function upgrade(address newImplementation) external onlyLocker {
         address oldImplementation = ERC1967Utils.getImplementation();
-        ERC1967Utils.upgradeToAndCall(newImplementation, "");
+        upgradeToAndCall(newImplementation, "");
         emit Adapter__Upgraded(oldImplementation, newImplementation);
     }
+    function _authorizeUpgrade(address newImplementation) internal override onlyLocker {}
     /*###############################################################
                             VIEW/PURE
     ###############################################################*/
