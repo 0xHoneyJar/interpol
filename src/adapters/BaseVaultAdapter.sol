@@ -31,7 +31,7 @@ abstract contract BaseVaultAdapter is Initializable, TokenReceiver {
     address     internal            honeyQueen;
     address     internal            adapterBeacon;
 
-    uint256[50] __gap;
+    uint256[47] __gap;
     /*###############################################################
                             MODIFIERS
     ###############################################################*/

@@ -32,7 +32,7 @@ contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgrade
     address     public        asset;
     address     public        henlo;
 
-    uint256[50] __gap;
+    uint256[43] __gap;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/

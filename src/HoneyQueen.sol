@@ -43,7 +43,7 @@ contract HoneyQueen is UUPSUpgradeable, OwnableUpgradeable {
     // authorized upgrades for proxies from logic to logic
     mapping(address fromLogic => address toLogic)       public      upgradeOfLocker;
 
-    uint256[50] __gap;
+    uint256[40] __gap;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
