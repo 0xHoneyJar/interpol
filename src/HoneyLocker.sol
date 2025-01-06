@@ -9,9 +9,8 @@ import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
-
+import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {BaseVaultAdapter as BVA} from "./adapters/BaseVaultAdapter.sol";
-import {AdapterFactory} from "./AdapterFactory.sol";
 import {IBGTStationGauge} from "./adapters/BGTStationAdapter.sol";
 import {IBGT} from "./utils/IBGT.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
@@ -109,29 +108,14 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
         BVA adapter = adapterOfProtocol[protocol];
         if (address(adapter) != address(0)) revert HoneyLocker__AdapterAlreadyRegistered();
 
-        address newAdapter = AdapterFactory(honeyQueen.adapterFactory()).createAdapter(address(this), protocol);
-        
+        address adapterBeacon = honeyQueen.adapterBeaconOfProtocol(protocol);
+        bytes memory data = abi.encodeWithSelector(BVA.initialize.selector, address(this), address(honeyQueen), adapterBeacon);
+        address newAdapter = address(new BeaconProxy(adapterBeacon, data));
+
         adapterOfProtocol[protocol] = BVA(newAdapter);
 
         emit HoneyLocker__AdapterRegistered(protocol, newAdapter);
     }
-
-    /**
-     * @notice              Upgrades an adapter implementation for a protocol to a new version
-     * @param protocol      The protocol name whose adapter should be upgraded
-     * @dev                 Only callable by owner
-     * @dev                 Will revert if upgrade is not authorized by HoneyQueen
-     * @dev                 The new implementation must be compatible with the old one
-     * @custom:emits        Adapter__Upgraded event from BaseVaultAdapter with old and new implementation addresses
-     */
-    function upgradeAdapter(string calldata protocol) external onlyOwner {
-        BVA adapter = adapterOfProtocol[protocol];
-        address authorizedLogic = HoneyQueen(honeyQueen).upgradeOfAdapter(adapter.implementation());
-        if(authorizedLogic == address(0)) revert HoneyLocker__NotAuthorizedUpgrade();
-        adapter.upgrade(authorizedLogic);
-        emit HoneyLocker__AdapterUpgraded(protocol, authorizedLogic);
-    }
-
     /*###############################################################
                             OWNER
     ###############################################################*/

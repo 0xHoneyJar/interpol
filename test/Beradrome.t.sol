@@ -6,6 +6,8 @@ import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {console2} from "forge-std/console2.sol";
 
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+
 import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {BeradromeAdapter, IBeradromeGauge} from "../src/adapters/BeradromeAdapter.sol";
@@ -16,7 +18,6 @@ contract BeradromeTest is BaseTest {
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
-    BeradromeAdapter    public adapter;
     BVA                 public lockerAdapter;
 
 
@@ -33,11 +34,12 @@ contract BeradromeTest is BaseTest {
         vm.createSelectFork(RPC_URL, uint256(7925685));
         super.setUp();
 
-        adapter = new BeradromeAdapter();
+        address adapterLogic = address(new BeradromeAdapter());
+        address adapterBeacon = address(new UpgradeableBeacon(adapterLogic, THJ));
 
         vm.startPrank(THJ);
 
-        queen.setAdapterForProtocol("BERADROME", address(adapter));
+        queen.setAdapterBeaconForProtocol("BERADROME", adapterBeacon);
         queen.setVaultForProtocol("BERADROME", PLUGIN, address(LP_TOKEN), true);
         locker.registerAdapter("BERADROME");
 

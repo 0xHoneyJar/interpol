@@ -8,6 +8,7 @@ import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {console2} from "forge-std/console2.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import {BaseTest} from "../Base.t.sol";
 import {HoneyLocker} from "../../src/HoneyLocker.sol";
@@ -44,12 +45,14 @@ contract BoycoTest is BaseTest {
         super.setUp();
 
         // Deploy adapter implementation that will be cloned
-        adapter = new BGTStationAdapter();
+        address adapterLogic = address(new BGTStationAdapter());
+        address adapterBeacon = address(new UpgradeableBeacon(adapterLogic, THJ));
+        
         asset = address(new MockERC20());
 
         vm.startPrank(THJ);
 
-        queen.setAdapterForProtocol("BGTSTATION", address(adapter));
+        queen.setAdapterBeaconForProtocol("BGTSTATION", address(adapterBeacon));
         queen.setVaultForProtocol("BGTSTATION", GAUGE, address(LP_TOKEN), true);
 
         lockerAdapter = BVA(locker.adapterOfProtocol("BGTSTATION"));

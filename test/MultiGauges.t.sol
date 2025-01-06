@@ -6,6 +6,7 @@ import {ERC721} from "solady/tokens/ERC721.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {console2} from "forge-std/console2.sol";
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
@@ -39,11 +40,12 @@ contract MultiAdaptersTest is BaseTest {
         super.setUp();
 
         // Deploy adapter implementation that will be cloned
-        adapter = new BGTStationAdapter();
+        address adapterLogic = address(new BGTStationAdapter());
+        address adapterBeacon = address(new UpgradeableBeacon(adapterLogic, THJ));
 
         vm.startPrank(THJ);
 
-        queen.setAdapterForProtocol("BGTSTATION", address(adapter));
+        queen.setAdapterBeaconForProtocol("BGTSTATION", address(adapterBeacon));
 
         queen.setVaultForProtocol("BGTSTATION", GAUGE1, address(LP_TOKEN1), true);
         queen.setVaultForProtocol("BGTSTATION", GAUGE2, address(LP_TOKEN2), true);

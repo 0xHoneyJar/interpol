@@ -6,6 +6,7 @@ import {ERC721} from "solady/tokens/ERC721.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {console2} from "forge-std/console2.sol";
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
@@ -19,6 +20,7 @@ contract UpgradesTest is BaseTest {
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
+    UpgradeableBeacon   public          adapterBeacon;
     KodiakAdapterOld    public          oldAdapter;
     KodiakAdapter       public          newAdapter;
     BVA                 public          lockerAdapter;
@@ -41,9 +43,11 @@ contract UpgradesTest is BaseTest {
         oldAdapter = new KodiakAdapterOld();
         newAdapter = new KodiakAdapter();
 
+        adapterBeacon = new UpgradeableBeacon(address(oldAdapter), THJ);
+
         vm.startPrank(THJ);
 
-        queen.setAdapterForProtocol("KODIAK", address(oldAdapter));
+        queen.setAdapterBeaconForProtocol("KODIAK", address(adapterBeacon));
         queen.setVaultForProtocol("KODIAK", address(GAUGE), address(LP_TOKEN), true);
         locker.registerAdapter("KODIAK");
 
@@ -78,8 +82,8 @@ contract UpgradesTest is BaseTest {
         );
         locker.stake(address(GAUGE), amountToDeposit);
 
-        queen.setUpgradeOfAdapter(address(oldAdapter), address(newAdapter));
-        locker.upgradeAdapter("KODIAK");
+        // upgrade beacon impl.
+        adapterBeacon.upgradeTo(address(newAdapter));
 
         vm.warp(block.timestamp + 30 days);
         GAUGE.sync();
@@ -120,8 +124,8 @@ contract UpgradesTest is BaseTest {
         vm.expectRevert(BVA.BaseVaultAdapter__NotImplemented.selector);
         locker.wildcard(address(GAUGE), 0, abi.encode(xkdkBalance, 15 days));
 
-        queen.setUpgradeOfAdapter(address(oldAdapter), address(newAdapter));
-        locker.upgradeAdapter("KODIAK");
+        // upgrade beacon impl.
+        adapterBeacon.upgradeTo(address(newAdapter));
 
         // xKDK balance should have NOT changed
         assertEq(xKDK.balanceOf(address(lockerAdapter)), xkdkBalance);
@@ -136,37 +140,15 @@ contract UpgradesTest is BaseTest {
 
         assertEq(KDK.balanceOf(address(locker)), kdkBalance + (xkdkBalance / 2));
     }
-
-    /*###############################################################
-        Even if there is an upgrade possible, the locker should still work
-        using the old adapter.
-    ###############################################################*/
-    function test_lockerUsingOldAdapterShouldNotWork(uint128 _amountToDeposit) public prankAsTHJ(false) {
-        uint256 amountToDeposit = StdUtils.bound(uint256(_amountToDeposit), 1e20, type(uint128).max);
-        
-        StdCheats.deal(address(LP_TOKEN), address(locker), amountToDeposit);
-
-        bytes32 expectedKekId = keccak256(
-            abi.encodePacked(
-                address(lockerAdapter), block.timestamp, amountToDeposit, GAUGE.lockedLiquidityOf(address(lockerAdapter))
-            )
-        );
-        locker.stake(address(GAUGE), amountToDeposit);
-
-        queen.setUpgradeOfAdapter(address(oldAdapter), address(newAdapter));
-
-        vm.warp(block.timestamp + 30 days);
-
-        vm.expectRevert(BVA.BaseVaultAdapter__InvalidVault.selector);
-        locker.unstake(address(GAUGE), uint256(expectedKekId));
-    }
+    
 
     /*###############################################################
         Registering a vault, on a new locker, after an upgrade should result in being the latest
         adapter being used.
     ###############################################################*/
     function test_registerVaultAfterUpgradeShouldUseLatestAdapter() public prankAsTHJ(false) {
-        queen.setUpgradeOfAdapter(address(oldAdapter), address(newAdapter));
+        // upgrade beacon impl.
+        adapterBeacon.upgradeTo(address(newAdapter));
 
         locker = HoneyLocker(lockerFactory.createLocker(THJ, referrer, false));
 

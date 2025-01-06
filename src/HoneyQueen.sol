@@ -29,20 +29,18 @@ contract HoneyQueen is UUPSUpgradeable, OwnableUpgradeable {
     ###############################################################*/
     address                                             public      BGT;
 
-    mapping(string protocol => address adapter)         public      adapterOfProtocol;
+    mapping(string protocol => address adapterBeacon)   public      adapterBeaconOfProtocol;
     // have to build a reverse mapping to allow lockers to query
-    mapping(address adapter => string protocol)         public      protocolOfAdapter;
+    mapping(address adapterBeacon => string protocol)   public      protocolOfAdapterBeacon;
     mapping(address vault => string protocol)           public      protocolOfVault;
     mapping(address vault => address token)             public      tokenOfVault;
     
     // this is for cases where gauges give you a NFT to represent your staking position
     mapping(address token => bool blocked)              public      isTokenBlocked;
     mapping(address token => bool isRewardToken)        public      isRewardToken;
-    address                                             public      adapterFactory;
     address                                             public      beekeeper;
     uint256                                             public      protocolFees;
     // authorized upgrades for proxies from logic to logic
-    mapping(address fromLogic => address toLogic)       public      upgradeOfAdapter;
     mapping(address fromLogic => address toLogic)       public      upgradeOfLocker;
 
     uint256[50] __gap;
@@ -56,9 +54,8 @@ contract HoneyQueen is UUPSUpgradeable, OwnableUpgradeable {
     /*###############################################################
                             INITIALIZER
     ###############################################################*/
-    function initialize(address _owner, address _BGT, address _adapterFactory) external initializer {
+    function initialize(address _owner, address _BGT) external initializer {
         BGT = _BGT;
-        adapterFactory = _adapterFactory;
         __Ownable_init(_owner);
     }
     /*###############################################################
@@ -69,13 +66,13 @@ contract HoneyQueen is UUPSUpgradeable, OwnableUpgradeable {
                             ADAPTERS MANAGEMENT
     ###############################################################*/
     /**
-     * @notice          Adds a new adapter implementation for a protocol
+     * @notice          Adds a new adapter beacon for a protocol
      * @param protocol  The protocol name
-     * @param adapter   The adapter implementation address
+     * @param adapterBeacon   The adapter beacon address
      */
-    function setAdapterForProtocol(string calldata protocol, address adapter) external onlyOwner {
-        adapterOfProtocol[protocol] = adapter;
-        protocolOfAdapter[adapter] = protocol;
+    function setAdapterBeaconForProtocol(string calldata protocol, address adapterBeacon) external onlyOwner {
+        adapterBeaconOfProtocol[protocol] = adapterBeacon;
+        protocolOfAdapterBeacon[adapterBeacon] = protocol;
     }
     /**
      * @notice          Approves or revokes a vault for a protocol
@@ -97,18 +94,6 @@ contract HoneyQueen is UUPSUpgradeable, OwnableUpgradeable {
             delete tokenOfVault[vault];
         }
     }
-
-    function setUpgradeOfAdapter(address fromLogic, address toLogic) external onlyOwner {
-        upgradeOfAdapter[fromLogic] = toLogic;
-
-        // update the mappings
-        string memory protocol = protocolOfAdapter[fromLogic];
-        protocolOfAdapter[toLogic] = protocol;
-        adapterOfProtocol[protocol] = toLogic;
-
-        emit HoneyQueen__AdapterUpgraded(protocol, fromLogic, toLogic);
-    }
-
     /*###############################################################
                             LOCKERS MANAGEMENT
     ###############################################################*/
@@ -125,10 +110,6 @@ contract HoneyQueen is UUPSUpgradeable, OwnableUpgradeable {
 
     function setIsRewardToken(address token, bool _isRewardToken) external onlyOwner {
         isRewardToken[token] = _isRewardToken;
-    }
-
-    function setAdapterFactory(address _adapterFactory) external onlyOwner {
-        adapterFactory = _adapterFactory;
     }
 
     function setBeekeeper(address _beekeeper) external onlyOwner {
@@ -150,13 +131,13 @@ contract HoneyQueen is UUPSUpgradeable, OwnableUpgradeable {
 
     function getAdapterParams(address vault) public view returns (address, address) {
         string memory protocol = protocolOfVault[vault];
-        address logic = adapterOfProtocol[protocol];
+        address adapterBeacon = adapterBeaconOfProtocol[protocol];
         address token = tokenOfVault[vault];
-        return (logic, token);
+        return (adapterBeacon, token);
     }
 
-    function isVaultValidForAdapter(address adapter, address vault) public view returns (bool) {
-        return adapterOfProtocol[protocolOfVault[vault]] == adapter;
+    function isVaultValidForAdapterBeacon(address adapterBeacon, address vault) public view returns (bool) {
+        return adapterBeaconOfProtocol[protocolOfVault[vault]] == adapterBeacon;
     }
 
     function version() external pure returns (string memory) {

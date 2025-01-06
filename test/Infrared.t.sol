@@ -5,6 +5,7 @@ import {ERC20} from "solady/tokens/ERC20.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {console2} from "forge-std/console2.sol";
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
@@ -34,11 +35,12 @@ contract BGTStationTest is BaseTest {
         super.setUp();
 
         // Deploy adapter implementation that will be cloned
-        adapter = new InfraredAdapter();
+        address adapterLogic = address(new InfraredAdapter());
+        address adapterBeacon = address(new UpgradeableBeacon(adapterLogic, THJ));
 
         vm.startPrank(THJ);
 
-        queen.setAdapterForProtocol("INFRARED", address(adapter));
+        queen.setAdapterBeaconForProtocol("INFRARED", address(adapterBeacon));
         queen.setVaultForProtocol("INFRARED", GAUGE, address(LP_TOKEN), true);
         locker.registerAdapter("INFRARED");
 

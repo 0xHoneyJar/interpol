@@ -59,11 +59,13 @@ contract KodiakAdapterOld is BaseVaultAdapter {
     ###############################################################*/
     function initialize(
         address _locker,
-        address _honeyQueen
+        address _honeyQueen,
+        address _adapterBeacon
     ) external override {
         if (locker != address(0)) revert BaseVaultAdapter__AlreadyInitialized();
         locker = _locker;
         honeyQueen = _honeyQueen;
+        adapterBeacon = _adapterBeacon;
     }
     /*###############################################################
                             EXTERNAL

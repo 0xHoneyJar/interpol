@@ -4,7 +4,6 @@ pragma solidity ^0.8.23;
 import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
-import {AdapterFactory} from "../src/AdapterFactory.sol";
 import {BGTStationAdapter} from "../src/adapters/BGTStationAdapter.sol";
 import {InfraredAdapter} from "../src/adapters/InfraredAdapter.sol";
 import {KodiakAdapter} from "../src/adapters/KodiakAdapter.sol";
@@ -28,19 +27,19 @@ contract AdaptersDeploy is Script {
 
         // ---- BGTStation ----
         BGTStationAdapter bgtsAdapter = new BGTStationAdapter();
-        queen.setAdapterForProtocol("BGTSTATION", address(bgtsAdapter));
+        queen.setAdapterBeaconForProtocol("BGTSTATION", address(bgtsAdapter));
 
         // ---- Infared ----
         InfraredAdapter infraredAdapter = new InfraredAdapter();
-        queen.setAdapterForProtocol("INFRARED", address(infraredAdapter));
+        queen.setAdapterBeaconForProtocol("INFRARED", address(infraredAdapter));
 
         // ---- Kodiak ----
         KodiakAdapter kodiakAdapter = new KodiakAdapter();
-        queen.setAdapterForProtocol("KODIAK", address(kodiakAdapter));
+        queen.setAdapterBeaconForProtocol("KODIAK", address(kodiakAdapter));
 
         // ---- Beradrome ----
         BeradromeAdapter beradromeAdapter = new BeradromeAdapter();
-        queen.setAdapterForProtocol("BERADROME", address(beradromeAdapter));
+        queen.setAdapterBeaconForProtocol("BERADROME", address(beradromeAdapter));
 
         vm.stopBroadcast();
 

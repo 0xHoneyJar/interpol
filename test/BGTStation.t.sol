@@ -5,6 +5,7 @@ import {ERC20} from "solady/tokens/ERC20.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {console2} from "forge-std/console2.sol";
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
@@ -36,11 +37,12 @@ contract BGTStationTest is BaseTest {
         super.setUp();
 
         // Deploy adapter implementation that will be cloned
-        adapter = new BGTStationAdapter();
+        address adapterLogic = address(new BGTStationAdapter());
+        address adapterBeacon = address(new UpgradeableBeacon(adapterLogic, THJ));
 
         vm.startPrank(THJ);
 
-        queen.setAdapterForProtocol("BGTSTATION", address(adapter));
+        queen.setAdapterBeaconForProtocol("BGTSTATION", address(adapterBeacon));
         queen.setVaultForProtocol("BGTSTATION", GAUGE, address(LP_TOKEN), true);
         locker.registerAdapter("BGTSTATION");
 
@@ -51,6 +53,8 @@ contract BGTStationTest is BaseTest {
         vm.stopPrank();
 
         vm.label(address(lockerAdapter), "BGTStationAdapter");
+        vm.label(address(adapterBeacon), "BGTStationBeacon");
+        vm.label(address(adapterLogic), "BGTStationLogic");
         vm.label(address(GAUGE), "LBGT-WBERA Gauge");
         vm.label(address(LP_TOKEN), "LBGT-WBERA LP Token");
     }

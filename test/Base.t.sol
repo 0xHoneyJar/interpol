@@ -10,7 +10,6 @@ import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {LockerFactory} from "../src/LockerFactory.sol";
 import {HoneyQueen} from "../src/HoneyQueen.sol";
 import {Beekeeper} from "../src/Beekeeper.sol";
-import {AdapterFactory} from "../src/AdapterFactory.sol";
 import {TokenReceiver} from "../src/utils/TokenReceiver.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
 
@@ -32,7 +31,6 @@ abstract contract BaseTest is Test, TokenReceiver {
     ###############################################################*/
     HoneyLocker     public locker;
     HoneyQueen      public queen;
-    AdapterFactory  public adapterFactory;
     Beekeeper       public beekeeper;
     LockerFactory   public lockerFactory;
 
@@ -50,11 +48,10 @@ abstract contract BaseTest is Test, TokenReceiver {
         HoneyLocker lockerImplementation = new HoneyLocker();
         address queenImplementation = address(new HoneyQueen());
 
-        bytes memory queenInitData = abi.encodeWithSelector(HoneyQueen.initialize.selector, THJ, address(BGT), address(0));
+        bytes memory queenInitData = abi.encodeWithSelector(HoneyQueen.initialize.selector, THJ, address(BGT));
 
         queen = HoneyQueen(address(new ERC1967Proxy(queenImplementation, queenInitData)));
         beekeeper = new Beekeeper(THJ, THJTreasury);
-        adapterFactory = new AdapterFactory(address(queen));
         lockerFactory = new LockerFactory(address(queen), THJ);
 
         lockerFactory.setLockerImplementation(address(lockerImplementation));
@@ -63,7 +60,6 @@ abstract contract BaseTest is Test, TokenReceiver {
 
         locker.setOperator(operator);
 
-        queen.setAdapterFactory(address(adapterFactory));
         queen.setBeekeeper(address(beekeeper));
         queen.setProtocolFees(200);
 
@@ -73,7 +69,6 @@ abstract contract BaseTest is Test, TokenReceiver {
 
         // Label addresses for better trace output
         vm.label(address(queen), "HoneyQueen");
-        vm.label(address(adapterFactory), "AdapterFactory");
         vm.label(address(locker), "HoneyLocker");
         vm.label(address(beekeeper), "Beekeeper");
         vm.label(THJ, "THJ");
