@@ -171,12 +171,13 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
         emit HoneyLocker__Unstaked(vault, token, unstaked);
     }
 
-    function claim(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator {
+    function claim(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator returns (address[] memory, uint256[] memory) {
         BVA adapter = _getAdapter(vault);
         (address[] memory rewardTokens, uint256[] memory earned) = adapter.claim(vault);
         for (uint256 i; i < rewardTokens.length; i++) {
             emit HoneyLocker__Claimed(vault, rewardTokens[i], earned[i]);
         }
+        return (rewardTokens, earned);
     }
     
     function wildcard(address vault, uint8 func, bytes calldata args) external onlyValidAdapter(vault) onlyOwnerOrOperator {
@@ -193,10 +194,11 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
         locker HAS to be the operator of the adapter.
 
     */
-    function claimBGT(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator {
+    function claimBGT(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator returns (uint256) {
         BVA adapter = _getAdapter(vault);
         uint256 reward = IBGTStationGauge(vault).getReward(address(adapter));
         emit HoneyLocker__Claimed(vault, honeyQueen.BGT(), reward);
+        return reward;
     }
 
     function burnBGTForBERA(uint256 _amount) external onlyOwnerOrOperator {
