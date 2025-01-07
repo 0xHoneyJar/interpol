@@ -57,8 +57,8 @@ contract KodiakAdapter is BaseVaultAdapter {
                             STORAGE
     ###############################################################*/
     mapping(bytes32 kekId => uint256 amount) amounts;
-
     uint256 public lockTime;
+    uint256[48] __gap_;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -71,10 +71,12 @@ contract KodiakAdapter is BaseVaultAdapter {
     ###############################################################*/
     function initialize(
         address _locker,
-        address _honeyQueen
+        address _honeyQueen,
+        address _adapterBeacon
     ) external override initializer {
         locker = _locker;
         honeyQueen = _honeyQueen;
+        adapterBeacon = _adapterBeacon;
     }
     /*###############################################################
                             INTERNAL

@@ -5,6 +5,7 @@ import {ERC20} from "solady/tokens/ERC20.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {console2} from "forge-std/console2.sol";
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
@@ -20,10 +21,10 @@ contract BGTStationTest is BaseTest {
     BGTStationAdapter   public adapter;
     BVA                 public lockerAdapter;   // adapter for BGT Station used by locker
 
-    // LBGT-WBERA gauge
-    address     public constant GAUGE       = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
-    // LBGT-WBERA LP token
-    ERC20       public constant LP_TOKEN    = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
+    // BERA-HONEY gauge
+    address     public constant GAUGE       = 0x0cc03066a3a06F3AC68D3A0D36610F52f7C20877;
+    // BERA-HONEY LP token
+    ERC20       public constant LP_TOKEN    = ERC20(0x3aD1699779eF2c5a4600e649484402DFBd3c503C);
     /*###############################################################
                             SETUP
     ###############################################################*/
@@ -31,16 +32,17 @@ contract BGTStationTest is BaseTest {
         /*
             Choosing this block number because the vault LBGT-WBERA is active
         */
-        vm.createSelectFork(RPC_URL, uint256(7925685));
+        vm.createSelectFork(RPC_URL_ALT);
 
         super.setUp();
 
         // Deploy adapter implementation that will be cloned
-        adapter = new BGTStationAdapter();
+        address adapterLogic = address(new BGTStationAdapter());
+        address adapterBeacon = address(new UpgradeableBeacon(adapterLogic, THJ));
 
         vm.startPrank(THJ);
 
-        queen.setAdapterForProtocol("BGTSTATION", address(adapter));
+        queen.setAdapterBeaconForProtocol("BGTSTATION", address(adapterBeacon));
         queen.setVaultForProtocol("BGTSTATION", GAUGE, address(LP_TOKEN), true);
         locker.registerAdapter("BGTSTATION");
 
@@ -51,8 +53,10 @@ contract BGTStationTest is BaseTest {
         vm.stopPrank();
 
         vm.label(address(lockerAdapter), "BGTStationAdapter");
-        vm.label(address(GAUGE), "LBGT-WBERA Gauge");
-        vm.label(address(LP_TOKEN), "LBGT-WBERA LP Token");
+        vm.label(address(adapterBeacon), "BGTStationBeacon");
+        vm.label(address(adapterLogic), "BGTStationLogic");
+        vm.label(address(GAUGE), "BERA-HONEY Gauge");
+        vm.label(address(LP_TOKEN), "BERA-HONEY LP Token");
     }
 
     /*###############################################################
@@ -224,7 +228,7 @@ contract BGTStationTest is BaseTest {
 
         vm.expectEmit(true, true, true, true, address(locker));
         emit HoneyLocker.HoneyLocker__Claimed(address(GAUGE), address(BGT), earned);
-        locker.claimBGT(address(GAUGE));
+        locker.claim(address(GAUGE));
 
         assertEq(BGT.unboostedBalanceOf(address(locker)), earned);
         assertEq(BGT.unboostedBalanceOf(address(lockerAdapter)), 0);

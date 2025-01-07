@@ -14,18 +14,18 @@ interface IBGTStationGauge {
 
     function stake(uint256 amount) external;
     function withdraw(uint256 amount) external;
-    function getReward(address account) external returns (uint256);
+    function getReward(address account, address recipient) external returns (uint256);
     function setOperator(address operator) external;
     function earned(address account) external view returns (uint256);
-    function STAKE_TOKEN() external view returns (address);
-    function REWARD_TOKEN() external view returns (address);
+    function stakeToken() external view returns (address);
+    function rewardToken() external view returns (address);
 }
 
 contract BGTStationAdapter is BaseVaultAdapter {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    mapping(address vault => bool isOperator) internal _hasSetOperator;
+    uint256[50] __gap_;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -38,23 +38,33 @@ contract BGTStationAdapter is BaseVaultAdapter {
     ###############################################################*/
     function initialize(
         address _locker,
-        address _honeyQueen
+        address _honeyQueen,
+        address _adapterBeacon
     ) external override initializer {
         locker = _locker;
         honeyQueen = _honeyQueen;
+        adapterBeacon = _adapterBeacon;
+    }
+    /*###############################################################
+                            INTERNAL
+    ###############################################################*/
+    function _earned(address vault) internal view returns (address[] memory, uint256[] memory) {
+        address rewardToken = IBGTStationGauge(vault).rewardToken();
+        uint256 earnedAmount = IBGTStationGauge(vault).earned(address(this));
+
+        address[] memory rewardTokens = new address[](1);
+        uint256[] memory amounts = new uint256[](1);
+        
+        rewardTokens[0] = rewardToken;
+        amounts[0] = earnedAmount;
+        return (rewardTokens, amounts);
     }
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
     function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) returns (uint256) {
         IBGTStationGauge bgtStationGauge = IBGTStationGauge(vault);
-        address token = bgtStationGauge.STAKE_TOKEN();
-
-        // quick check if the operator is set
-        if (!_hasSetOperator[vault]) {
-            bgtStationGauge.setOperator(locker);
-            _hasSetOperator[vault] = true;
-        }
+        address token = bgtStationGauge.stakeToken();
 
         SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
         SafeERC20.forceApprove(IERC20(token), address(bgtStationGauge), amount);
@@ -64,19 +74,17 @@ contract BGTStationAdapter is BaseVaultAdapter {
 
     function unstake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) returns (uint256) {
         IBGTStationGauge bgtStationGauge = IBGTStationGauge(vault);
-        address token = bgtStationGauge.STAKE_TOKEN();
+        address token = bgtStationGauge.stakeToken();
 
         bgtStationGauge.withdraw(amount);
         SafeERC20.safeTransfer(IERC20(token), locker, amount);
         return amount;
     }
 
-    /*
-        Claiming is disabled because we are exclusively relying on the locker to claim rewards.
-        This is possible because we have set the locker as the operator of the gauge for this adapter.
-    */
     function claim(address vault) external override onlyLocker isVaultValid(vault) returns (address[] memory, uint256[] memory) {
-        revert BaseVaultAdapter__NotImplemented();
+        (address[] memory rewardTokens, uint256[] memory amounts) = _earned(vault);
+        IBGTStationGauge(vault).getReward(address(this), locker);
+        return (rewardTokens, amounts);
     }
 
     function wildcard(address vault, uint8 func, bytes calldata args) external override onlyLocker isVaultValid(vault) {
@@ -86,19 +94,11 @@ contract BGTStationAdapter is BaseVaultAdapter {
                             VIEW
     ###############################################################*/
     function stakingToken(address vault) external view override returns (address) {
-        return IBGTStationGauge(vault).STAKE_TOKEN();
+        return IBGTStationGauge(vault).stakeToken();
     }
 
     function earned(address vault) external view override returns (address[] memory, uint256[] memory) {
-        address rewardToken = IBGTStationGauge(vault).REWARD_TOKEN();
-        uint256 earnedAmount = IBGTStationGauge(vault).earned(address(this));
-
-        address[] memory rewardTokens = new address[](1);
-        uint256[] memory amounts = new uint256[](1);
-        
-        rewardTokens[0] = rewardToken;
-        amounts[0] = earnedAmount;
-        return (rewardTokens, amounts);
+        return _earned(vault);
     }
 
 

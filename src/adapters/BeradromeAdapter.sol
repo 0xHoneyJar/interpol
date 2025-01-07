@@ -23,6 +23,7 @@ contract BeradromeAdapter is BaseVaultAdapter {
     /*###############################################################
                             STORAGE
     ###############################################################*/
+    uint256[50] __gap_;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -35,10 +36,12 @@ contract BeradromeAdapter is BaseVaultAdapter {
     ###############################################################*/
     function initialize(
         address _locker,
-        address _honeyQueen
+        address _honeyQueen,
+        address _adapterBeacon
     ) external override initializer {
         locker = _locker;
         honeyQueen = _honeyQueen;
+        adapterBeacon = _adapterBeacon;
     }
     /*###############################################################
                             EXTERNAL

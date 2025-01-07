@@ -55,7 +55,7 @@ contract BoycoInterpolScript is Script {
 
         // Assume the deployer is the owner of HoneyQueen
         // if not, set the vault for the protocol elsewhere
-        queen.setVaultForProtocol("BGTSTATION", vault, IBGTStationGauge(BGT).STAKE_TOKEN(), true);
+        queen.setVaultForProtocol("BGTSTATION", vault, IBGTStationGauge(BGT).stakeToken(), true);
 
         HoneyLocker(payable(locker)).registerAdapter("BGTSTATION");
         HoneyLocker(payable(locker)).wildcard(vault, 0, "");

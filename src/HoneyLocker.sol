@@ -9,9 +9,8 @@ import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
-
+import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {BaseVaultAdapter as BVA} from "./adapters/BaseVaultAdapter.sol";
-import {AdapterFactory} from "./AdapterFactory.sol";
 import {IBGTStationGauge} from "./adapters/BGTStationAdapter.sol";
 import {IBGT} from "./utils/IBGT.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
@@ -67,7 +66,7 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
     address                                         public  treasury;            
     address                                         public  operator;
 
-    uint256[50] __gap;
+    uint256[41] __gap;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -109,29 +108,14 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
         BVA adapter = adapterOfProtocol[protocol];
         if (address(adapter) != address(0)) revert HoneyLocker__AdapterAlreadyRegistered();
 
-        address newAdapter = AdapterFactory(honeyQueen.adapterFactory()).createAdapter(address(this), protocol);
-        
+        address adapterBeacon = honeyQueen.adapterBeaconOfProtocol(protocol);
+        bytes memory data = abi.encodeWithSelector(BVA.initialize.selector, address(this), address(honeyQueen), adapterBeacon);
+        address newAdapter = address(new BeaconProxy(adapterBeacon, data));
+
         adapterOfProtocol[protocol] = BVA(newAdapter);
 
         emit HoneyLocker__AdapterRegistered(protocol, newAdapter);
     }
-
-    /**
-     * @notice              Upgrades an adapter implementation for a protocol to a new version
-     * @param protocol      The protocol name whose adapter should be upgraded
-     * @dev                 Only callable by owner
-     * @dev                 Will revert if upgrade is not authorized by HoneyQueen
-     * @dev                 The new implementation must be compatible with the old one
-     * @custom:emits        Adapter__Upgraded event from BaseVaultAdapter with old and new implementation addresses
-     */
-    function upgradeAdapter(string calldata protocol) external onlyOwner {
-        BVA adapter = adapterOfProtocol[protocol];
-        address authorizedLogic = HoneyQueen(honeyQueen).upgradeOfAdapter(adapter.implementation());
-        if(authorizedLogic == address(0)) revert HoneyLocker__NotAuthorizedUpgrade();
-        adapter.upgrade(authorizedLogic);
-        emit HoneyLocker__AdapterUpgraded(protocol, authorizedLogic);
-    }
-
     /*###############################################################
                             OWNER
     ###############################################################*/
@@ -187,12 +171,13 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
         emit HoneyLocker__Unstaked(vault, token, unstaked);
     }
 
-    function claim(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator {
+    function claim(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator returns (address[] memory, uint256[] memory) {
         BVA adapter = _getAdapter(vault);
         (address[] memory rewardTokens, uint256[] memory earned) = adapter.claim(vault);
         for (uint256 i; i < rewardTokens.length; i++) {
             emit HoneyLocker__Claimed(vault, rewardTokens[i], earned[i]);
         }
+        return (rewardTokens, earned);
     }
     
     function wildcard(address vault, uint8 func, bytes calldata args) external onlyValidAdapter(vault) onlyOwnerOrOperator {
@@ -203,37 +188,33 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
     /*###############################################################
                             BGT MANAGEMENT
     ###############################################################*/
-    /*
-        Claim directly the BGT rewards from the vault.
-        vault HAS to be a BG Station vault.
-        locker HAS to be the operator of the adapter.
-
-    */
-    function claimBGT(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator {
-        BVA adapter = _getAdapter(vault);
-        uint256 reward = IBGTStationGauge(vault).getReward(address(adapter));
-        emit HoneyLocker__Claimed(vault, honeyQueen.BGT(), reward);
-    }
-
     function burnBGTForBERA(uint256 _amount) external onlyOwnerOrOperator {
         IBGT(honeyQueen.BGT()).redeem(address(this), _amount);
         withdrawBERA(_amount);
     }
 
-    function delegateBGT(uint128 amount, address validator) external onlyOwnerOrOperator {
+    function queueBoost(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
         IBGT(honeyQueen.BGT()).queueBoost(validator, amount);
     }
 
-    function activateBoost(address validator) external onlyOwnerOrOperator {
-        IBGT(honeyQueen.BGT()).activateBoost(validator);
+    function activateBoost(bytes calldata validator) external onlyOwnerOrOperator {
+        require(IBGT(honeyQueen.BGT()).activateBoost(address(this), validator));
     }
 
-    function cancelQueuedBoost(uint128 amount, address validator) external onlyOwnerOrOperator {
+    function cancelQueuedBoost(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
         IBGT(honeyQueen.BGT()).cancelBoost(validator, amount);
     }
 
-    function dropBoost(uint128 amount, address validator) external onlyOwnerOrOperator {
-        IBGT(honeyQueen.BGT()).dropBoost(validator, amount);
+    function queueDropBoost(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGT(honeyQueen.BGT()).queueDropBoost(validator, amount);
+    }
+
+    function cancelDropBoost(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGT(honeyQueen.BGT()).cancelDropBoost(validator, amount);
+    }
+
+    function dropBoost(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        require(IBGT(honeyQueen.BGT()).dropBoost(address(this), validator));
     }
     /*###############################################################
                             LP MANAGEMENT

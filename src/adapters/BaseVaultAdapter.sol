@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 
 import {HoneyQueen} from "../HoneyQueen.sol";
 import {TokenReceiver} from "../utils/TokenReceiver.sol";
 
-abstract contract BaseVaultAdapter is UUPSUpgradeable, TokenReceiver {
+abstract contract BaseVaultAdapter is Initializable, TokenReceiver {
     /*###############################################################
                             ERRORS
     ###############################################################*/
@@ -27,8 +29,9 @@ abstract contract BaseVaultAdapter is UUPSUpgradeable, TokenReceiver {
     ###############################################################*/
     address     public              locker;
     address     internal            honeyQueen;
+    address     internal            adapterBeacon;
 
-    uint256[50] __gap;
+    uint256[47] __gap;
     /*###############################################################
                             MODIFIERS
     ###############################################################*/
@@ -37,13 +40,13 @@ abstract contract BaseVaultAdapter is UUPSUpgradeable, TokenReceiver {
         _;
     }
     modifier isVaultValid(address vault) {
-        if (!HoneyQueen(honeyQueen).isVaultValidForAdapter(ERC1967Utils.getImplementation(), vault)) revert BaseVaultAdapter__InvalidVault();
+        if (!HoneyQueen(honeyQueen).isVaultValidForAdapterBeacon(adapterBeacon, vault)) revert BaseVaultAdapter__InvalidVault();
         _;
     }
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
-    function initialize(address locker, address _honeyQueen) external virtual;
+    function initialize(address locker, address _honeyQueen, address _adapterBeacon) external virtual;
     function stake(address vault, uint256 amount) external virtual returns (uint256);
     function unstake(address vault, uint256 amount) external virtual returns (uint256);
     function claim(address vault) external virtual returns (address[] memory rewardTokens, uint256[] memory earned);
@@ -55,12 +58,6 @@ abstract contract BaseVaultAdapter is UUPSUpgradeable, TokenReceiver {
     /*###############################################################
                             PROXY LOGIC
     ###############################################################*/
-    function upgrade(address newImplementation) external onlyLocker {
-        address oldImplementation = ERC1967Utils.getImplementation();
-        upgradeToAndCall(newImplementation, "");
-        emit Adapter__Upgraded(oldImplementation, newImplementation);
-    }
-    function _authorizeUpgrade(address newImplementation) internal override onlyLocker {}
     /*###############################################################
                             VIEW/PURE
     ###############################################################*/
@@ -68,7 +65,7 @@ abstract contract BaseVaultAdapter is UUPSUpgradeable, TokenReceiver {
     function earned(address vault) external view virtual returns (address[] memory rewardTokens, uint256[] memory amounts);
     function version() external pure virtual returns (string memory);
     function implementation() external view returns (address) {
-        return ERC1967Utils.getImplementation();
+        return IBeacon(adapterBeacon).implementation();
     }
 }
 

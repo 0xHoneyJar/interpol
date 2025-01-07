@@ -20,51 +20,111 @@ contract BGTTest is BaseTest {
                             SETUP
     ###############################################################*/
     function setUp() public override {
-        vm.createSelectFork(RPC_URL, uint256(7925685));
+        vm.createSelectFork(RPC_URL_ALT);
         super.setUp();
+
+        vm.prank(THJ);
+        locker.setTreasury(treasury);
+
     }
 
     /*###############################################################
                             TESTS
     ###############################################################*/
 
-    function test_cancelQueuedBoost(uint128 amount, bool _useOperator) external prankAsTHJ(_useOperator) {
-        amount = uint128(StdUtils.bound(amount, 1, type(uint128).max));
-        StdCheats.deal(address(BGT), address(locker), uint256(amount));
+    function test_burnBGTForBERA(uint256 amount, bool _useOperator) external prankAsTHJ(_useOperator) {
+        amount = StdUtils.bound(amount, 1, type(uint32).max);
+        StdCheats.deal(address(BGT), address(locker), amount);
 
-        // test the delegate part
+        uint256 fees = queen.computeFees(amount);
+
         vm.expectEmit(true, true, false, true, address(BGT));
-        emit IBGT.QueueBoost(address(locker), THJ, amount);
-        locker.delegateBGT(amount, THJ);
+        emit IBGT.Redeem(address(locker), address(locker), amount);
+        locker.burnBGTForBERA(amount);
 
         assertEq(BGT.unboostedBalanceOf(address(locker)), 0);
-
-        // test cancel boost
-        vm.expectEmit(true, true, false, true, address(BGT));
-        emit IBGT.CancelBoost(address(locker), THJ, amount);
-        locker.cancelQueuedBoost(amount, THJ);
-
-        assertEq(BGT.unboostedBalanceOf(address(locker)), amount);
+        assertEq(treasury.balance, amount - fees);
     }
 
-    function test_dropBoost(uint128 amount, bool _useOperator) external prankAsTHJ(_useOperator) {
-        amount = uint128(StdUtils.bound(amount, 1, type(uint64).max));
+    function test_queueBoost(uint128 amount, bool _useOperator) external prankAsTHJ(_useOperator) {
+        amount = uint128(StdUtils.bound(amount, 1, type(uint32).max));
         StdCheats.deal(address(BGT), address(locker), uint256(amount));
 
-        // test the delegate part
         vm.expectEmit(true, true, false, true, address(BGT));
-        emit IBGT.QueueBoost(address(locker), THJ, amount);
-        locker.delegateBGT(amount, THJ);
+        emit IBGT.QueueBoost(address(locker), validator, amount);
+        locker.queueBoost(amount, validator);
+
+        assertEq(BGT.unboostedBalanceOf(address(locker)), 0);
+        assertEq(BGT.queuedBoost(address(locker)), amount);
+    }
+
+    function test_cancelBoost(uint128 amount, bool _useOperator) external prankAsTHJ(_useOperator) {
+        amount = uint128(StdUtils.bound(amount, 1, type(uint32).max));
+        StdCheats.deal(address(BGT), address(locker), uint256(amount));
+
+        locker.queueBoost(amount, validator);
+
+        vm.expectEmit(true, true, false, true, address(BGT));
+        emit IBGT.CancelBoost(address(locker), validator, amount);
+        locker.cancelQueuedBoost(amount, validator);
+    }
+
+    function test_activateBoost(uint128 amount, bool _useOperator) external prankAsTHJ(_useOperator) {
+        amount = uint128(StdUtils.bound(amount, 1, type(uint32).max));
+        StdCheats.deal(address(BGT), address(locker), uint256(amount));
+
+        locker.queueBoost(amount, validator);
 
         vm.roll(block.number + 10001);
 
         vm.expectEmit(true, true, false, true, address(BGT));
-        emit IBGT.ActivateBoost(address(locker), THJ, amount);
-        locker.activateBoost(THJ);
+        emit IBGT.ActivateBoost(address(locker), address(locker), validator, amount);
+        locker.activateBoost(validator);
+    }
+
+    function test_queueDropBoost(uint128 amount, bool _useOperator) external prankAsTHJ(_useOperator) {
+        amount = uint128(StdUtils.bound(amount, 1, type(uint32).max));
+        StdCheats.deal(address(BGT), address(locker), uint256(amount));
+
+        locker.queueBoost(amount, validator);
+        vm.roll(block.number + 10001);
+        locker.activateBoost(validator);
 
         vm.expectEmit(true, true, false, true, address(BGT));
-        emit IBGT.DropBoost(address(locker), THJ, amount);
-        locker.dropBoost(amount, THJ);
+        emit IBGT.QueueDropBoost(address(locker), validator, amount);
+        locker.queueDropBoost(amount, validator);
+    }
+
+    function test_cancelDropBoost(uint128 amount, bool _useOperator) external prankAsTHJ(_useOperator) {
+        amount = uint128(StdUtils.bound(amount, 1, type(uint32).max));
+        StdCheats.deal(address(BGT), address(locker), uint256(amount));
+
+        locker.queueBoost(amount, validator);
+        vm.roll(block.number + 10001);
+        locker.activateBoost(validator);
+        locker.queueDropBoost(amount, validator);
+
+        vm.expectEmit(true, true, false, true, address(BGT));
+        emit IBGT.CancelDropBoost(address(locker), validator, amount);
+        locker.cancelDropBoost(amount, validator);
+    }
+
+    function test_dropBoost(uint128 amount, bool _useOperator) external prankAsTHJ(_useOperator) {
+        amount = uint128(StdUtils.bound(amount, 1, type(uint32).max));
+        StdCheats.deal(address(BGT), address(locker), uint256(amount));
+
+        locker.queueBoost(amount, validator);
+
+        vm.roll(block.number + 10001);
+
+        locker.activateBoost(validator);
+        locker.queueDropBoost(amount, validator);
+
+        vm.roll(block.number + 10001);
+
+        vm.expectEmit(true, true, false, true, address(BGT));
+        emit IBGT.DropBoost(address(locker), validator, amount);
+        locker.dropBoost(amount, validator);
 
         assertEq(BGT.unboostedBalanceOf(address(locker)), amount);
     }

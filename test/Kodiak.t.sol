@@ -6,7 +6,7 @@ import {ERC721} from "solady/tokens/ERC721.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {console2} from "forge-std/console2.sol";
-
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {KodiakAdapter, IKodiakFarm, XKDK} from "../src/adapters/KodiakAdapter.sol";
@@ -52,11 +52,12 @@ contract KodiakTest is BaseTest {
         super.setUp();
 
         // Deploy adapter implementation that will be cloned
-        adapter = new KodiakAdapter();
+        address adapterLogic = address(new KodiakAdapter());
+        address adapterBeacon = address(new UpgradeableBeacon(adapterLogic, THJ));
 
         vm.startPrank(THJ);
 
-        queen.setAdapterForProtocol("KODIAK", address(adapter));
+        queen.setAdapterBeaconForProtocol("KODIAK", address(adapterBeacon));
         queen.setVaultForProtocol("KODIAK", address(GAUGE), address(LP_TOKEN), true);
         locker.registerAdapter("KODIAK");
 

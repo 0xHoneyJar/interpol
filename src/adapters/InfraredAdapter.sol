@@ -29,6 +29,7 @@ contract InfraredAdapter is BaseVaultAdapter {
     /*###############################################################
                             STORAGE
     ###############################################################*/
+    uint256[50] __gap_;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -41,10 +42,12 @@ contract InfraredAdapter is BaseVaultAdapter {
     ###############################################################*/
     function initialize(
         address _locker,
-        address _honeyQueen
+        address _honeyQueen,
+        address _adapterBeacon
     ) external override initializer {
         locker = _locker;
         honeyQueen = _honeyQueen;
+        adapterBeacon = _adapterBeacon;
     }
     /*###############################################################
                             INTERNAL
@@ -91,7 +94,8 @@ contract InfraredAdapter is BaseVaultAdapter {
     function claim(address vault) external override onlyLocker isVaultValid(vault) returns (address[] memory, uint256[] memory) {
         IInfraredVault infraredVault = IInfraredVault(vault);
 
-        (address[] memory rewardTokens, uint256[] memory amounts) = _earned(vault);
+        (address[] memory rewardTokens,) = _earned(vault);
+        uint256[] memory amounts = new uint256[](rewardTokens.length);
         infraredVault.getReward();
         for (uint256 i; i < rewardTokens.length; i++) {
             amounts[i] = IERC20(rewardTokens[i]).balanceOf(address(this));

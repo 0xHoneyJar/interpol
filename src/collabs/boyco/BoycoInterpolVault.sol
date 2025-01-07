@@ -32,7 +32,7 @@ contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgrade
     address     public        asset;
     address     public        henlo;
 
-    uint256[50] __gap;
+    uint256[43] __gap;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -53,7 +53,7 @@ contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgrade
         __Ownable_init(_owner);
         // this vault should be the owner of the locker
         locker = HoneyLocker(payable(_locker));
-        LPToken = IBGTStationGauge(_vault).STAKE_TOKEN();
+        LPToken = IBGTStationGauge(_vault).stakeToken();
         vault = _vault;
         asset = _asset;
     }
