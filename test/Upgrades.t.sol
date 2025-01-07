@@ -7,6 +7,8 @@ import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {console2} from "forge-std/console2.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 
 import {BaseTest} from "./Base.t.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
@@ -43,7 +45,8 @@ contract UpgradesTest is BaseTest {
         oldAdapter = new KodiakAdapterOld();
         newAdapter = new KodiakAdapter();
 
-        adapterBeacon = new UpgradeableBeacon(address(oldAdapter), THJ);
+        //adapterBeacon = new UpgradeableBeacon(address(oldAdapter), THJ);
+        adapterBeacon = UpgradeableBeacon(Upgrades.deployBeacon("KodiakAdapterOld.sol:KodiakAdapterOld", THJ));
 
         vm.startPrank(THJ);
 
@@ -93,6 +96,31 @@ contract UpgradesTest is BaseTest {
         assertEq(LP_TOKEN.balanceOf(address(locker)), amountToDeposit);
     }
 
+    function test_upgradeThroughUpgradesPlugin() public prankAsTHJ(false) {
+        uint256 amountToDeposit = 1e20;
+        
+        StdCheats.deal(address(LP_TOKEN), address(locker), amountToDeposit);
+
+        bytes32 expectedKekId = keccak256(
+            abi.encodePacked(
+                address(lockerAdapter), block.timestamp, amountToDeposit, GAUGE.lockedLiquidityOf(address(lockerAdapter))
+            )
+        );
+        locker.stake(address(GAUGE), amountToDeposit);
+
+        // upgrade beacon impl.
+        //adapterBeacon.upgradeTo(address(newAdapter));
+        Options memory options;
+        options.referenceContract = "KodiakAdapterOld.sol:KodiakAdapterOld";
+        Upgrades.upgradeBeacon(address(adapterBeacon), "KodiakAdapter.sol:KodiakAdapter", options);
+
+        vm.warp(block.timestamp + 30 days);
+        GAUGE.sync();
+
+        // now we unstake and see if we get our stake back
+        locker.unstake(address(GAUGE), uint256(expectedKekId));
+        assertEq(LP_TOKEN.balanceOf(address(locker)), amountToDeposit);
+    }
     /*###############################################################
         We test that the upgrade allows us to add functionalities for the
         adapter while preserving the state of the adapter wrt Kodiak vault

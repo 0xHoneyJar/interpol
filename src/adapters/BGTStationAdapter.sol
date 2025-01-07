@@ -26,6 +26,7 @@ contract BGTStationAdapter is BaseVaultAdapter {
                             STORAGE
     ###############################################################*/
     mapping(address vault => bool isOperator) internal _hasSetOperator;
+    uint256[49] __gap_;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/

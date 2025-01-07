@@ -58,6 +58,7 @@ contract KodiakAdapter is BaseVaultAdapter {
     ###############################################################*/
     mapping(bytes32 kekId => uint256 amount) amounts;
     uint256 public lockTime;
+    uint256[48] __gap_;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/

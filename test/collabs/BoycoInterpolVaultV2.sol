@@ -35,7 +35,7 @@ contract BoycoInterpolVaultV2 is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgra
     mapping(address => uint256) public something;
     uint256 public something2;
 
-    uint256[48] __gap;
+    uint256[41] __gap;
     /*###############################################################
                             INITIALIZER
     ###############################################################*/

@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {DynamicArrayLib as DAL} from "solady/utils/DynamicArrayLib.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import {BaseVaultAdapter} from "../../src/adapters/BaseVaultAdapter.sol";
 
@@ -47,13 +48,14 @@ interface XKDK {
     function balanceOf(address account) external view returns (uint256);
 }
 
-contract KodiakAdapterOld is BaseVaultAdapter {
+contract KodiakAdapterOld is Initializable, BaseVaultAdapter {
     using DAL for address[];
     using DAL for uint256[];
     using DAL for DAL.DynamicArray;
     /*###############################################################
                             STORAGE
     ###############################################################*/
+    uint256[50] __gap_;
     /*###############################################################
                             INITIALIZATION
     ###############################################################*/
@@ -61,8 +63,7 @@ contract KodiakAdapterOld is BaseVaultAdapter {
         address _locker,
         address _honeyQueen,
         address _adapterBeacon
-    ) external override {
-        if (locker != address(0)) revert BaseVaultAdapter__AlreadyInitialized();
+    ) external override initializer {
         locker = _locker;
         honeyQueen = _honeyQueen;
         adapterBeacon = _adapterBeacon;
