@@ -188,38 +188,33 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
     /*###############################################################
                             BGT MANAGEMENT
     ###############################################################*/
-    /*
-        Claim directly the BGT rewards from the vault.
-        vault HAS to be a BG Station vault.
-        locker HAS to be the operator of the adapter.
-
-    */
-    function claimBGT(address vault) external onlyValidAdapter(vault) onlyOwnerOrOperator returns (uint256) {
-        BVA adapter = _getAdapter(vault);
-        uint256 reward = IBGTStationGauge(vault).getReward(address(adapter));
-        emit HoneyLocker__Claimed(vault, honeyQueen.BGT(), reward);
-        return reward;
-    }
-
     function burnBGTForBERA(uint256 _amount) external onlyOwnerOrOperator {
         IBGT(honeyQueen.BGT()).redeem(address(this), _amount);
         withdrawBERA(_amount);
     }
 
-    function delegateBGT(uint128 amount, address validator) external onlyOwnerOrOperator {
+    function queueBoost(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
         IBGT(honeyQueen.BGT()).queueBoost(validator, amount);
     }
 
-    function activateBoost(address validator) external onlyOwnerOrOperator {
-        IBGT(honeyQueen.BGT()).activateBoost(validator);
+    function activateBoost(bytes calldata validator) external onlyOwnerOrOperator {
+        require(IBGT(honeyQueen.BGT()).activateBoost(address(this), validator));
     }
 
-    function cancelQueuedBoost(uint128 amount, address validator) external onlyOwnerOrOperator {
+    function cancelQueuedBoost(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
         IBGT(honeyQueen.BGT()).cancelBoost(validator, amount);
     }
 
-    function dropBoost(uint128 amount, address validator) external onlyOwnerOrOperator {
-        IBGT(honeyQueen.BGT()).dropBoost(validator, amount);
+    function queueDropBoost(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGT(honeyQueen.BGT()).queueDropBoost(validator, amount);
+    }
+
+    function cancelDropBoost(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGT(honeyQueen.BGT()).cancelDropBoost(validator, amount);
+    }
+
+    function dropBoost(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        require(IBGT(honeyQueen.BGT()).dropBoost(address(this), validator));
     }
     /*###############################################################
                             LP MANAGEMENT

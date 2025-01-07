@@ -49,7 +49,7 @@ contract BoycoInterpolVaultV2 is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgra
         __Ownable_init(_owner);
         // this vault should be the owner of the locker
         locker = HoneyLocker(payable(_locker));
-        LPToken = IBGTStationGauge(_vault).STAKE_TOKEN();
+        LPToken = IBGTStationGauge(_vault).stakeToken();
         vault = _vault;
         asset = _asset;
     }

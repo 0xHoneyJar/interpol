@@ -22,20 +22,20 @@ contract MultiAdaptersTest is BaseTest {
     BVA                 public lockerAdapter;
 
 
-    // LBGT-WBERA gauge
-    address public constant     GAUGE1          = 0x7a6b92457e7D7e7a5C1A2245488b850B7Da8E01D;
-    // LBGT-WBERA LP token
-    ERC20   public constant     LP_TOKEN1       = ERC20(0x6AcBBedEcD914dE8295428B4Ee51626a1908bB12);
+    // BERA-HONEY gauge
+    address     public constant GAUGE1          = 0x0cc03066a3a06F3AC68D3A0D36610F52f7C20877;
+    // BERA-HONEY LP token
+    ERC20       public constant LP_TOKEN1       = ERC20(0x3aD1699779eF2c5a4600e649484402DFBd3c503C);
 
-    // YEET-WBERA gauge
-    address public constant     GAUGE2          = 0x175e2429bCb92643255abCbCDF47Fff63F7990CC;
-    // YEET-WBERA LP token
-    ERC20   public constant     LP_TOKEN2       = ERC20(0xE5A2ab5D2fb268E5fF43A5564e44c3309609aFF9);
+    // BERA-WBTC gauge
+    address public constant     GAUGE2          = 0x67993Fc90A8EC45625447Ad2ff454cfD3fbE9d79;
+    // BERA-WBTC LP token
+    ERC20   public constant     LP_TOKEN2       = ERC20(0x4A782a6bA2e47367A4b2A1551815c27dc15F4795);
     /*###############################################################
                             SETUP
     ###############################################################*/
     function setUp() public override {
-        vm.createSelectFork(RPC_URL, uint256(7925685));
+        vm.createSelectFork(RPC_URL_ALT);
 
         super.setUp();
 
