@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {console2} from "forge-std/console2.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {LockerFactory} from "../src/LockerFactory.sol";
@@ -48,6 +49,8 @@ abstract contract BaseTest is Test, TokenReceiver {
         vm.startPrank(THJ);
 
         HoneyLocker lockerImplementation = new HoneyLocker();
+        address lockerBeacon = address(new UpgradeableBeacon(address(lockerImplementation), THJ));
+
         address queenImplementation = address(new HoneyQueen());
 
         bytes memory queenInitData = abi.encodeWithSelector(HoneyQueen.initialize.selector, THJ, address(BGT));
@@ -56,7 +59,7 @@ abstract contract BaseTest is Test, TokenReceiver {
         beekeeper = new Beekeeper(THJ, THJTreasury);
         lockerFactory = new LockerFactory(address(queen), THJ);
 
-        lockerFactory.setLockerImplementation(address(lockerImplementation));
+        lockerFactory.setBeacon(lockerBeacon);
 
         locker = HoneyLocker(lockerFactory.createLocker(THJ, referrer, false));
 

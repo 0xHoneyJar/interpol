@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 
 import {HoneyLocker} from "./HoneyLocker.sol";
@@ -15,7 +15,7 @@ contract LockerFactory is Ownable {
                             STORAGE
     ###############################################################*/
     address internal immutable  HONEY_QUEEN;
-    address internal            lockerImplementation;
+    address internal            beacon;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -26,8 +26,8 @@ contract LockerFactory is Ownable {
     /*###############################################################
                             OWNER
     ###############################################################*/
-    function setLockerImplementation(address _lockerImplementation) external onlyOwner {
-        lockerImplementation = _lockerImplementation;
+    function setBeacon(address _beacon) external onlyOwner {
+        beacon = _beacon;
     }
     /*###############################################################
                             EXTERNAL
@@ -45,7 +45,8 @@ contract LockerFactory is Ownable {
         bool _unlocked
     ) external returns (address payable) {
         bytes memory data = abi.encodeWithSelector(HoneyLocker.initialize.selector, HONEY_QUEEN, _owner, _referral, _unlocked);
-        address locker = address(new ERC1967Proxy(lockerImplementation, data));
+        address locker = address(new BeaconProxy(beacon, data));
+
         emit LockerFactory__NewLocker(_owner, locker, _referral, _unlocked);
         return payable(locker);
     }
