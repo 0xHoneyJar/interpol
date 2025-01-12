@@ -150,7 +150,7 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
         BVA adapter = _getAdapter(vault);
         address token = adapter.stakingToken(vault);
 
-        ERC721(token).approve(address(adapter), amount);
+        STL.safeApprove(token, address(adapter), amount);
         uint256 staked = adapter.stake(vault, amount);
 
         totalLPStaked[token] += staked;
