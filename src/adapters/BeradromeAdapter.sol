@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 
 import {IRelaxedERC20} from "../utils/RelaxedERC20.sol";
 import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
@@ -49,8 +50,8 @@ contract BeradromeAdapter is BaseVaultAdapter {
     function stake(address vault, uint256 amount) external override onlyLocker isVaultValid(vault) returns (uint256) {
         IBeradromePlugin beradromePlugin = IBeradromePlugin(vault);
         address token = beradromePlugin.getToken();
-        SafeERC20.safeTransferFrom(IERC20(token), locker, address(this), amount);
-        SafeERC20.forceApprove(IERC20(token), address(beradromePlugin), amount);
+        STL.safeTransferFrom(token, locker, address(this), amount);
+        STL.safeApprove(token, address(beradromePlugin), amount);
         beradromePlugin.depositFor(address(this), amount);
         return amount;
     }
@@ -59,7 +60,7 @@ contract BeradromeAdapter is BaseVaultAdapter {
         IBeradromePlugin beradromePlugin = IBeradromePlugin(vault);
         address token = beradromePlugin.getToken();
         beradromePlugin.withdrawTo(address(this), amount);
-        SafeERC20.safeTransfer(IERC20(token), locker, amount);
+        STL.safeTransfer(token, locker, amount);
         return amount;
     }
 

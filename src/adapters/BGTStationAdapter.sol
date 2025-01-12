@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {ERC721} from "solady/tokens/ERC721.sol";
-import {ERC20} from "solady/tokens/ERC20.sol";
-import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 
 import {IRelaxedERC20} from "../utils/RelaxedERC20.sol";
 import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
@@ -66,8 +65,8 @@ contract BGTStationAdapter is BaseVaultAdapter {
         IBGTStationGauge bgtStationGauge = IBGTStationGauge(vault);
         address token = bgtStationGauge.stakeToken();
 
-        SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
-        SafeERC20.forceApprove(IERC20(token), address(bgtStationGauge), amount);
+        STL.safeTransferFrom(token, msg.sender, address(this), amount);
+        STL.safeApprove(token, address(bgtStationGauge), amount);
         bgtStationGauge.stake(amount);
         return amount;
     }
@@ -77,7 +76,7 @@ contract BGTStationAdapter is BaseVaultAdapter {
         address token = bgtStationGauge.stakeToken();
 
         bgtStationGauge.withdraw(amount);
-        SafeERC20.safeTransfer(IERC20(token), locker, amount);
+        STL.safeTransfer(token, locker, amount);
         return amount;
     }
 

@@ -3,8 +3,8 @@ pragma solidity ^0.8.23;
 
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {DynamicArrayLib as DAL} from "solady/utils/DynamicArrayLib.sol";
-import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {IRelaxedERC20} from "../utils/RelaxedERC20.sol";
 import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
 
@@ -106,8 +106,8 @@ contract KodiakAdapter is BaseVaultAdapter {
         address token = kodiakFarm.stakingToken();
         uint256 duration = lockTime > 0 ? lockTime : kodiakFarm.lock_time_for_max_multiplier();
 
-        SafeERC20.safeTransferFrom(IERC20(token), locker, address(this), amount);
-        SafeERC20.forceApprove(IERC20(token), address(kodiakFarm), amount);
+        STL.safeTransferFrom(token, locker, address(this), amount);
+        STL.safeApprove(token, address(kodiakFarm), amount);
         bytes32 expectedKekId = keccak256(
             abi.encodePacked(
                 address(this),
@@ -130,7 +130,7 @@ contract KodiakAdapter is BaseVaultAdapter {
         uint256 unstakedAmount = amounts[bytes32(kekIdAsUint)];
         uint256 balance = IERC20(token).balanceOf(address(this));
         delete amounts[bytes32(kekIdAsUint)];
-        SafeERC20.safeTransfer(IERC20(token), locker, balance);
+        STL.safeTransfer(token, locker, balance);
         return unstakedAmount;
     }
 
