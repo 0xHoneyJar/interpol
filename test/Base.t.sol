@@ -48,21 +48,18 @@ abstract contract BaseTest is Test, TokenReceiver {
     function setUp() public virtual {
         vm.startPrank(THJ);
 
+        address queenImplementation = address(new HoneyQueen());
+        bytes memory queenInitData = abi.encodeWithSelector(HoneyQueen.initialize.selector, THJ, address(BGT));
+        queen = HoneyQueen(address(new ERC1967Proxy(queenImplementation, queenInitData)));
+
+        beekeeper = new Beekeeper(THJ, THJTreasury);
+
         HoneyLocker lockerImplementation = new HoneyLocker();
         address lockerBeacon = address(new UpgradeableBeacon(address(lockerImplementation), THJ));
-
-        address queenImplementation = address(new HoneyQueen());
-
-        bytes memory queenInitData = abi.encodeWithSelector(HoneyQueen.initialize.selector, THJ, address(BGT));
-
-        queen = HoneyQueen(address(new ERC1967Proxy(queenImplementation, queenInitData)));
-        beekeeper = new Beekeeper(THJ, THJTreasury);
         lockerFactory = new LockerFactory(address(queen), THJ);
-
         lockerFactory.setBeacon(lockerBeacon);
 
         locker = HoneyLocker(lockerFactory.createLocker(THJ, referrer, false));
-
         locker.setOperator(operator);
 
         queen.setBeekeeper(address(beekeeper));

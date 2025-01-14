@@ -3,6 +3,8 @@ pragma solidity ^0.8.23;
 
 import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import {BGTStationAdapter} from "../src/adapters/BGTStationAdapter.sol";
 import {InfraredAdapter} from "../src/adapters/InfraredAdapter.sol";
@@ -21,51 +23,52 @@ contract AdaptersDeploy is Script {
 
         string memory json = config.getConfig();
         HoneyQueen queen = HoneyQueen(json.readAddress("$.honeyqueen"));
+        address owner = json.readAddress("$.owner");
         uint256 pkey = vm.envUint("PRIVATE_KEY");
 
         vm.startBroadcast(pkey);
 
         // ---- BGTStation ----
-        BGTStationAdapter bgtsAdapter = new BGTStationAdapter();
-        queen.setAdapterBeaconForProtocol("BGTSTATION", address(bgtsAdapter));
+        address bgtBeacon = Upgrades.deployBeacon("BGTStationAdapter.sol:BGTStationAdapter", owner);
+        queen.setAdapterBeaconForProtocol("BGTSTATION", bgtBeacon);
 
         // ---- Infared ----
-        InfraredAdapter infraredAdapter = new InfraredAdapter();
-        queen.setAdapterBeaconForProtocol("INFRARED", address(infraredAdapter));
+        address infraredBeacon = Upgrades.deployBeacon("InfraredAdapter.sol:InfraredAdapter", owner);
+        queen.setAdapterBeaconForProtocol("INFRARED", infraredBeacon);
 
         // ---- Kodiak ----
-        KodiakAdapter kodiakAdapter = new KodiakAdapter();
-        queen.setAdapterBeaconForProtocol("KODIAK", address(kodiakAdapter));
+        address kodiakBeacon = Upgrades.deployBeacon("KodiakAdapter.sol:KodiakAdapter", owner);
+        queen.setAdapterBeaconForProtocol("KODIAK", kodiakBeacon);
 
         // ---- Beradrome ----
-        BeradromeAdapter beradromeAdapter = new BeradromeAdapter();
-        queen.setAdapterBeaconForProtocol("BERADROME", address(beradromeAdapter));
+        address beradromeBeacon = Upgrades.deployBeacon("BeradromeAdapter.sol:BeradromeAdapter", owner);
+        queen.setAdapterBeaconForProtocol("BERADROME", beradromeBeacon);
 
         vm.stopBroadcast();
 
         vm.writeJson(
-            vm.toString(address(bgtsAdapter)),
+            vm.toString(bgtBeacon),
             config.getConfigFilename(),
             ".adapters.BGTSTATION"
         );
         vm.writeJson(
-            vm.toString(address(infraredAdapter)),
+            vm.toString(infraredBeacon),
             config.getConfigFilename(),
             ".adapters.INFRARED"
         );
         vm.writeJson(
-            vm.toString(address(kodiakAdapter)),
+            vm.toString(kodiakBeacon),
             config.getConfigFilename(),
             ".adapters.KODIAK"
         );
         vm.writeJson(
-            vm.toString(address(beradromeAdapter)),
+            vm.toString(beradromeBeacon),
             config.getConfigFilename(),
             ".adapters.BERADROME"
         );
-        console.log("BGTStation deployed at", address(bgtsAdapter));
-        console.log("Infrared deployed at", address(infraredAdapter));
-        console.log("Kodiak deployed at", address(kodiakAdapter));
-        console.log("Beradrome deployed at", address(beradromeAdapter));
+        console.log("BGTStation beacon deployed at", bgtBeacon);
+        console.log("Infrared beacon deployed at", infraredBeacon);
+        console.log("Kodiak beacon deployed at", kodiakBeacon);
+        console.log("Beradrome beacon deployed at", beradromeBeacon);
     }
 }

@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {LockerFactory} from "../src/LockerFactory.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {Config} from "./Config.sol";
@@ -20,13 +21,16 @@ contract LockerFactoryDeploy is Script {
 
         string memory json = config.getConfig();
         address honeyQueen = json.readAddress("$.honeyqueen");
+        address owner = json.readAddress("$.owner");
         uint256 pkey = vm.envUint("PRIVATE_KEY");
         address pubkey = vm.addr(pkey);
         vm.startBroadcast(pkey);
-        HoneyLocker lockerImplementation = new HoneyLocker();
-        address lockerBeacon = address(new UpgradeableBeacon(address(lockerImplementation), pubkey));
+
+        address lockerBeacon = Upgrades.deployBeacon("HoneyLocker.sol:HoneyLocker", owner);
+        address lockerImplementation = UpgradeableBeacon(lockerBeacon).implementation();
         factory = new LockerFactory(honeyQueen, pubkey);
         factory.setBeacon(lockerBeacon);
+
         vm.stopBroadcast();
 
         vm.writeJson(
