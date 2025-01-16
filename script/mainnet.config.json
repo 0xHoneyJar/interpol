@@ -4,8 +4,8 @@
   "beekeeper": "",
   "honeyqueen": "",
   "lockerFactory": "",
-  "adapterFactory": "",
   "lockerImplementation": "",
+  "owner": "",
   "adapters" : {
     "BERADROME": "",
     "INFRARED": "",

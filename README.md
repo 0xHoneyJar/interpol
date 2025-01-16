@@ -36,7 +36,7 @@ source .env && forge script script/Deploy.s.sol:DeployScript true  \
 --verify \
 --verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
 --etherscan-api-key verifyContract \
---chain-id 80084 --legacy --slow --sig "run(bool)"
+--chain-id 80084 --legacy --slow --sig "run(bool)" --force
 ```
 
 ### Adapters
@@ -48,7 +48,7 @@ source .env && forge script script/Adapters.s.sol:AdaptersDeploy true  \
 --verify \
 --verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
 --etherscan-api-key verifyContract \
---chain-id 80084 --legacy --slow --sig "run(bool)"
+--chain-id 80084 --legacy --slow --sig "run(bool)" --force
 ```
 
 <!-- ### Beekeeper
