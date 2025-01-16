@@ -8,10 +8,6 @@ InterPoL is a protocol specially designed for the Berachain ecosystem which allo
 
 BaseVaultAdapter is an abstract contract that serves as the base implementation for all vault adapters in the protocol, defining core interfaces for staking, unstaking, and claiming rewards.
 
-### AdapterFactory
-
-AdapterFactory is a contract that creates adapter instances for lockers using a cloning mechanism, ensuring that only authorized adapters can be deployed through validation by HoneyQueen. It acts as a factory for creating adapter contracts that enable lockers to interact with various vaults while maintaining security through proper authorization checks.
-
 ### HoneyQueen
 
 HoneyQueen is the central registry and configuration contract for the protocol. It maintains a list of approved adapter implementations for vaults, tracks blocked tokens and reward tokens, and handles protocol fee calculations. The contract also manages the adapter factory and beekeeper addresses, allowing only authorized adapters to be deployed through the factory.
