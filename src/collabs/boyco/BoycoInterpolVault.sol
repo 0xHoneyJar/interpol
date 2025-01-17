@@ -68,13 +68,16 @@ contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgrade
     }
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
     /*###############################################################
-                            VIEW FUNCTIONS
+                            INTERNAL FUNCTIONS
     ###############################################################*/
+    function _decimalsOffset() internal view virtual returns (uint8) {
+        return 8;
+    }
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
     function deposit(uint256 _assets, address _receiver) public returns (uint256) {
-        uint256 shares = _assets.mulDiv(totalSupply() + 1, totalSupplied + 1, Math.Rounding.Floor);
+        uint256 shares = _assets.mulDiv(totalSupply() + 10 ** _decimalsOffset(), totalSupplied + 1, Math.Rounding.Floor);
 
         STL.safeTransferFrom(asset, msg.sender, address(this), _assets);
         totalSupplied += _assets;
@@ -89,8 +92,8 @@ contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgrade
         uint256 LPBalance = locker.totalLPStaked(LPToken);
         uint256 henloBalance = IERC20(henlo).balanceOf(address(this));
         // also require that this vault has been set as the treasury in the locker
-        uint256 LPToWithdraw = _shares.mulDiv(LPBalance + 1, totalSupply() + 1, Math.Rounding.Floor);
-        uint256 henloToWithdraw = _shares.mulDiv(henloBalance + 1, totalSupply() + 1, Math.Rounding.Floor);
+        uint256 LPToWithdraw = _shares.mulDiv(LPBalance + 1, totalSupply() + 10 ** _decimalsOffset(), Math.Rounding.Floor);
+        uint256 henloToWithdraw = _shares.mulDiv(henloBalance + 1, totalSupply() + 10 ** _decimalsOffset(), Math.Rounding.Floor);
 
         _burn(msg.sender, _shares);
 

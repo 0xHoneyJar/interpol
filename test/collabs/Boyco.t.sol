@@ -34,7 +34,7 @@ contract BoycoTest is BaseTest {
     ###############################################################*/
     BoycoInterpolVault  public boycoInterpolVault;
 
-    address             public asset;
+    MockERC20           public asset;
     address             public vault            = GAUGE; 
     bytes               public validatorBytes   = hex"49e7CF782fB697CDAe1046D45778C8aE3D7eC644";
     address             public sfOperator       = makeAddr("sfOperator");
@@ -48,7 +48,8 @@ contract BoycoTest is BaseTest {
         address adapterLogic = address(new BGTStationAdapter());
         address adapterBeacon = address(new UpgradeableBeacon(adapterLogic, THJ));
 
-        asset = address(new MockERC20());
+        asset = new MockERC20();
+        asset.setUse18Decimals(false);
 
         vm.startPrank(THJ);
 
@@ -60,7 +61,7 @@ contract BoycoTest is BaseTest {
         // Deploy vault
         address _boycoInterpolVault = Upgrades.deployUUPSProxy(
             "BoycoInterpolVault.sol",
-            abi.encodeCall(BoycoInterpolVault.initialize, (THJ, address(locker), asset, vault))
+            abi.encodeCall(BoycoInterpolVault.initialize, (THJ, address(locker), address(asset), vault))
         );
 
         boycoInterpolVault = BoycoInterpolVault(payable(_boycoInterpolVault));
@@ -79,30 +80,32 @@ contract BoycoTest is BaseTest {
 
     function test_initialization() public {
         assertEq(boycoInterpolVault.validator(), validatorBytes);
-        assertEq(boycoInterpolVault.asset(), asset);
+        assertEq(boycoInterpolVault.asset(), address(asset));
         assertEq(boycoInterpolVault.vault(), vault);
     }
 
     function test_deposit() public prankAsTHJ(false) {
-        uint256 amount = 10 ether;
-        MockERC20(asset).mint(THJ, amount);
+        uint256 amount = 1000 * 10**6;
+        asset.mint(THJ, amount);
 
-        MockERC20(asset).approve(address(boycoInterpolVault), amount);
+        asset.approve(address(boycoInterpolVault), amount);
         uint256 shares = boycoInterpolVault.deposit(amount, THJ);
 
+        console2.log("Shares: %s", shares);
+
         assertGt(shares, 0);
-        assertEq(MockERC20(asset).balanceOf(THJ), 0);
-        assertEq(MockERC20(asset).balanceOf(address(boycoInterpolVault)), 0);
-        assertEq(MockERC20(asset).balanceOf(address(locker)), amount);
+        assertEq(asset.balanceOf(THJ), 0);
+        assertEq(asset.balanceOf(address(boycoInterpolVault)), 0);
+        assertEq(asset.balanceOf(address(locker)), amount);
         assertEq(boycoInterpolVault.balanceOf(THJ), shares);
     }
 
     function test_operatorSwapAssetForLP() public {
         uint256 amount = 10 ether;
-        MockERC20(asset).mint(THJ, amount);
+        asset.mint(THJ, amount);
 
         vm.startPrank(THJ);
-        MockERC20(asset).approve(address(boycoInterpolVault), amount);
+        asset.approve(address(boycoInterpolVault), amount);
         uint256 shares = boycoInterpolVault.deposit(amount, THJ);
         vm.stopPrank();
 
@@ -111,7 +114,7 @@ contract BoycoTest is BaseTest {
         vm.startPrank(sfOperator);
 
         locker.withdrawLPToken(address(asset), amount);
-        assertEq(MockERC20(asset).balanceOf(sfOperator), amount);
+        assertEq(asset.balanceOf(sfOperator), amount);
         // assume some swap for LP tokens which are then deposited and staked
         uint256 LPAmount = 100 ether;
         StdCheats.deal(address(LP_TOKEN), sfOperator, LPAmount);
@@ -132,27 +135,22 @@ contract BoycoTest is BaseTest {
         Before redeeming, S&F operator (or another address in prod) transfers 
         ownership of the locker to the boyco vault.
     */
-    function test_redeem(address[4] memory _depositors, uint256[4] memory _amounts) public {
+    function test_redeem(address[10] memory _depositors, uint256[10] memory _amounts) public {
         uint256 totalDeposited = 0;
         // deposit for all depositors
-        for (uint256 i = 0; i < _depositors.length; i++) {
+        for (uint256 i; i < _depositors.length; i++) {
             _depositors[i] = makeAddr(string(abi.encodePacked("depositor", i)));
             _amounts[i] = StdUtils.bound(_amounts[i], 1 ether, type(uint64).max);
 
-            MockERC20(asset).mint(_depositors[i], _amounts[i]);
+            asset.mint(_depositors[i], _amounts[i]);
 
             vm.startPrank(_depositors[i]);
-            MockERC20(asset).approve(address(boycoInterpolVault), _amounts[i]);
+            asset.approve(address(boycoInterpolVault), _amounts[i]);
             uint256 shares = boycoInterpolVault.deposit(_amounts[i], _depositors[i]);
             vm.stopPrank();
 
             totalDeposited += _amounts[i];
-            console2.log("%s deposited %s", _depositors[i], _amounts[i]);
-            console2.log("%s has %s shares", _depositors[i], shares);
-
         }
-        console2.log("Total deposited is %s", totalDeposited);
-        console2.log("Total supply is %s", boycoInterpolVault.totalSupply());
 
         // deal LP tokens to locker and have it staked
         uint256 amountToStake = 100 ether;
@@ -178,12 +176,8 @@ contract BoycoTest is BaseTest {
         uint256 expectedLPToReceive = locker.totalLPStaked(address(LP_TOKEN)).mulDiv(_amounts[0], totalDeposited);
         uint256 expectedRewardToReceive = rewardsToMint.mulDiv(_amounts[0], totalDeposited);
         uint256 sharesToRedeem = boycoInterpolVault.balanceOf(_depositors[0]);
-        console2.log("Expected LP to receive %s", expectedLPToReceive);
-        console2.log("Expected reward to receive %s", expectedRewardToReceive);
-        console2.log("Shares to redeem %s", sharesToRedeem);
     
         uint256 LPToWithdraw = sharesToRedeem.mulDiv(locker.totalLPStaked(address(LP_TOKEN)) + 1, boycoInterpolVault.totalSupply() + 1, Math.Rounding.Floor);
-        console2.log("Vault computes LP to withdraw %s", LPToWithdraw);
 
         vm.prank(_depositors[0]);
         boycoInterpolVault.redeem(sharesToRedeem, _depositors[0]);

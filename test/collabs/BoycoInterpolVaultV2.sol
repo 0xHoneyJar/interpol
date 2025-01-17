@@ -64,8 +64,11 @@ contract BoycoInterpolVaultV2 is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgra
     }
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
     /*###############################################################
-                            VIEW FUNCTIONS
+                            INTERNAL FUNCTIONS
     ###############################################################*/
+    function _decimalsOffset() internal view virtual returns (uint8) {
+        return 8;
+    }
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
