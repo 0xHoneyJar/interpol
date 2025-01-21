@@ -67,6 +67,9 @@ contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgrade
         henlo = _henlo;
     }
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    function setLocker(address _locker) public onlyOwner {
+        locker = HoneyLocker(payable(_locker));
+    }
     /*###############################################################
                             INTERNAL FUNCTIONS
     ###############################################################*/
