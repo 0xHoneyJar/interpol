@@ -16,6 +16,7 @@ import {IBGT} from "./utils/IBGT.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {Beekeeper} from "./Beekeeper.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
+import {IUniswapV3} from "./utils/IUniswapV3.sol";
 
 contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
     /*###############################################################
@@ -44,6 +45,7 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
     event HoneyLocker__Unstaked(address indexed vault, address indexed LPToken, uint256 amountOrId);
     event HoneyLocker__Claimed(address indexed vault, address indexed rewardToken, uint256 amount);
     event HoneyLocker__Wildcard(address indexed vault, uint8 indexed func, bytes args);
+    event HoneyLocker__ClaimedFeesOfLP(address indexed LPToken, uint256 amount0, uint256 amount1);
 
     event HoneyLocker__OperatorSet(address indexed operator);
     event HoneyLocker__TreasurySet(address indexed treasury);
@@ -260,6 +262,22 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
         try ERC721(_LPToken).approve(address(this), _amountOrId) {} catch {}
         ERC721(_LPToken).transferFrom(address(this), recipient(), _amountOrId);
         emit HoneyLocker__Withdrawn(_LPToken, _amountOrId);
+    }
+
+    /*
+        Claim accumulated fees of NFT LP tokens on Uniswap V3 contracts.
+    */
+    function claimFeesOfLP(address _LPToken, uint256 _tokenId) external onlyOwnerOrOperator {
+        IUniswapV3.CollectParams memory params =
+            IUniswapV3.CollectParams({
+                tokenId: _tokenId,
+                recipient: address(this),
+                amount0Max: type(uint128).max,
+                amount1Max: type(uint128).max
+            });
+
+        (uint256 amount0, uint256 amount1) = IUniswapV3(_LPToken).collect(params);
+        emit HoneyLocker__ClaimedFeesOfLP(_LPToken, amount0, amount1);
     }
 
     /*###############################################################

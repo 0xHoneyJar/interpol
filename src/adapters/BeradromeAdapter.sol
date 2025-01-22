@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 
-import {IRelaxedERC20} from "../utils/RelaxedERC20.sol";
+import {IRelaxedERC20} from "../utils/IRelaxedERC20.sol";
 import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
 
 interface IBeradromePlugin {
