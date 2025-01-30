@@ -15,7 +15,7 @@ import {HoneyLocker} from "../../src/HoneyLocker.sol";
 import {BGTStationAdapter, IBGTStationGauge} from "../../src/adapters/BGTStationAdapter.sol";
 import {BaseVaultAdapter as BVA} from "../../src/adapters/BaseVaultAdapter.sol";
 import {BoycoInterpolVault} from "../../src/collabs/boyco/BoycoInterpolVault.sol";
-import {BoycoInterpolVaultV2} from "./BoycoInterpolVaultV2.sol";
+import {BoycoInterpolVaultVN} from "./BoycoInterpolVaultVN.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 
 contract BoycoTest is BaseTest {
@@ -204,13 +204,13 @@ contract BoycoTest is BaseTest {
         options.referenceContract = "BoycoInterpolVault.sol";
         Upgrades.upgradeProxy(
             address(boycoInterpolVault),
-            "BoycoInterpolVaultV2.sol",
+            "BoycoInterpolVaultVN.sol",
             "",
             options
         );
         vm.stopPrank();
 
-        BoycoInterpolVaultV2 boycoInterpolVault_ = BoycoInterpolVaultV2(payable(address(boycoInterpolVault)));
+        BoycoInterpolVaultVN boycoInterpolVault_ = BoycoInterpolVaultVN(payable(address(boycoInterpolVault)));
         assertEq(boycoInterpolVault_.emergency(), 100);
     }
 }

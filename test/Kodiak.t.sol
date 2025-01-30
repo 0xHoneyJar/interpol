@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
+import {DynamicArrayLib as DAL} from "solady/utils/DynamicArrayLib.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {console2} from "forge-std/console2.sol";
@@ -29,7 +30,10 @@ contract KodiakV3Gauge {
     }
 }
 
-contract KodiakTest is BaseTest {    
+contract KodiakTest is BaseTest {   
+    using DAL for uint256[];
+    using DAL for address[];
+    using DAL for DAL.DynamicArray;
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
@@ -122,6 +126,8 @@ contract KodiakTest is BaseTest {
         assertEq(LP_TOKEN.balanceOf(address(locker)), amountToDeposit);
     }
 
+
+    mapping(address rewardToken => uint256 amount) totalEarned;
     function test_claimRewards(
         uint128 _amountToDeposit,
         bool _useOperator
@@ -136,6 +142,11 @@ contract KodiakTest is BaseTest {
         GAUGE.sync();
 
         (address[] memory rewardTokens, uint256[] memory earned) = lockerAdapter.earned(address(GAUGE));
+        // since earned concats rewards from the farm and the rewards contract, we might have some
+        // duplicates, we just accumulate the rewards in the mapping
+        for (uint256 i; i < rewardTokens.length; i++) {
+            totalEarned[rewardTokens[i]] += earned[i];
+        }
 
         // always skip xKDK because it won't be emitted
         for (uint256 i; i < rewardTokens.length - 1; i++) {
@@ -145,13 +156,14 @@ contract KodiakTest is BaseTest {
 
         locker.claim(address(GAUGE));
         // skip xKDK testing in the loop, do it separately
-        for (uint256 i; i < rewardTokens.length - 1; i++) {
+        for (uint256 i; i < rewardTokens.length; i++) {
             address rewardToken = rewardTokens[i];
+            if (rewardToken == address(xKDK)) continue;
             uint256 rewardBalanceAfter = ERC20(rewardToken).balanceOf(address(locker));
-            assertEq(rewardBalanceAfter, earned[i]);
+            assertEq(rewardBalanceAfter, totalEarned[rewardToken]);
         }
         uint256 xkdkBalance = xKDK.balanceOf(address(lockerAdapter));
-        assertEq(xkdkBalance, earned[earned.length - 1]);
+        assertEq(xkdkBalance, totalEarned[address(xKDK)]);
     }
 
     function test_xkdk(uint128 _amount, bool _useOperator) external prankAsTHJ(_useOperator) {

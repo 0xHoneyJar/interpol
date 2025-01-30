@@ -96,6 +96,7 @@ contract KodiakAdapter is BaseVaultAdapter {
         address[] memory rewardTokens = kodiakFarm.getAllRewardTokens();
         for (uint256 i; i < rewardTokens.length; i++) {
             uint256 amount = IERC20(rewardTokens[i]).balanceOf(address(this));
+            if (amount == 0) continue;
             /*
                 we skip the transfer, to not block any other rewards
                 it can always be retrieved later because we use the balanceOf() function
@@ -111,6 +112,7 @@ contract KodiakAdapter is BaseVaultAdapter {
         for (uint256 i; i < distributedTokensLength; i++) {
             address token = kodiakRewards.distributedToken(i);
             uint256 amount = IERC20(token).balanceOf(address(this));
+            if (amount == 0) continue;
             try IRelaxedERC20(token).transfer(locker, amount) {} catch {
                 emit Adapter__FailedTransfer(locker, token, amount);
             }

@@ -13,7 +13,7 @@ import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
 import {HoneyLocker} from "../../src/HoneyLocker.sol";
 import {IBGTStationGauge} from "../../src/adapters/BGTStationAdapter.sol";
 
-contract BoycoInterpolVaultV2 is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgradeable {
+contract BoycoInterpolVaultVN is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgradeable {
     using Math for uint256;
     /*###############################################################
                             STATE
