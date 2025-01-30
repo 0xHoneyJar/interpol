@@ -5,13 +5,13 @@ import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-import {BoycoInterpolVault} from "../../src/collabs/boyco/BoycoInterpolVault.sol";
-import {HoneyQueen} from "../../src/HoneyQueen.sol";
-import {LockerFactory} from "../../src/LockerFactory.sol";
-import {HoneyLocker} from "../../src/HoneyLocker.sol";
-import {Config} from "../Config.sol";
+import {BoycoInterpolVault} from "../../../src/collabs/boyco/BoycoInterpolVault.sol";
+import {HoneyQueen} from "../../../src/HoneyQueen.sol";
+import {LockerFactory} from "../../../src/LockerFactory.sol";
+import {HoneyLocker} from "../../../src/HoneyLocker.sol";
+import {Config} from "../../Config.sol";
 
-import {IBGTStationGauge} from "../../src/adapters/BGTStationAdapter.sol";
+import {IBGTStationGauge} from "../../../src/adapters/BGTStationAdapter.sol";
 
 contract Deploy is Script {
     using stdJson for string;
