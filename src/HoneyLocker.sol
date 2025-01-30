@@ -4,15 +4,18 @@ pragma solidity ^0.8.23;
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
+
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+
 import {BaseVaultAdapter as BVA} from "./adapters/BaseVaultAdapter.sol";
 import {IBGTStationGauge} from "./adapters/BGTStationAdapter.sol";
 import {IBGT} from "./utils/IBGT.sol";
+import {IBGTStaker} from "./utils/IBGTStaker.sol";
 import {HoneyQueen} from "./HoneyQueen.sol";
 import {Beekeeper} from "./Beekeeper.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
@@ -190,6 +193,13 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
     /*###############################################################
                             BGT MANAGEMENT
     ###############################################################*/
+    function claimBGTRewards() external onlyOwnerOrOperator {
+        IBGTStaker staker = IBGTStaker(IBGT(honeyQueen.BGT()).staker());
+        uint256 rewards = staker.earned(address(this));
+        staker.getReward();
+        emit HoneyLocker__Claimed(address(staker), staker.rewardToken(), rewards);
+    }
+
     function burnBGTForBERA(uint256 _amount) external onlyOwnerOrOperator {
         IBGT(honeyQueen.BGT()).redeem(address(this), _amount);
         withdrawBERA(_amount);

@@ -26,4 +26,5 @@ interface IBGT {
     function boostees(bytes calldata pubkey) external view returns (uint128);
     function totalBoosts() external view returns (uint128);
     function normalizedBoost(bytes calldata pubkey) external view returns (uint256);
+    function staker() external view returns (address);
 }
