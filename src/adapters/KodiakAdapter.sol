@@ -47,6 +47,15 @@ interface XKDK {
     function redeem(uint256,uint256) external;
     function finalizeRedeem(uint256) external;
     function balanceOf(address account) external view returns (uint256);
+    function rewardsAddress() external view returns (address);
+}
+
+interface IKodiakRewards {
+    function distributedTokensLength() external view returns (uint256);
+    function distributedToken(uint256 index) external view returns (address);
+    function pendingRewardsAmount(address token, address userAddress) external view returns (uint256);
+    function harvestAllRewards() external;
+
 }
 
 contract KodiakAdapter is BaseVaultAdapter {
@@ -81,22 +90,31 @@ contract KodiakAdapter is BaseVaultAdapter {
     /*###############################################################
                             INTERNAL
     ###############################################################*/
-    function _transferRewards(address vault) internal returns (address[] memory, uint256[] memory) {
+    function _transferRewards(address vault) internal {
+        // first distribute the rewards from the farm
         IKodiakFarm kodiakFarm = IKodiakFarm(vault);
         address[] memory rewardTokens = kodiakFarm.getAllRewardTokens();
-        uint256[] memory amounts = new uint256[](rewardTokens.length);
         for (uint256 i; i < rewardTokens.length; i++) {
-            amounts[i] = IERC20(rewardTokens[i]).balanceOf(address(this));
+            uint256 amount = IERC20(rewardTokens[i]).balanceOf(address(this));
             /*
                 we skip the transfer, to not block any other rewards
                 it can always be retrieved later because we use the balanceOf() function
             */
-            try IRelaxedERC20(rewardTokens[i]).transfer(locker, amounts[i]) {} catch {
-                emit Adapter__FailedTransfer(locker, rewardTokens[i], amounts[i]);
-                amounts[i] = 0;
+            try IRelaxedERC20(rewardTokens[i]).transfer(locker, amount) {} catch {
+                emit Adapter__FailedTransfer(locker, rewardTokens[i], amount);
             }
         }
-        return (rewardTokens, amounts);
+
+        // then distribute the rewards from the KodiakRewards contract
+        IKodiakRewards kodiakRewards = IKodiakRewards(XKDK(kodiakFarm.xKdk()).rewardsAddress());
+        uint256 distributedTokensLength = kodiakRewards.distributedTokensLength();
+        for (uint256 i; i < distributedTokensLength; i++) {
+            address token = kodiakRewards.distributedToken(i);
+            uint256 amount = IERC20(token).balanceOf(address(this));
+            try IRelaxedERC20(token).transfer(locker, amount) {} catch {
+                emit Adapter__FailedTransfer(locker, token, amount);
+            }
+        }
     }
     /*###############################################################
                             EXTERNAL
@@ -136,10 +154,16 @@ contract KodiakAdapter is BaseVaultAdapter {
 
     function claim(address vault) external override onlyLocker isVaultValid(vault) returns (address[] memory, uint256[] memory) {
         IKodiakFarm kodiakFarm = IKodiakFarm(vault);
+        IKodiakRewards kodiakRewards = IKodiakRewards(XKDK(kodiakFarm.xKdk()).rewardsAddress());
 
-        try kodiakFarm.getReward() {} catch {} // can still distribute rewards even if the call fails
+        (address[] memory rewardTokens, uint256[] memory amounts) = earned(vault);
 
-        return _transferRewards(vault);
+        try kodiakFarm.getReward() {} catch {}
+        try kodiakRewards.harvestAllRewards() {} catch {}
+
+        _transferRewards(vault);
+
+        return (rewardTokens, amounts);
     }
 
     function wildcard(address vault, uint8 func, bytes calldata args) external override onlyLocker isVaultValid(vault) {
@@ -164,26 +188,39 @@ contract KodiakAdapter is BaseVaultAdapter {
         return IKodiakFarm(vault).stakingToken();
     }
 
-    function earned(address vault) external view override returns (address[] memory, uint256[] memory) {
+    function earned(address vault) public view override returns (address[] memory, uint256[] memory) {
         IKodiakFarm kodiakFarm = IKodiakFarm(vault);
         DAL.DynamicArray memory rewardTokens = kodiakFarm.getAllRewardTokens().wrap();
         DAL.DynamicArray memory amounts = kodiakFarm.earned(address(this)).wrap();
-        address kdk = kodiakFarm.kdk();
-        uint256 xKDKAmount;
-        /*
-            To have an accurate result, we must reproduce the logic of the rewards payout
-            meaning that a chunk of kdk goes as xKDK
-        */
-        for (uint256 i; i < rewardTokens.length(); i++) {
-            if (rewardTokens.getAddress(i) == kdk) {
-                uint256 amount = amounts.getUint256(i);
-                xKDKAmount = amount * kodiakFarm.xKdkPercentage() / 100e18;
-                amounts.set(i, amount - xKDKAmount);
+        {
+            address kdk = kodiakFarm.kdk();
+            uint256 xKDKAmount;
+            /*
+                To have an accurate result, we must reproduce the logic of the rewards payout
+                meaning that a chunk of kdk goes as xKDK
+            */
+            for (uint256 i; i < rewardTokens.length(); i++) {
+                if (rewardTokens.getAddress(i) == kdk) {
+                    uint256 amount = amounts.getUint256(i);
+                    xKDKAmount = amount * kodiakFarm.xKdkPercentage() / 100e18;
+                    amounts.set(i, amount - xKDKAmount);
+                }
             }
+            rewardTokens.p(kodiakFarm.xKdk());
+            amounts.p(xKDKAmount);
         }
-        rewardTokens.p(kodiakFarm.xKdk());
-        amounts.p(xKDKAmount);
-        // resize arrays to include xKDK as a reward
+        {
+            IKodiakRewards kodiakRewards = IKodiakRewards(XKDK(kodiakFarm.xKdk()).rewardsAddress());
+            // also include the rewards from the KodiakRewards contract
+            uint256 previousLength = rewardTokens.length();
+            rewardTokens.expand(rewardTokens.length() + kodiakRewards.distributedTokensLength());
+            amounts.expand(rewardTokens.length());
+            for (uint256 i; i < kodiakRewards.distributedTokensLength(); i++) {
+                rewardTokens.set(i + previousLength, kodiakRewards.distributedToken(i));
+                amounts.set(i + previousLength, kodiakRewards.pendingRewardsAmount(kodiakRewards.distributedToken(i), address(this)));
+            }
+
+        }
         return (rewardTokens.asAddressArray(), amounts.asUint256Array());
     }
 

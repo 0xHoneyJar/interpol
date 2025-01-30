@@ -96,7 +96,7 @@ contract BGTStationAdapter is BaseVaultAdapter {
         return IBGTStationGauge(vault).stakeToken();
     }
 
-    function earned(address vault) external view override returns (address[] memory, uint256[] memory) {
+    function earned(address vault) public view override returns (address[] memory, uint256[] memory) {
         return _earned(vault);
     }
 

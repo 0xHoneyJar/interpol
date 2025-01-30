@@ -94,7 +94,7 @@ contract BeradromeAdapter is BaseVaultAdapter {
         return IBeradromePlugin(vault).getToken();
     }
     
-    function earned(address vault) external view override returns (address[] memory, uint256[] memory) {
+    function earned(address vault) public view override returns (address[] memory, uint256[] memory) {
         IBeradromePlugin beradromePlugin = IBeradromePlugin(vault);
         IBeradromeGauge gauge = IBeradromeGauge(beradromePlugin.getGauge());
         address[] memory rewardTokens = gauge.getRewardTokens();

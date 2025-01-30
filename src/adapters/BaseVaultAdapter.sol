@@ -62,7 +62,7 @@ abstract contract BaseVaultAdapter is Initializable, TokenReceiver {
                             VIEW/PURE
     ###############################################################*/
     function stakingToken(address vault) external view virtual returns (address);
-    function earned(address vault) external view virtual returns (address[] memory rewardTokens, uint256[] memory amounts);
+    function earned(address vault) public view virtual returns (address[] memory rewardTokens, uint256[] memory amounts);
     function version() external pure virtual returns (string memory);
     function implementation() external view returns (address) {
         return IBeacon(adapterBeacon).implementation();

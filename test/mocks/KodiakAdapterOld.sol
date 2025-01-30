@@ -120,7 +120,7 @@ contract KodiakAdapterOld is Initializable, BaseVaultAdapter {
     function stakingToken(address vault) external view override returns (address) {
         return IKodiakFarm(vault).stakingToken();
     }
-    function earned(address vault) external view override returns (address[] memory, uint256[] memory) {
+    function earned(address vault) public view override returns (address[] memory, uint256[] memory) {
         IKodiakFarm kodiakFarm = IKodiakFarm(vault);
         DAL.DynamicArray memory rewardTokens = kodiakFarm.getAllRewardTokens().wrap();
         DAL.DynamicArray memory amounts = kodiakFarm.earned(address(this)).wrap();
