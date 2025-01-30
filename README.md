@@ -26,59 +26,23 @@ Beekeeper is a contract that manages fee distribution between referrers and the 
 ### Whole protocol
 
 ```
-source .env && forge script script/Deploy.s.sol:DeployScript true  \
---rpc-url $RPC_URL \
+source .env && forge script script/Deploy.s.sol:DeployScript false  \
+--rpc-url $RPC_URL_MAINNET \
 --broadcast \
 --verify \
---verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
+--verifier-url https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan \
 --etherscan-api-key verifyContract \
---chain-id 80084 --legacy --slow --sig "run(bool)" --force
+--chain-id 80094 --legacy --slow --sig "run(bool)" --force
 ```
 
 ### Adapters
 
 ```
-source .env && forge script script/Adapters.s.sol:AdaptersDeploy true  \
---rpc-url $RPC_URL \
+source .env && forge script script/Adapters.s.sol:AdaptersDeploy false  \
+--rpc-url $RPC_URL_MAINNET \
 --broadcast \
 --verify \
---verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
+--verifier-url https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan \
 --etherscan-api-key verifyContract \
---chain-id 80084 --legacy --slow --sig "run(bool)" --force
+--chain-id 80094 --legacy --slow --sig "run(bool)" --force
 ```
-
-<!-- ### Beekeeper
-
-```
-source .env && forge script script/Beekeeper.s.sol:BeekeeperDeploy \
---rpc-url https://bartio.rpc.berachain.com \
---broadcast \
---verify \
---verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
---etherscan-api-key verifyContract \
---chain-id 80084 --legacy --slow
-```
-
-### Honey Queen
-
-```
-source .env && forge script script/HoneyQueen.s.sol:HoneyQueenDeploy \
---rpc-url https://bartio.rpc.berachain.com \
---broadcast \
---verify \
---verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
---etherscan-api-key verifyContract \
---chain-id 80084 --legacy --slow
-```
-
-### Factory
-
-```
-source .env && forge script script/LockerFactory.s.sol:LockerFactoryDeploy \
---rpc-url https://bartio.rpc.berachain.com \
---broadcast \
---verify \
---verifier-url https://api.routescan.io/v2/network/testnet/evm/80084/etherscan \
---etherscan-api-key verifyContract \
---chain-id 80084 --legacy --slow
-``` -->

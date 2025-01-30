@@ -25,9 +25,7 @@ contract HoneyQueenDeploy is Script {
         address pubkey = vm.addr(pkey);
         vm.startBroadcast(pkey);
 
-        address queenImplementation = address(new HoneyQueen());
         bytes memory queenInitData = abi.encodeWithSelector(HoneyQueen.initialize.selector, pubkey, address(BGT));
-        //queen = HoneyQueen(address(new ERC1967Proxy(queenImplementation, queenInitData)));
         queen = HoneyQueen(Upgrades.deployUUPSProxy("HoneyQueen.sol:HoneyQueen", queenInitData));
 
         vm.stopBroadcast();

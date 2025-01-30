@@ -20,14 +20,15 @@ contract LockerFactoryDeploy is Script {
         Config config = new Config(isTestnet);
 
         string memory json = config.getConfig();
+
         address honeyQueen = json.readAddress("$.honeyqueen");
         address owner = json.readAddress("$.owner");
         uint256 pkey = vm.envUint("PRIVATE_KEY");
         address pubkey = vm.addr(pkey);
+        
         vm.startBroadcast(pkey);
 
         address lockerBeacon = Upgrades.deployBeacon("HoneyLocker.sol:HoneyLocker", owner);
-        address lockerImplementation = UpgradeableBeacon(lockerBeacon).implementation();
         factory = new LockerFactory(honeyQueen, pubkey);
         factory.setBeacon(lockerBeacon);
 
@@ -39,13 +40,13 @@ contract LockerFactoryDeploy is Script {
             ".lockerFactory"
         );
         vm.writeJson(
-            vm.toString(address(lockerImplementation)),
+            vm.toString(address(lockerBeacon)),
             config.getConfigFilename(),
-            ".lockerImplementation"
+            ".lockerBeacon"
         );
 
         console.log("LockerFactory deployed at", address(factory));
-        console.log("LockerImplementation deployed at", address(lockerImplementation));
+        console.log("LockerBeacon deployed at", address(lockerBeacon));
     }
 
     function getLockerFactory() public view returns (LockerFactory) {

@@ -20,4 +20,10 @@ contract Config is Script {
     function getConfigFilename() public view returns (string memory) {
         return isTestnet ? "./script/testnet.config.json" : "./script/mainnet.config.json";
     }
+
+    function getRPCUrl() public view returns (string memory) {
+        string memory testnetRpc = vm.envOr(string("RPC_URL_TESTNET"), string(""));
+        string memory mainnetRpc = vm.envOr(string("RPC_URL_MAINNET"), string(""));
+        return isTestnet ? testnetRpc : mainnetRpc;
+    }
 }

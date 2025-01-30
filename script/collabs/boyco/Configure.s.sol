@@ -13,7 +13,7 @@ import {Config} from "../Config.sol";
 
 import {IBGTStationGauge} from "../../src/adapters/BGTStationAdapter.sol";
 
-contract BoycoInterpolScript is Script {
+contract Configure is Script {
     using stdJson for string;
 
     BoycoInterpolVault public boycoInterpolVault;

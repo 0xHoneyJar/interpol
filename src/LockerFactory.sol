@@ -15,7 +15,7 @@ contract LockerFactory is Ownable {
                             STORAGE
     ###############################################################*/
     address internal immutable  HONEY_QUEEN;
-    address internal            beacon;
+    address public              beacon;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/

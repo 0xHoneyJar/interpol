@@ -4,7 +4,7 @@
   "beekeeper": "0x31F2c1A5Fe545e8fa6a280D781d5FfFdCad5Eeab",
   "honeyqueen": "0x064C01e0fAc383372D0A8d71E3BA055c198Faf62",
   "lockerFactory": "0x716DCB55BeDE0655D6c9B4d98e3754b1Be13f43b",
-  "lockerImplementation": "0x5B43C6a273CE584621ebD4744BB6278DB18903d5",
+  "lockerBeacon": "",
   "owner": "0xDe81B20B6801d99EFEaEcEd48a11ba025180b8cc",
   "adapters": {
     "BERADROME": "0x24B11b4b9746a9f0A33657006241fF00f9750230",

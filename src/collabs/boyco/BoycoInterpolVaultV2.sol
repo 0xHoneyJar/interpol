@@ -13,8 +13,13 @@ import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
 import {HoneyLocker} from "../../HoneyLocker.sol";
 import {IBGTStationGauge} from "../../adapters/BGTStationAdapter.sol";
 
-contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgradeable {
+contract BoycoInterpolVaultV2 is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgradeable {
     using Math for uint256;
+    /*###############################################################
+                            EVENTS
+    ###############################################################*/
+    event Deposit(address indexed recipient, uint256 assets, uint256 shares);
+    event Withdraw(address indexed recipient, address indexed token, uint256 assets, uint256 shares);
     /*###############################################################
                             STATE
     ###############################################################*/
@@ -97,6 +102,7 @@ contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgrade
 
         IERC20(asset).approve(address(locker), _assets);
         locker.depositAndLock(asset, _assets, 1);
+        emit Deposit(_receiver, _assets, shares);
         return shares;
     }
 
@@ -115,6 +121,8 @@ contract BoycoInterpolVault is ERC20Upgradeable, UUPSUpgradeable, OwnableUpgrade
         STL.safeTransfer(LPToken, _receiver, LPToWithdraw);
         STL.safeTransfer(henlo, _receiver, henloToWithdraw);
 
+        emit Withdraw(_receiver, address(LPToken), LPToWithdraw, _shares);
+        emit Withdraw(_receiver, address(henlo), henloToWithdraw, _shares);
         return LPBalance;
     }
 
