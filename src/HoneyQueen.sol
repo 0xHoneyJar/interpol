@@ -40,10 +40,8 @@ contract HoneyQueen is UUPSUpgradeable, OwnableUpgradeable {
     mapping(address token => bool isRewardToken)        public      isRewardToken;
     address                                             public      beekeeper;
     uint256                                             public      protocolFees;
-    // authorized upgrades for proxies from logic to logic
-    mapping(address fromLogic => address toLogic)       public      upgradeOfLocker;
 
-    uint256[40] __gap;
+    uint256[41] __gap;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -97,10 +95,6 @@ contract HoneyQueen is UUPSUpgradeable, OwnableUpgradeable {
     /*###############################################################
                             LOCKERS MANAGEMENT
     ###############################################################*/
-    function setUpgradeOfLocker(address fromLogic, address toLogic) external onlyOwner {
-        upgradeOfLocker[fromLogic] = toLogic;
-        emit HoneyQueen__LockerUpgraded(fromLogic, toLogic);
-    }
     /*###############################################################
                             OWNER MANAGEMENT
     ###############################################################*/

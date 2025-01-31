@@ -8,8 +8,6 @@ import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import {BaseVaultAdapter as BVA} from "./adapters/BaseVaultAdapter.sol";
@@ -21,7 +19,7 @@ import {Beekeeper} from "./Beekeeper.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
 import {IUniswapV3} from "./utils/IUniswapV3.sol";
 
-contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
+contract HoneyLocker is OwnableUpgradeable, TokenReceiver {
     /*###############################################################
                             ERRORS
     ###############################################################*/
@@ -133,18 +131,9 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
         treasury = _treasury;
         emit HoneyLocker__TreasurySet(_treasury);
     }
-
-    function upgradeLocker() external onlyOwner {
-        address oldImplementation = ERC1967Utils.getImplementation();
-        address authorizedLogic = HoneyQueen(honeyQueen).upgradeOfLocker(oldImplementation);
-        if(authorizedLogic == address(0)) revert HoneyLocker__NotAuthorizedUpgrade();
-        upgradeToAndCall(authorizedLogic, "");
-        emit HoneyLocker__Upgraded(oldImplementation, authorizedLogic);
-    }
     /*###############################################################
                             INTERNAL
     ###############################################################*/
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
     function _getAdapter(address vault) internal view returns (BVA adapter) {
         return adapterOfProtocol[honeyQueen.protocolOfVault(vault)];
     }
@@ -336,9 +325,6 @@ contract HoneyLocker is UUPSUpgradeable, OwnableUpgradeable, TokenReceiver {
     }
     function version() external pure returns (string memory) {
         return "1.0";
-    }
-    function implementation() external view returns (address) {
-        return ERC1967Utils.getImplementation();
     }
     /*###############################################################
                             PUBLIC LOGIC
