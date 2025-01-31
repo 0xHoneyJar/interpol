@@ -52,8 +52,6 @@ contract HoneyLocker is OwnableUpgradeable, TokenReceiver {
     event HoneyLocker__TreasurySet(address indexed treasury);
 
     event HoneyLocker__AdapterRegistered(string indexed protocol, address adapter);
-    event HoneyLocker__AdapterUpgraded(string indexed protocol, address newImplementation);
-    event HoneyLocker__Upgraded(address oldImplementation, address newImplementation);
     /*###############################################################
                             STORAGE
     ###############################################################*/

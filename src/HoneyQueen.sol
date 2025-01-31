@@ -17,10 +17,6 @@ contract HoneyQueen is UUPSUpgradeable, OwnableUpgradeable {
     /*###############################################################
                             EVENTS
     ###############################################################*/
-    event HoneyQueen__AdapterApproved(address indexed vault, address adapter, bool approved);
-    event HoneyQueen__VaultAdapterSet(address indexed vault, address adapter);
-    event HoneyQueen__AdapterUpgraded(string indexed protocol, address indexed fromLogic, address toLogic);
-    event HoneyQueen__LockerUpgraded(address indexed fromLogic, address toLogic);
     /*###############################################################
                             STRUCTS
     ###############################################################*/
