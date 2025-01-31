@@ -11,6 +11,11 @@ import {IRelaxedERC20} from "../utils/IRelaxedERC20.sol";
 import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
 
 interface IInfraredVault {
+    struct UserReward {
+        address token;
+        uint256 amount;
+    }
+
     event Staked(address indexed account, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
     event RewardPaid(address indexed account, address indexed rewardsToken, uint256 reward);
@@ -21,6 +26,8 @@ interface IInfraredVault {
     function rewardTokens(uint256 index) external view returns (address);
     function earned(address account, address rewardToken) external view returns (uint256);
     function stakingToken() external view returns (address);
+    function getAllRewardTokens() external view returns (address[] memory);
+    function getAllRewardsForUser(address _user) external view returns (UserReward[] memory);
 }
 
 contract InfraredAdapter is BaseVaultAdapter {
@@ -52,23 +59,6 @@ contract InfraredAdapter is BaseVaultAdapter {
     /*###############################################################
                             INTERNAL
     ###############################################################*/
-    function _earned(address vault) internal view returns (address[] memory, uint256[] memory) {
-        IInfraredVault infraredVault = IInfraredVault(vault);
-        // we use 10 as very optimistic
-        address[] memory rewardTokens = new address[](10);
-        uint256[] memory amounts = new uint256[](10);
-        uint256 realLength;
-        for (uint256 i; i < rewardTokens.length; i++) {
-            try infraredVault.rewardTokens(i) returns (address token) {
-                rewardTokens[realLength] = token;
-                amounts[realLength] = infraredVault.earned(address(this), token);
-                realLength++;
-            } catch {
-                break;
-            }
-        }
-        return (rewardTokens.toUint256Array().truncate(realLength).asAddressArray(), amounts.truncate(realLength));
-    }
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
@@ -95,8 +85,7 @@ contract InfraredAdapter is BaseVaultAdapter {
     function claim(address vault) external override onlyLocker isVaultValid(vault) returns (address[] memory, uint256[] memory) {
         IInfraredVault infraredVault = IInfraredVault(vault);
 
-        (address[] memory rewardTokens,) = _earned(vault);
-        uint256[] memory amounts = new uint256[](rewardTokens.length);
+        (address[] memory rewardTokens, uint256[] memory amounts) = earned(vault);
         infraredVault.getReward();
         for (uint256 i; i < rewardTokens.length; i++) {
             amounts[i] = IERC20(rewardTokens[i]).balanceOf(address(this));
@@ -123,7 +112,14 @@ contract InfraredAdapter is BaseVaultAdapter {
     }
 
     function earned(address vault) public view override returns (address[] memory, uint256[] memory) {
-        return _earned(vault);
+        IInfraredVault.UserReward[] memory rewards = IInfraredVault(vault).getAllRewardsForUser(address(this));
+        address[] memory rewardTokens = new address[](rewards.length);
+        uint256[] memory amounts = new uint256[](rewards.length);
+        for (uint256 i; i < rewards.length; i++) {
+            rewardTokens[i] = rewards[i].token;
+            amounts[i] = rewards[i].amount;
+        }
+        return (rewardTokens, amounts);
     }
 
     function version() external pure override returns (string memory) {

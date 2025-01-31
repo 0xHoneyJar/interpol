@@ -21,16 +21,16 @@ contract BGTStationTest is BaseTest {
     BVA                 public lockerAdapter;   // adapter for BGT Station used by locker
 
     // Infrared HONEY-WBERA gauge
-    address     public constant GAUGE       = 0x5c5f9a838747fb83678ECe15D85005FD4F558237;
+    address     public constant GAUGE       = 0xA8C3A7fe0cD52d7A57A5Df7A6e3c71fB1ed428b1;
     // BEX HONEY-WBERA LP token
-    ERC20       public constant LP_TOKEN    = ERC20(0xd28d852cbcc68DCEC922f6d5C7a8185dBaa104B7);
+    ERC20       public constant LP_TOKEN    = ERC20(0x3aD1699779eF2c5a4600e649484402DFBd3c503C);
 
-    address     public constant IRED        = 0xE9eEa54fB348b8B4A350FE88ae8DB6E1A7a39Ae0;
+    address     public constant IRED        = 0x0000000000000000000000000000000000000000;
     /*###############################################################
                             SETUP
     ###############################################################*/
     function setUp() public override {
-        vm.createSelectFork(RPC_URL, uint256(7925685));
+        vm.createSelectFork(RPC_URL_ALT, uint256(5498655));
 
         super.setUp();
 
