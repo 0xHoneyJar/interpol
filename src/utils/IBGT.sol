@@ -16,6 +16,7 @@ interface IBGT {
     function queueDropBoost(bytes calldata pubkey, uint128 amount) external;
     function cancelDropBoost(bytes calldata pubkey, uint128 amount) external;
     function dropBoost(address user, bytes calldata pubkey) external returns (bool);
+    function delegate(address delegatee) external;
 
     function balanceOf(address account) external view returns (uint256);
     function unboostedBalanceOf(address account) external view returns (uint256);

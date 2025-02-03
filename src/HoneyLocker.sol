@@ -215,6 +215,10 @@ contract HoneyLocker is OwnableUpgradeable, TokenReceiver {
     function dropBoost(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
         require(IBGT(honeyQueen.BGT()).dropBoost(address(this), validator));
     }
+
+    function delegate(address delegatee) external onlyOwnerOrOperator {
+        IBGT(honeyQueen.BGT()).delegate(delegatee);
+    }
     /*###############################################################
                             LP MANAGEMENT
     ###############################################################*/
