@@ -8,9 +8,9 @@ ast = true
 build_info = true
 extra_output = ["storageLayout"]
 
-evm_version = "shanghai"
-
-solc = "0.8.23"
+auto_detect_solc = false
+solc = "0.8.26"
+evm_version = "cancun"
 
 fs_permissions = [{ access = "read-write", path = "./" }]
 

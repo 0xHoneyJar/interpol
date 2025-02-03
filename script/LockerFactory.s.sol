@@ -3,11 +3,12 @@ pragma solidity ^0.8.23;
 
 import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {LockerFactory} from "../src/LockerFactory.sol";
 import {HoneyLocker} from "../src/HoneyLocker.sol";
 import {Config} from "./Config.sol";
+
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 contract LockerFactoryDeploy is Script {
     using stdJson for string;
@@ -29,6 +30,9 @@ contract LockerFactoryDeploy is Script {
         vm.startBroadcast(pkey);
 
         address lockerBeacon = Upgrades.deployBeacon("HoneyLocker.sol:HoneyLocker", owner);
+        //address lockerImplementation = address(new HoneyLocker());
+        //address lockerBeacon = address(new UpgradeableBeacon(lockerImplementation, owner));
+        
         factory = new LockerFactory(honeyQueen, pubkey);
         factory.setBeacon(lockerBeacon);
 
