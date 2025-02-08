@@ -85,7 +85,7 @@ contract BoycoTest is BaseTest {
     }
 
     function test_deposit() public prankAsTHJ(false) {
-        uint256 amount = 1000 * 10**6;
+        uint256 amount = 42000000000000;
         asset.mint(THJ, amount);
 
         asset.approve(address(boycoInterpolVault), amount);

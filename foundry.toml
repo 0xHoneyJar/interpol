@@ -22,8 +22,8 @@ remappings = [
 
 [rpc_endpoints]
 bArtio = "https://bartio.rpc.berachain.com/"
-bera = "https://billowing-flashy-leaf.furtim-network.quiknode.pro/2c0dc24524597bb9aba3345ac1c275dad5dafc39/"
+bera = "https://rpc.berachain.com/"
 
 [etherscan]
 bArtio = { key = "verifyContract", url = "https://api.routescan.io/v2/network/testnet/evm/80084/etherscan", chain = 80084 }
-bera = { key = "verifyContract", chain = 80094, url = "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan" }
+bera = { key = "verifyContract", chain = 80094, url = "https://api.beratrail.io/v2/network/mainnet/evm/80094/etherscan" }

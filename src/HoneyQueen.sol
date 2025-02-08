@@ -119,13 +119,6 @@ contract HoneyQueen is UUPSUpgradeable, OwnableUpgradeable {
         return FPML.mulDivUp(amount, protocolFees, 10000);
     }
 
-    function getAdapterParams(address vault) public view returns (address, address) {
-        string memory protocol = protocolOfVault[vault];
-        address adapterBeacon = adapterBeaconOfProtocol[protocol];
-        address token = tokenOfVault[vault];
-        return (adapterBeacon, token);
-    }
-
     function isVaultValidForAdapterBeacon(address adapterBeacon, address vault) public view returns (bool) {
         return adapterBeaconOfProtocol[protocolOfVault[vault]] == adapterBeacon;
     }
