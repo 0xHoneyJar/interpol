@@ -36,7 +36,7 @@ contract BGTTest is BaseTest {
         amount = StdUtils.bound(amount, 1, type(uint32).max);
         StdCheats.deal(address(BGT), address(locker), amount);
 
-        uint256 fees = queen.computeFees(amount);
+        uint256 fees = queen.computeFees(THJ, false, amount);
 
         vm.expectEmit(true, true, false, true, address(BGT));
         emit IBGT.Redeem(address(locker), address(locker), amount);

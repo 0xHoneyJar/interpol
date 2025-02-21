@@ -9,7 +9,7 @@ import {console2} from "forge-std/console2.sol";
 import {LibString} from "solady/utils/LibString.sol";
 
 import {BaseTest} from "./Base.t.sol";
-import {HoneyLocker} from "../src/HoneyLocker.sol";
+import {HoneyLockerV2} from "../src/HoneyLockerV2.sol";
 import {Beekeeper} from "../src/Beekeeper.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
@@ -30,12 +30,19 @@ contract BeekeeperTest is BaseTest {
     /*###############################################################
                             TESTS
     ###############################################################*/
-  function test_feesBERA(uint64 _amount, bool _useOperator) external prankAsTHJ(_useOperator) {
+  function test_feesBERA(
+    uint64 _amount,
+    uint8 _badgesHeld,
+    bool _unlocked
+  ) external prankAsTHJ(false) {
         uint256 amount = uint256(StdUtils.bound(_amount, 1e16, type(uint64).max));
+        cub.setBadgesHeld(locker.owner(), _badgesHeld);
+
+        locker = HoneyLockerV2(lockerFactory.createLocker(THJ, referrer, _unlocked));
 
         vm.deal(address(locker), amount);
 
-        string[] memory inputs = new string[](8);
+        string[] memory inputs = new string[](10);
         inputs[0] = "python3";
         inputs[1] = "test/utils/fees.py";
         inputs[2] = "--fees-bps";
@@ -44,6 +51,8 @@ contract BeekeeperTest is BaseTest {
         inputs[5] = beekeeper.standardReferrerFeeShare().toString();
         inputs[6] = "--amount";
         inputs[7] = amount.toString();
+        inputs[8] = "--badges-held";
+        inputs[9] = _unlocked ? uint256(_badgesHeld).toString() : uint(0).toString();
         bytes memory res = vm.ffi(inputs);
         (uint256 pythonTreasuryFees, uint256 pythonReferrerFees, uint256 pythonWithdrawn) = abi.decode(res, (uint256, uint256, uint256));
 
@@ -52,7 +61,7 @@ contract BeekeeperTest is BaseTest {
         vm.expectEmit(true, true, false, false, address(beekeeper));
         emit Beekeeper.Beekeeper__FeesDistributed(THJTreasury, address(0), pythonTreasuryFees);
         vm.expectEmit(true, false, false, false, address(locker));
-        emit HoneyLocker.HoneyLocker__Withdrawn(address(0), pythonWithdrawn);
+        emit HoneyLockerV2.HoneyLocker__Withdrawn(address(0), pythonWithdrawn);
 
         uint256 balanceOfTHJBefore = THJ.balance;
 
@@ -87,7 +96,7 @@ contract BeekeeperTest is BaseTest {
         vm.expectEmit(true, true, false, false, address(beekeeper));
         emit Beekeeper.Beekeeper__FeesDistributed(THJTreasury, address(token), pythonTreasuryFees);
         vm.expectEmit(true, false, false, false, address(locker));
-        emit HoneyLocker.HoneyLocker__Withdrawn(address(token), pythonWithdrawn);
+        emit HoneyLockerV2.HoneyLocker__Withdrawn(address(token), pythonWithdrawn);
 
         uint256 balanceOfTHJBefore = token.balanceOf(address(THJ));
 

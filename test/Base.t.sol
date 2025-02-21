@@ -7,12 +7,13 @@ import {console2} from "forge-std/console2.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
-import {HoneyLocker} from "../src/HoneyLocker.sol";
+import {HoneyLockerV2} from "../src/HoneyLockerV2.sol";
 import {LockerFactory} from "../src/LockerFactory.sol";
-import {HoneyQueen} from "../src/HoneyQueen.sol";
+import {HoneyQueenV2} from "../src/HoneyQueenV2.sol";
 import {Beekeeper} from "../src/Beekeeper.sol";
 import {TokenReceiver} from "../src/utils/TokenReceiver.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
+import {CUB} from "./mocks/CUB.sol";
 
 abstract contract BaseTest is Test, TokenReceiver {
     /*###############################################################
@@ -30,17 +31,20 @@ abstract contract BaseTest is Test, TokenReceiver {
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
-    HoneyLocker     public locker;
-    HoneyQueen      public queen;
-    Beekeeper       public beekeeper;
-    LockerFactory   public lockerFactory;
+    HoneyLockerV2       public locker;
+    HoneyQueenV2        public queen;
+    Beekeeper           public beekeeper;
+    LockerFactory       public lockerFactory;
+    CUB                 public cub;
 
-    string          public RPC_URL;
-    string          public RPC_URL_ALT;
+    string              public RPC_URL;
+    string              public RPC_URL_ALT;
+    string              public RPC_URL_MAINNET;
 
     constructor() {
         RPC_URL = vm.envOr(string("RPC_URL_TEST"), string("https://bartio.rpc.berachain.com/"));
         RPC_URL_ALT = vm.envOr(string("RPC_URL_TEST_ALT"), string(""));
+        RPC_URL_MAINNET = vm.envOr(string("RPC_URL_MAINNET"), string(""));
     }
     /*###############################################################
                             SETUP
@@ -48,22 +52,25 @@ abstract contract BaseTest is Test, TokenReceiver {
     function setUp() public virtual {
         vm.startPrank(THJ);
 
-        address queenImplementation = address(new HoneyQueen());
-        bytes memory queenInitData = abi.encodeWithSelector(HoneyQueen.initialize.selector, THJ, address(BGT));
-        queen = HoneyQueen(address(new ERC1967Proxy(queenImplementation, queenInitData)));
+        cub = new CUB();
+
+        address queenImplementation = address(new HoneyQueenV2());
+        bytes memory queenInitData = abi.encodeWithSelector(HoneyQueenV2.initialize.selector, THJ, address(BGT));
+        queen = HoneyQueenV2(address(new ERC1967Proxy(queenImplementation, queenInitData)));
 
         beekeeper = new Beekeeper(THJ, THJTreasury);
 
-        HoneyLocker lockerImplementation = new HoneyLocker();
+        HoneyLockerV2 lockerImplementation = new HoneyLockerV2();
         address lockerBeacon = address(new UpgradeableBeacon(address(lockerImplementation), THJ));
         lockerFactory = new LockerFactory(address(queen), THJ);
         lockerFactory.setBeacon(lockerBeacon);
 
-        locker = HoneyLocker(lockerFactory.createLocker(THJ, referrer, false));
+        locker = HoneyLockerV2(lockerFactory.createLocker(THJ, referrer, false));
         locker.setOperator(operator);
 
         queen.setBeekeeper(address(beekeeper));
         queen.setProtocolFees(200);
+        queen.setBadges(address(cub));
 
         beekeeper.setReferrer(referrer, true);
 

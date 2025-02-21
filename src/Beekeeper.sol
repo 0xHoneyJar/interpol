@@ -5,7 +5,6 @@ import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
 
-import {ICUB} from "./utils/ICUB.sol";
 import {HoneyLocker} from "./HoneyLocker.sol";
 
 // prettier-ignore
@@ -25,8 +24,6 @@ contract Beekeeper is Ownable {
     address public treasury;
     uint256 public standardReferrerFeeShare = 2500; // BPS
     
-    ICUB internal badges;
-
     mapping(address referrer => bool authorized)            public      isReferrer;
     mapping(address referrer => address overridingReferrer) public      referrerOverrides;
     mapping(address referrer => uint256 shareOfFeeInBps)    public      _referrerFeeShare;
@@ -40,9 +37,6 @@ contract Beekeeper is Ownable {
     /*###############################################################
                             OWNER ONLY
     ###############################################################*/
-    function setBadges(address _badges) external onlyOwner {
-        badges = ICUB(_badges);
-    }
     function setTreasury(address _treasury) external onlyOwner {
         treasury = _treasury;
     }
@@ -85,14 +79,6 @@ contract Beekeeper is Ownable {
     /*###############################################################
                             INTERNAL
     ###############################################################*/
-    function _applyDiscount(address _locker, uint256 _amount) internal view returns (uint256) {
-        address owner = HoneyLocker(payable(_locker)).owner();
-        uint256 badgesHeld = badges.badgesHeld(owner);
-        if (badgesHeld == 0) return _amount;
-        uint256 effectiveBadges = badgesHeld > 69 ? 69 : badgesHeld;
-        uint256 discountBasisPoints = effectiveBadges * 100;
-        return FPML.mulDivUp(_amount, 10000 - discountBasisPoints, 10000);
-    }
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
@@ -106,7 +92,6 @@ contract Beekeeper is Ownable {
     function distributeFees(address _referrer, address _token, uint256 _amount) external payable {
         bool isBera = _token == address(0);
         if (!isBera && _token.code.length == 0) revert Beekeeper__NoCodeForToken();
-        _amount = _applyDiscount(msg.sender, _amount);
         // if not an authorized referrer, send everything to treasury
         if (!isReferrer[_referrer]) {
             isBera ? STL.safeTransferETH(treasury, _amount) : STL.safeTransfer(_token, treasury, _amount);
