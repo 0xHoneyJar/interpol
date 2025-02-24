@@ -4,9 +4,9 @@ pragma solidity ^0.8.23;
 import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
-import {HoneyQueen} from "../src/HoneyQueen.sol";
-import {Beekeeper} from "../src/Beekeeper.sol";
-import {LockerFactory} from "../src/LockerFactory.sol";
+import {HoneyQueen} from "src/HoneyQueen.sol";
+import {Beekeeper} from "src/Beekeeper.sol";
+import {LockerFactory} from "src/LockerFactory.sol";
 
 import {BeekeeperDeploy} from "./Beekeeper.s.sol";
 import {HoneyQueenDeploy} from "./HoneyQueen.s.sol";

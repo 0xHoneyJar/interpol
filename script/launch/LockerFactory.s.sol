@@ -4,8 +4,8 @@ pragma solidity ^0.8.23;
 import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
-import {LockerFactory} from "../src/LockerFactory.sol";
-import {HoneyLocker} from "../src/HoneyLocker.sol";
+import {LockerFactory} from "src/LockerFactory.sol";
+import {HoneyLocker} from "src/HoneyLocker.sol";
 import {Config} from "./Config.sol";
 
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";

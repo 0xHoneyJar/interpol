@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
-import {Beekeeper} from "../src/Beekeeper.sol";
+import {Beekeeper} from "src/Beekeeper.sol";
 import {Config} from "./Config.sol";
 
 contract BeekeeperDeploy is Script {

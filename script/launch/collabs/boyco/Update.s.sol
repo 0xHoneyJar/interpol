@@ -7,7 +7,7 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import { Options } from "openzeppelin-foundry-upgrades/Options.sol";
 
-import {BoycoInterpolVaultV2} from "../../../src/collabs/boyco/BoycoInterpolVaultV2.sol";
+import {BoycoInterpolVaultV2} from "src/collabs/boyco/BoycoInterpolVaultV2.sol";
 
 contract Update is Script {
     using stdJson for string;
