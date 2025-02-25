@@ -9,7 +9,7 @@ import {console2} from "forge-std/console2.sol";
 import {LibString} from "solady/utils/LibString.sol";
 
 import {BaseTest} from "./Base.t.sol";
-import {HoneyLocker} from "../src/HoneyLocker.sol";
+import {HoneyLockerV2} from "../src/HoneyLockerV2.sol";
 import {Beekeeper} from "../src/Beekeeper.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
@@ -30,7 +30,7 @@ contract BeekeeperTest is BaseTest {
     /*###############################################################
                             TESTS
     ###############################################################*/
-  function test_feesBERA(uint64 _amount, bool _useOperator) external prankAsTHJ(_useOperator) {
+   function test_feesBERA(uint64 _amount, bool _useOperator) external prankAsTHJ(_useOperator) {
         uint256 amount = uint256(StdUtils.bound(_amount, 1e16, type(uint64).max));
 
         vm.deal(address(locker), amount);
@@ -52,7 +52,7 @@ contract BeekeeperTest is BaseTest {
         vm.expectEmit(true, true, false, false, address(beekeeper));
         emit Beekeeper.Beekeeper__FeesDistributed(THJTreasury, address(0), pythonTreasuryFees);
         vm.expectEmit(true, false, false, false, address(locker));
-        emit HoneyLocker.HoneyLocker__Withdrawn(address(0), pythonWithdrawn);
+        emit HoneyLockerV2.HoneyLocker__Withdrawn(address(0), pythonWithdrawn);
 
         uint256 balanceOfTHJBefore = THJ.balance;
 
@@ -87,7 +87,7 @@ contract BeekeeperTest is BaseTest {
         vm.expectEmit(true, true, false, false, address(beekeeper));
         emit Beekeeper.Beekeeper__FeesDistributed(THJTreasury, address(token), pythonTreasuryFees);
         vm.expectEmit(true, false, false, false, address(locker));
-        emit HoneyLocker.HoneyLocker__Withdrawn(address(token), pythonWithdrawn);
+        emit HoneyLockerV2.HoneyLocker__Withdrawn(address(token), pythonWithdrawn);
 
         uint256 balanceOfTHJBefore = token.balanceOf(address(THJ));
 

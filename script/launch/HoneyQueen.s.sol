@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-import {HoneyQueen} from "../src/HoneyQueen.sol";
+import {HoneyQueen} from "src/HoneyQueen.sol";
 import {Config} from "./Config.sol";
 
 contract HoneyQueenDeploy is Script {

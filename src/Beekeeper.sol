@@ -5,6 +5,8 @@ import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
 
+import {HoneyLocker} from "./HoneyLocker.sol";
+
 // prettier-ignore
 contract Beekeeper is Ownable {
     /*###############################################################
@@ -21,7 +23,7 @@ contract Beekeeper is Ownable {
     ###############################################################*/
     address public treasury;
     uint256 public standardReferrerFeeShare = 2500; // BPS
-
+    
     mapping(address referrer => bool authorized)            public      isReferrer;
     mapping(address referrer => address overridingReferrer) public      referrerOverrides;
     mapping(address referrer => uint256 shareOfFeeInBps)    public      _referrerFeeShare;
@@ -74,6 +76,9 @@ contract Beekeeper is Ownable {
     function referrerFeeShare(address _referrer) public view returns (uint256) {
         return _referrerFeeShare[_referrer] != 0 ? _referrerFeeShare[_referrer] : standardReferrerFeeShare;
     }
+    /*###############################################################
+                            INTERNAL
+    ###############################################################*/
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
