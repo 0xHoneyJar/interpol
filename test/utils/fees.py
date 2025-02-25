@@ -6,16 +6,11 @@ def main(args):
     fees_bps = args.fees_bps
     amount = args.amount
     referrer_fees_bps = args.referrer_fees_bps
-    badges_held = args.badges_held
-
     if fees_bps is None or amount is None or referrer_fees_bps is None:
         print("All arguments are required.")
         return
 
-    capped_badges = min(badges_held, 69)
-
     fees = int((amount * fees_bps) / 10000)
-    fees = int(fees * ((100-capped_badges) / 100))
     referrer_fees = int((fees * referrer_fees_bps) / 10000)
     treasury_fees = fees - referrer_fees
 
@@ -32,7 +27,6 @@ def parse_args():
     )  # total fees in bps, to be split between treasury and referrer
     parser.add_argument("--referrer-fees-bps", type=int)  # fees given to referrer
     parser.add_argument("--amount", type=int)  # amount of tokens the user gets
-    parser.add_argument("--badges-held", type=int, default=0)  # amount of badges the user has
     return parser.parse_args()
 
 

@@ -124,11 +124,20 @@ contract HoneyQueenV2 is UUPSUpgradeable, OwnableUpgradeable {
     ###############################################################*/
     function computeFees(address user, bool applyDiscount, uint256 amount) public view returns (uint256) {
         uint256 fees = FPML.mulDivUp(amount, protocolFees, 10000);
-        uint256 badgesHeld = badges.badgesHeld(user);
-        if (badgesHeld == 0 || !applyDiscount) return fees;
-        uint256 effectiveBadges = badgesHeld > 69 ? 69 : badgesHeld;
-        uint256 discountBasisPoints = effectiveBadges * 100;
-        return FPML.mulDivUp(fees, 10000 - discountBasisPoints, 10000);
+        if (!applyDiscount) return fees;
+        
+        uint256 badgesPercentageOfUser = badges.badgesPercentageOfUser(user);
+        if (badgesPercentageOfUser == 0) return fees;
+        
+        // Calculate a linear discount on the fees based on the user's badge holding.
+        // The discount fraction is the proportion of badges owned (in bps) scaled to a maximum discount of 69%.
+        // That is, discount = (badgesPercentageOfUser / 10000) * 6900 (in basis points)
+        uint256 maxDiscount = 6900;
+        uint256 discount = FPML.mulDivUp(badgesPercentageOfUser, maxDiscount, 10000);
+        if (discount > maxDiscount) {
+            discount = maxDiscount;
+        }
+        return FPML.mulDivUp(fees, 10000 - discount, 10000);
     }
 
     function isVaultValidForAdapterBeacon(address adapterBeacon, address vault) public view returns (bool) {
@@ -136,7 +145,7 @@ contract HoneyQueenV2 is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function version() external pure returns (string memory) {
-        return "2.0";
+        return "2.1";
     }
 
     function getImplementation() external view returns (address) {

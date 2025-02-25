@@ -53,6 +53,7 @@ abstract contract BaseTest is Test, TokenReceiver {
         vm.startPrank(THJ);
 
         cub = new CUB();
+        cub.setTotalBadges(200);
 
         address queenImplementation = address(new HoneyQueenV2());
         bytes memory queenInitData = abi.encodeWithSelector(HoneyQueenV2.initialize.selector, THJ, address(BGT));
