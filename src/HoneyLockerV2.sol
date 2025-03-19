@@ -18,6 +18,7 @@ import {HoneyQueenV2} from "./HoneyQueenV2.sol";
 import {Beekeeper} from "./Beekeeper.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
 import {IUniswapV3} from "./utils/IUniswapV3.sol";
+import {IBGM} from "./utils/IBGM.sol";
 
 contract HoneyLockerV2 is OwnableUpgradeable, TokenReceiver {
     /*###############################################################
@@ -50,6 +51,7 @@ contract HoneyLockerV2 is OwnableUpgradeable, TokenReceiver {
 
     event HoneyLocker__OperatorSet(address indexed operator);
     event HoneyLocker__TreasurySet(address indexed treasury);
+    event HoneyLocker__BGMSet(address indexed BGM);
 
     event HoneyLocker__AdapterRegistered(string indexed protocol, address adapter);
     /*###############################################################
@@ -66,8 +68,9 @@ contract HoneyLockerV2 is OwnableUpgradeable, TokenReceiver {
     address                                         public  referrer;
     address                                         public  treasury;            
     address                                         public  operator;
+    address                                         public  BGM;
 
-    uint256[41] __gap;
+    uint256[40] __gap;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -128,6 +131,10 @@ contract HoneyLockerV2 is OwnableUpgradeable, TokenReceiver {
     function setTreasury(address _treasury) external onlyOwner {
         treasury = _treasury;
         emit HoneyLocker__TreasurySet(_treasury);
+    }
+
+    function setBGM(address _BGM) external onlyOwner {
+        BGM = _BGM;
     }
     /*###############################################################
                             INTERNAL
@@ -218,6 +225,37 @@ contract HoneyLockerV2 is OwnableUpgradeable, TokenReceiver {
 
     function delegate(address delegatee) external onlyOwnerOrOperator {
         IBGT(honeyQueen.BGT()).delegate(delegatee);
+    }
+    /*###############################################################
+                            BGM MANAGEMENT
+    ###############################################################*/
+    function contributeBGM(uint256 _amount) external onlyOwnerOrOperator {
+        IBGM(BGM).contribute(_amount);
+    }
+
+    function burnBGMForBERA(uint256 _amount) external onlyOwnerOrOperator {
+        IBGM(BGM).redeem(_amount);
+        withdrawBERA(_amount);
+    }
+
+    function queueBoostBGM(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGM(BGM).delegate(validator, amount);
+    }
+
+    function cancelQueuedBoostBGM(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGM(BGM).cancel(validator, amount);
+    }
+
+    function queueDropBoostBGM(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGM(BGM).unbondQueue(validator, amount);
+    }
+
+    function cancelDropBoostBGM(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGM(BGM).cancelUnbond(validator, amount);
+    }
+
+    function dropBoostBGM(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGM(BGM).unbond(validator);
     }
     /*###############################################################
                             LP MANAGEMENT
