@@ -14,6 +14,7 @@ import {Beekeeper} from "../src/Beekeeper.sol";
 import {TokenReceiver} from "../src/utils/TokenReceiver.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
 import {CUB} from "./mocks/CUB.sol";
+import {IBGM} from "../src/utils/IBGM.sol";
 
 abstract contract BaseTest is Test, TokenReceiver {
     /*###############################################################
@@ -27,7 +28,8 @@ abstract contract BaseTest is Test, TokenReceiver {
     address internal treasury       = makeAddr("treasury");
     address internal operator       = makeAddr("operator");
 
-    IBGT    internal BGT            = IBGT(0x289274787bAF083C15A45a174b7a8e44F0720660);
+    IBGT    internal BGT            = IBGT(0x656b95E550C07a9ffe548bd4085c72418Ceb1dba);
+    IBGM    internal BGM            = IBGM(0xF50891e02e14EA124140338B6f05E3d73b7d313E);
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
@@ -68,6 +70,7 @@ abstract contract BaseTest is Test, TokenReceiver {
 
         locker = HoneyLockerV2(lockerFactory.createLocker(THJ, referrer, false));
         locker.setOperator(operator);
+        locker.setBGM(address(BGM));
 
         queen.setBeekeeper(address(beekeeper));
         queen.setProtocolFees(200);

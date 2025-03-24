@@ -22,13 +22,13 @@ contract BGTStationTest is BaseTest {
     BVA                 public lockerAdapter;   // adapter for BGT Station used by locker
 
     // BERA-HONEY gauge
-    address     public constant GAUGE       = 0x0cc03066a3a06F3AC68D3A0D36610F52f7C20877;
+    address     public constant GAUGE       = 0x9C84a17467d0F691b4a6FE6c64fA00eDb55D9646;
     // BERA-HONEY LP token
-    ERC20       public constant LP_TOKEN    = ERC20(0x3aD1699779eF2c5a4600e649484402DFBd3c503C);
+    ERC20       public constant LP_TOKEN    = ERC20(0xE48463c7C26287133d86485985f71F8F52d5Dd9c);
     /*###############################################################
                             SETUP
     ###############################################################*/
-    function setUp() public override {
+    function setUp() public virtual override {
         /*
             Choosing this block number because the vault LBGT-WBERA is active
         */
