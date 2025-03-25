@@ -22,7 +22,7 @@ interface IBGTStationGauge {
     function operator(address account) external view returns (address);
 }
 
-interface IHoneyLocker {
+interface IHoneyQueen {
     function BGM() external view returns (address);
 }
 
@@ -30,9 +30,7 @@ contract BGTStationAdapter is BaseVaultAdapter {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    address public BGM;
-
-    uint256[49] __gap_;
+    uint256[50] __gap_;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -69,7 +67,7 @@ contract BGTStationAdapter is BaseVaultAdapter {
 
     function _claimBGM(address vault) internal {        
         IBGTStationGauge bgtStationGauge = IBGTStationGauge(vault);
-        address bgmAddress = IHoneyLocker(locker).BGM();
+        address bgmAddress = IHoneyQueen(honeyQueen).BGM();
 
         address[] memory vaults = new address[](1);
         vaults[0] = vault;

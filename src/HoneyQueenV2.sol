@@ -39,8 +39,9 @@ contract HoneyQueenV2 is UUPSUpgradeable, OwnableUpgradeable {
     address                                             public      beekeeper;
     uint256                                             public      protocolFees;
     ICUB                                                public      badges;
+    address                                             public      BGM;
 
-    uint256[40] __gap;
+    uint256[39] __gap;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -115,6 +116,10 @@ contract HoneyQueenV2 is UUPSUpgradeable, OwnableUpgradeable {
 
     function setBadges(address _badges) external onlyOwner {
         badges = ICUB(_badges);
+    }
+
+    function setBGM(address _BGM) external onlyOwner {
+        BGM = _BGM;
     }
     /*###############################################################
                             EXTERNAL FUNCTIONS

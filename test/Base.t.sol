@@ -29,7 +29,7 @@ abstract contract BaseTest is Test, TokenReceiver {
     address internal operator       = makeAddr("operator");
 
     IBGT    internal BGT            = IBGT(0x656b95E550C07a9ffe548bd4085c72418Ceb1dba);
-    IBGM    internal BGM            = IBGM(0xF50891e02e14EA124140338B6f05E3d73b7d313E);
+    IBGM    internal BGM            = IBGM(0x714b6d682c168096D7c78944dDe7cae783DdB583);
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
@@ -70,11 +70,11 @@ abstract contract BaseTest is Test, TokenReceiver {
 
         locker = HoneyLockerV2(lockerFactory.createLocker(THJ, referrer, false));
         locker.setOperator(operator);
-        locker.setBGM(address(BGM));
 
         queen.setBeekeeper(address(beekeeper));
         queen.setProtocolFees(200);
         queen.setBadges(address(cub));
+        queen.setBGM(address(BGM));
 
         beekeeper.setReferrer(referrer, true);
 
