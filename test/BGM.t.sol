@@ -32,6 +32,27 @@ contract BGMTest is BGTStationTest {
         locker.setTreasury(treasury);
     }
 
+    function _setUpBoostDelay() public {
+        address contractAddr = address(BGT);
+        bytes32 slot1Value = vm.load(contractAddr, bytes32(uint256(1)));
+
+        uint256 storageValue = uint256(slot1Value);
+
+        uint32 newActivateBoostDelay = 8191;
+        uint32 newDropBoostDelay = 8191;
+
+        storageValue &= ~(uint256(0xFFFFFFFF) << 160); // Clear activateBoostDelay (bits 160-191)
+        storageValue |= uint256(newActivateBoostDelay) << 160; // Insert new value
+
+        storageValue &= ~(uint256(0xFFFFFFFF) << 192); // Clear dropBoostDelay (bits 192-223)
+        storageValue |= uint256(newDropBoostDelay) << 192; // Insert new value
+
+        vm.store(contractAddr, bytes32(uint256(1)), bytes32(storageValue));
+
+        assertEq(BGT.activateBoostDelay(), newActivateBoostDelay);
+        assertEq(BGT.dropBoostDelay(), newDropBoostDelay);
+    }
+
     function _setUpStake(uint256 amountToDeposit) internal {
         StdCheats.deal(address(LP_TOKEN), address(locker), amountToDeposit);
 
@@ -163,19 +184,20 @@ contract BGMTest is BGTStationTest {
         amount = uint128(StdUtils.bound(amount, 1, type(uint32).max));
         StdCheats.deal(address(BGT), address(locker), uint256(amount));
         _setUpStake(amount);
+        _setUpBoostDelay();
 
         uint128 balance = uint128(BGM.getBalance(address(locker)));
         uint128 boostAmount = balance / 2;
 
         locker.queueBoostBGM(boostAmount, VALIDATOR_PUBKEY);
-        vm.roll(block.number + 100);
+        vm.roll(block.number + 1);
         locker.queueBoostBGM(boostAmount, VALIDATOR_PUBKEY);
 
         vm.expectEmit(true, false, false, true, address(BGM));
         emit IBGM.DelegationCancelled(VALIDATOR_PUBKEY, address(locker), boostAmount);
         locker.cancelQueuedBoostBGM(boostAmount, VALIDATOR_PUBKEY);
 
-        assertEq(BGM.getBalance(address(locker)), boostAmount);
+        assertEq(BGM.getBalance(address(locker)), balance - boostAmount);
     }
 
     function testBGM_queueDropBoostBGM(uint128 amount, bool _useOperator) external prankAsTHJ(_useOperator) {
@@ -201,6 +223,7 @@ contract BGMTest is BGTStationTest {
         amount = uint128(StdUtils.bound(amount, 1, type(uint32).max));
         StdCheats.deal(address(BGT), address(locker), uint256(amount));
         _setUpStake(amount);
+        _setUpBoostDelay();
 
         uint128 boostAmount = uint128(BGM.getBalance(address(locker)));
 
@@ -209,14 +232,16 @@ contract BGMTest is BGTStationTest {
         vm.roll(block.number + BGT.activateBoostDelay() + 1);
         BGM.activate(VALIDATOR_PUBKEY);
 
-        locker.queueDropBoostBGM(boostAmount / 2, VALIDATOR_PUBKEY);
-        vm.roll(block.number + 100);
-        locker.queueDropBoostBGM(boostAmount / 2, VALIDATOR_PUBKEY);
+        uint128 dropBoostAmount = boostAmount / 2;
+
+        locker.queueDropBoostBGM(dropBoostAmount, VALIDATOR_PUBKEY);
+        vm.roll(block.number + 1);
+        locker.queueDropBoostBGM(dropBoostAmount, VALIDATOR_PUBKEY);
 
         vm.expectEmit(true, false, false, true, address(BGM));
-        emit IBGM.UnbondCancelled(VALIDATOR_PUBKEY, address(locker), boostAmount / 2);
-        locker.cancelDropBoostBGM(boostAmount / 2, VALIDATOR_PUBKEY);
-        _assertBalance(VALIDATOR_PUBKEY, address(locker), 0, 0, boostAmount / 2, "After cancel unbond - should have balance");
+        emit IBGM.UnbondCancelled(VALIDATOR_PUBKEY, address(locker), dropBoostAmount);
+        locker.cancelDropBoostBGM(dropBoostAmount, VALIDATOR_PUBKEY);
+        _assertBalance(VALIDATOR_PUBKEY, address(locker), 0, 0, boostAmount - dropBoostAmount, "After cancel unbond - should have balance");
     }
 
     function testBGM_dropBoostBGM(uint128 amount, bool _useOperator) external prankAsTHJ(_useOperator) {
