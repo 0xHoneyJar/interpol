@@ -8,7 +8,7 @@ import {FixedPointMathLib as FPML} from "solady/utils/FixedPointMathLib.sol";
 
 import {ICUB} from "./utils/ICUB.sol";
 
-contract HoneyQueenV2 is UUPSUpgradeable, OwnableUpgradeable {
+contract HoneyQueenV3 is UUPSUpgradeable, OwnableUpgradeable {
     /*###############################################################
                             ERRORS
     ###############################################################*/
@@ -40,7 +40,9 @@ contract HoneyQueenV2 is UUPSUpgradeable, OwnableUpgradeable {
     uint256                                             public      protocolFees;
     ICUB                                                public      badges;
 
-    uint256[40] __gap;
+    address                                             public      BGM;
+
+    uint256[39] __gap;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
@@ -116,6 +118,10 @@ contract HoneyQueenV2 is UUPSUpgradeable, OwnableUpgradeable {
     function setBadges(address _badges) external onlyOwner {
         badges = ICUB(_badges);
     }
+
+    function setBGM(address _BGM) external onlyOwner {
+        BGM = _BGM;
+    }
     /*###############################################################
                             EXTERNAL FUNCTIONS
     ###############################################################*/
@@ -145,7 +151,7 @@ contract HoneyQueenV2 is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function version() external pure returns (string memory) {
-        return "2.1";
+        return "3.0";
     }
 
     function getImplementation() external view returns (address) {

@@ -14,12 +14,13 @@ import {BaseVaultAdapter as BVA} from "./adapters/BaseVaultAdapter.sol";
 import {IBGTStationGauge} from "./adapters/BGTStationAdapter.sol";
 import {IBGT} from "./utils/IBGT.sol";
 import {IBGTStaker} from "./utils/IBGTStaker.sol";
-import {HoneyQueenV2} from "./HoneyQueenV2.sol";
+import {HoneyQueenV3} from "./HoneyQueenV3.sol";
 import {Beekeeper} from "./Beekeeper.sol";
 import {TokenReceiver} from "./utils/TokenReceiver.sol";
 import {IUniswapV3} from "./utils/IUniswapV3.sol";
+import {IBGM} from "./utils/IBGM.sol";
 
-contract HoneyLockerV2 is OwnableUpgradeable, TokenReceiver {
+contract HoneyLockerV3 is OwnableUpgradeable, TokenReceiver {
     /*###############################################################
                             ERRORS
     ###############################################################*/
@@ -55,7 +56,7 @@ contract HoneyLockerV2 is OwnableUpgradeable, TokenReceiver {
     /*###############################################################
                             STORAGE
     ###############################################################*/
-    HoneyQueenV2                                    public  honeyQueen;
+    HoneyQueenV3                                    public  honeyQueen;
     mapping(string protocol => BVA adapter)         public  adapterOfProtocol;
 
     mapping(address LPToken => uint256 staked)      public  totalLPStaked;
@@ -83,7 +84,7 @@ contract HoneyLockerV2 is OwnableUpgradeable, TokenReceiver {
     initializer 
     {
         __Ownable_init(_owner);
-        honeyQueen = HoneyQueenV2(_honeyQueen);
+        honeyQueen = HoneyQueenV3(_honeyQueen);
         unlocked = _unlocked;
         referrer = _referrer;
     }
@@ -220,6 +221,37 @@ contract HoneyLockerV2 is OwnableUpgradeable, TokenReceiver {
         IBGT(honeyQueen.BGT()).delegate(delegatee);
     }
     /*###############################################################
+                            BGM MANAGEMENT
+    ###############################################################*/
+    function contributeBGM(uint256 _amount) external onlyOwnerOrOperator {
+        IBGM(honeyQueen.BGM()).contribute(_amount);
+    }
+
+    function burnBGMForBERA(uint256 _amount) external onlyOwnerOrOperator {
+        IBGM(honeyQueen.BGM()).redeem(_amount);
+        withdrawBERA(_amount);
+    }
+
+    function queueBoostBGM(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGM(honeyQueen.BGM()).delegate(validator, amount);
+    }
+
+    function cancelQueuedBoostBGM(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGM(honeyQueen.BGM()).cancel(validator, amount);
+    }
+
+    function queueDropBoostBGM(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGM(honeyQueen.BGM()).unbondQueue(validator, amount);
+    }
+
+    function cancelDropBoostBGM(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGM(honeyQueen.BGM()).cancelUnbond(validator, amount);
+    }
+
+    function dropBoostBGM(uint128 amount, bytes calldata validator) external onlyOwnerOrOperator {
+        IBGM(honeyQueen.BGM()).unbond(validator);
+    }
+    /*###############################################################
                             LP MANAGEMENT
     ###############################################################*/
     /// @notice             Deposits and locks LP tokens in the HoneyLocker
@@ -326,7 +358,7 @@ contract HoneyLockerV2 is OwnableUpgradeable, TokenReceiver {
         return treasury == address(0) ? owner() : treasury;
     }
     function version() external pure returns (string memory) {
-        return "2.0";
+        return "3.0";
     }
     /*###############################################################
                             PUBLIC LOGIC

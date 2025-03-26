@@ -6,6 +6,7 @@ import {SafeTransferLib as STL} from "solady/utils/SafeTransferLib.sol";
 
 import {IRelaxedERC20} from "../utils/IRelaxedERC20.sol";
 import {BaseVaultAdapter} from "./BaseVaultAdapter.sol";
+import {IBGM} from "../utils/IBGM.sol";
 
 interface IBGTStationGauge {
     event Staked(address indexed account, uint256 amount);
@@ -18,9 +19,14 @@ interface IBGTStationGauge {
     function earned(address account) external view returns (uint256);
     function stakeToken() external view returns (address);
     function rewardToken() external view returns (address);
+    function operator(address account) external view returns (address);
 }
 
-contract BGTStationAdapter is BaseVaultAdapter {
+interface IHoneyQueen {
+    function BGM() external view returns (address);
+}
+
+contract BGTStationAdapterV2 is BaseVaultAdapter {
     /*###############################################################
                             STORAGE
     ###############################################################*/
@@ -58,6 +64,20 @@ contract BGTStationAdapter is BaseVaultAdapter {
         amounts[0] = earnedAmount;
         return (rewardTokens, amounts);
     }
+
+    function _claimBGM(address vault) internal {        
+        IBGTStationGauge bgtStationGauge = IBGTStationGauge(vault);
+        address bgmAddress = IHoneyQueen(honeyQueen).BGM();
+
+        address[] memory vaults = new address[](1);
+        vaults[0] = vault;
+
+        if (bgtStationGauge.operator(address(this)) != bgmAddress) {
+            bgtStationGauge.setOperator(bgmAddress);
+        }
+
+        IBGM(bgmAddress).depositFor(vaults, locker);
+    }
     /*###############################################################
                             EXTERNAL
     ###############################################################*/
@@ -87,7 +107,9 @@ contract BGTStationAdapter is BaseVaultAdapter {
     }
 
     function wildcard(address vault, uint8 func, bytes calldata args) external override onlyLocker isVaultValid(vault) {
-        revert BaseVaultAdapter__NotImplemented();
+        if (func == 0) {
+            _claimBGM(vault);
+        }
     }
     /*###############################################################
                             VIEW
@@ -102,7 +124,7 @@ contract BGTStationAdapter is BaseVaultAdapter {
 
 
     function version() external pure override returns (string memory) {
-        return "1.0";
+        return "2.0";
     }
 }
 
