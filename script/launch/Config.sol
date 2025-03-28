@@ -14,11 +14,11 @@ contract Config is Script {
     }
 
     function getConfig() public view returns (string memory) {
-        return vm.readFile(isTestnet ? "./script/testnet.config.json" : "./script/mainnet.config.json");
+        return vm.readFile(isTestnet ? "./script/launch/testnet.config.json" : "./script/launch/mainnet.config.json");
     }
 
     function getConfigFilename() public view returns (string memory) {
-        return isTestnet ? "./script/testnet.config.json" : "./script/mainnet.config.json";
+        return isTestnet ? "./script/launch/testnet.config.json" : "./script/launch/mainnet.config.json";
     }
 
     function getRPCUrl() public view returns (string memory) {

@@ -123,7 +123,7 @@ contract BGTTest is BaseTest {
         vm.roll(block.number + 10001);
 
         vm.expectEmit(true, true, false, true, address(BGT));
-        emit IBGT.DropBoost(address(locker), validator, amount);
+        emit IBGT.DropBoost(address(locker), address(locker), validator, amount);
         locker.dropBoost(amount, validator);
 
         assertEq(BGT.unboostedBalanceOf(address(locker)), amount);
