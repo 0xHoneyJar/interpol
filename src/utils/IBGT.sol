@@ -6,7 +6,7 @@ interface IBGT {
     event ActivateBoost(address indexed sender, address indexed user, bytes indexed pubkey, uint128 amount);
     event QueueDropBoost(address indexed user, bytes indexed pubkey, uint128 amount);
     event CancelDropBoost(address indexed user, bytes indexed pubkey, uint128 amount);
-    event DropBoost(address indexed sender, bytes indexed pubkey, uint128 amount);
+    event DropBoost(address indexed sender, address indexed user, bytes indexed pubkey, uint128 amount);
     event Redeem(address indexed from, address indexed receiver, uint256 amount);
     
     function redeem(address receiver, uint256 amount) external;
@@ -28,4 +28,6 @@ interface IBGT {
     function totalBoosts() external view returns (uint128);
     function normalizedBoost(bytes calldata pubkey) external view returns (uint256);
     function staker() external view returns (address);
+    function activateBoostDelay() external view returns (uint32);
+    function dropBoostDelay() external view returns (uint32);
 }

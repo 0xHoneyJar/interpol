@@ -7,13 +7,14 @@ import {console2} from "forge-std/console2.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
-import {HoneyLockerV2} from "../src/HoneyLockerV2.sol";
+import {HoneyLockerV3} from "../src/HoneyLockerV3.sol";
 import {LockerFactory} from "../src/LockerFactory.sol";
-import {HoneyQueenV2} from "../src/HoneyQueenV2.sol";
+import {HoneyQueenV3} from "../src/HoneyQueenV3.sol";
 import {Beekeeper} from "../src/Beekeeper.sol";
 import {TokenReceiver} from "../src/utils/TokenReceiver.sol";
 import {IBGT} from "../src/utils/IBGT.sol";
 import {CUB} from "./mocks/CUB.sol";
+import {IBGM} from "../src/utils/IBGM.sol";
 
 abstract contract BaseTest is Test, TokenReceiver {
     /*###############################################################
@@ -27,12 +28,13 @@ abstract contract BaseTest is Test, TokenReceiver {
     address internal treasury       = makeAddr("treasury");
     address internal operator       = makeAddr("operator");
 
-    IBGT    internal BGT            = IBGT(0x289274787bAF083C15A45a174b7a8e44F0720660);
+    IBGT    internal BGT            = IBGT(0x656b95E550C07a9ffe548bd4085c72418Ceb1dba);
+    IBGM    internal BGM            = IBGM(0x714b6d682c168096D7c78944dDe7cae783DdB583);
     /*###############################################################
                             STATE VARIABLES
     ###############################################################*/
-    HoneyLockerV2       public locker;
-    HoneyQueenV2        public queen;
+    HoneyLockerV3       public locker;
+    HoneyQueenV3        public queen;
     Beekeeper           public beekeeper;
     LockerFactory       public lockerFactory;
     CUB                 public cub;
@@ -55,23 +57,24 @@ abstract contract BaseTest is Test, TokenReceiver {
         cub = new CUB();
         cub.setTotalBadges(200);
 
-        address queenImplementation = address(new HoneyQueenV2());
-        bytes memory queenInitData = abi.encodeWithSelector(HoneyQueenV2.initialize.selector, THJ, address(BGT));
-        queen = HoneyQueenV2(address(new ERC1967Proxy(queenImplementation, queenInitData)));
+        address queenImplementation = address(new HoneyQueenV3());
+        bytes memory queenInitData = abi.encodeWithSelector(HoneyQueenV3.initialize.selector, THJ, address(BGT));
+        queen = HoneyQueenV3(address(new ERC1967Proxy(queenImplementation, queenInitData)));
 
         beekeeper = new Beekeeper(THJ, THJTreasury);
 
-        HoneyLockerV2 lockerImplementation = new HoneyLockerV2();
+        HoneyLockerV3 lockerImplementation = new HoneyLockerV3();
         address lockerBeacon = address(new UpgradeableBeacon(address(lockerImplementation), THJ));
         lockerFactory = new LockerFactory(address(queen), THJ);
         lockerFactory.setBeacon(lockerBeacon);
 
-        locker = HoneyLockerV2(lockerFactory.createLocker(THJ, referrer, false));
+        locker = HoneyLockerV3(lockerFactory.createLocker(THJ, referrer, false));
         locker.setOperator(operator);
 
         queen.setBeekeeper(address(beekeeper));
         queen.setProtocolFees(200);
         queen.setBadges(address(cub));
+        queen.setBGM(address(BGM));
 
         beekeeper.setReferrer(referrer, true);
 
