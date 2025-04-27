@@ -19,20 +19,25 @@ contract UpdateScript is Script {
         vm.startBroadcast(pkey);
 
         // // deploy new implementations for honeyqueen
-        HoneyQueenV3 honeyQueenV3 = new HoneyQueenV3();
+        Options memory honeyQueenOpts;
+        honeyQueenOpts.referenceContract = "HoneyQueenV2.sol:HoneyQueenV2";
+        Upgrades.upgradeProxy(0x9f18D3bb7BB30581625d243FDB97Ab04f91FD95B, "HoneyQueenV3.sol:HoneyQueenV3", "", honeyQueenOpts);
         HoneyQueenV3 honeyQueen = HoneyQueenV3(0x9f18D3bb7BB30581625d243FDB97Ab04f91FD95B);
-        honeyQueen.upgradeToAndCall(address(honeyQueenV3), "");
         honeyQueen.setBGM(0x488F847E277D6cC50EB349c493aa0875136cBFF1);
+
+        
 
         // // upgrade honeylocker
         Options memory lockerBeaconOpts;
         lockerBeaconOpts.referenceContract = "HoneyLockerV2.sol:HoneyLockerV2";
-        Upgrades.upgradeBeacon(0xD57848B26aBed18E36Fdb368E45F081C3A8C9980, "HoneyLockerV3.sol:HoneyLockerV3", lockerBeaconOpts);
+        address honeyLockerV3 = Upgrades.deployImplementation("HoneyLockerV3.sol:HoneyLockerV3", lockerBeaconOpts);
+        console.log("HoneyLockerV3 deployed at:", honeyLockerV3);
 
         // // upgrade BGTStationAdapter beacon
         Options memory adapterBeaconOpts;
         adapterBeaconOpts.referenceContract = "BGTStationAdapter.sol:BGTStationAdapter";
-        Upgrades.upgradeBeacon(0x6571d9e2830ab0d500ffe557e94EA45762Fd8B8f, "BGTStationAdapterV2.sol:BGTStationAdapterV2", adapterBeaconOpts);
+        address bgtStationAdapterV2 = Upgrades.deployImplementation("BGTStationAdapterV2.sol:BGTStationAdapterV2", adapterBeaconOpts);
+        console.log("BGTStationAdapterV2 deployed at:", bgtStationAdapterV2);
 
         vm.stopBroadcast();
     }
