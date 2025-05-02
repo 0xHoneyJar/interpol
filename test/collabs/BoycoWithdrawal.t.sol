@@ -27,9 +27,22 @@ contract BoycoWithdrawalTest is BaseTest {
     // henlo token
     ERC20               public constant HENLO           = ERC20(0xb2F776e9c1C926C4b2e54182Fac058dA9Af0B6A5);
 
+    uint256             public constant LOST_SHARES     = 0.001 ether;
+
 
     function setUp() public override {
         vm.createSelectFork("https://rpc.berachain.com", 4474233);
+
+        vm.label(LOCKER, "LOCKER");
+        vm.label(BOYCO_VAULT, "BOYCO_VAULT");
+        vm.label(OWNER, "OWNER");
+        vm.label(HUB_VAULT, "HUB_VAULT");
+        vm.label(WEIROLL, "WEIROLL");
+        vm.label(address(HENLO), "HENLO");
+        vm.label(address(LP_TOKEN), "LP_TOKEN");
+        vm.label(address(0x1), "USER_1");
+        vm.label(address(0x2), "USER_2");
+        vm.label(address(0x3), "USER_3");
     }
 
     /*
@@ -57,6 +70,14 @@ contract BoycoWithdrawalTest is BaseTest {
         HoneyLockerV3(LOCKER).withdrawERC20(address(HENLO), HENLO.balanceOf(LOCKER));
         vm.stopPrank();
 
+        assertEq(HENLO.balanceOf(address(BOYCO_VAULT)), 2216472764029384056390497758);
+
+        // uint256 initialHENLO = HENLO.balanceOf(address(BOYCO_VAULT));
+        // uint256 initialLP = HoneyLockerV3(LOCKER).totalLPStaked(address(HUB_VAULT));
+
+        console2.log("initial HENLO", HENLO.balanceOf(address(BOYCO_VAULT)));
+        console2.log("initial LP", HoneyLockerV3(LOCKER).totalLPStaked(address(LP_TOKEN)));
+
         address[] memory addresses = Solarray.addresses(address(0x1), address(0x2), address(0x3));
         uint256[] memory amounts = Solarray.uint256s(2200 ether, 1000 ether, 1000 ether);
 
@@ -69,9 +90,9 @@ contract BoycoWithdrawalTest is BaseTest {
 
         assertEq(BoycoInterpolVaultV3(BOYCO_VAULT).totalSupply(), 0.001 ether);
 
-        // the locker should have 0 henlo left and 0 lp staked
-        assertEq(HENLO.balanceOf(address(LOCKER)), 0, "HENLO should be 0");
-        assertEq(HoneyLockerV3(LOCKER).totalLPStaked(address(BOYCO_VAULT)), 0, "LP should be 0");
+        (uint256 lostLP, uint256 lostHENLO) = BoycoInterpolVaultV3(BOYCO_VAULT).previewRedeem(LOST_SHARES);
+        assertApproxEqAbs(HENLO.balanceOf(address(BOYCO_VAULT)), lostHENLO, 1e16);
+        assertApproxEqAbs(HoneyLockerV3(LOCKER).totalLPStaked(address(LP_TOKEN)), lostLP, 1e16);
 
         // every user should have a positive balance of LP and henlo
         for(uint256 i; i < addresses.length; i++) {
