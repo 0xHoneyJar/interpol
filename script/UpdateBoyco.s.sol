@@ -7,7 +7,7 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 
-import {BoycoInterpolVaultV3} from "src/collabs/boyco/BoycoInterpolVaultV3.sol";
+import {BoycoInterpolVaultV4} from "src/collabs/boyco/BoycoInterpolVaultV4.sol";
 
 contract Update is Script {
     using stdJson for string;
@@ -23,15 +23,17 @@ contract Update is Script {
         address pubkey = vm.addr(pkey);
 
         Options memory options;
-        options.referenceContract = "BoycoInterpolVaultV2.sol:BoycoInterpolVaultV2";
+        options.referenceContract = "BoycoInterpolVaultV3.sol:BoycoInterpolVaultV3";
 
         vm.startBroadcast(pkey);
 
         // deploy new implementation
         address newImplementation = Upgrades.deployImplementation(
-            "BoycoInterpolVaultV3.sol",
+            "BoycoInterpolVaultV4.sol",
             options
         );
+
+        console.log("newImplementation", newImplementation);
 
         vm.stopBroadcast();
     }
