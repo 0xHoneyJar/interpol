@@ -11,7 +11,7 @@ import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 
 import {BaseTest} from "./Base.t.sol";
-import {HoneyLockerV3} from "../src/HoneyLockerV3.sol";
+import {HoneyLockerV4} from "../src/HoneyLockerV4.sol";
 import {KodiakAdapter, IKodiakFarm, XKDK} from "../src/adapters/KodiakAdapter.sol";
 import {KodiakAdapterOld} from "./mocks/KodiakAdapterOld.sol";
 import {BaseVaultAdapter as BVA} from "../src/adapters/BaseVaultAdapter.sol";
@@ -178,7 +178,7 @@ contract UpgradesTest is BaseTest {
         // upgrade beacon impl.
         adapterBeacon.upgradeTo(address(newAdapter));
 
-        locker = HoneyLockerV3(lockerFactory.createLocker(THJ, referrer, false));
+        locker = HoneyLockerV4(lockerFactory.createLocker(THJ, referrer, false));
 
         locker.registerAdapter("KODIAK");
         assertEq(address(locker.adapterOfProtocol("KODIAK").implementation()), address(newAdapter));
