@@ -6,10 +6,13 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 
-import {HoneyQueenV3} from "../src/HoneyQueenV3.sol";
-import {HoneyLockerV3} from "../src/HoneyLockerV3.sol";
+import {HoneyQueenV4} from "../src/HoneyQueenV4.sol";
+import {HoneyLockerV4} from "../src/HoneyLockerV4.sol";
 
-contract UpdateScript is Script {
+//   HoneyLockerV4 deployed at: 0x3e72b3f266E8C0C46EB65C4a5B2B15b8789F12D8
+//   BGTStationAdapterV3 deployed at: 0x9FFdCBB531Ac15030E42a173Bc831403891Ae9e5
+
+contract Update is Script {
     using stdJson for string;
 
     function setUp() public {}
@@ -25,7 +28,7 @@ contract UpdateScript is Script {
         HoneyQueenV4 honeyQueen = HoneyQueenV4(0x9f18D3bb7BB30581625d243FDB97Ab04f91FD95B);
         honeyQueen.setInfrared(0xb71b3DaEA39012Fb0f2B14D2a9C86da9292fC126);
         honeyQueen.setInfraredBGT(0xac03CABA51e17c86c921E1f6CBFBdC91F8BB2E6b);
-        
+
         honeyQueen.transferOwnership(0xd6C0E5F5F201f95F660bB7CFbb214Bd81dd4AB87);
 
         

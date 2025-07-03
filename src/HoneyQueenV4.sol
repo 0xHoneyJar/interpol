@@ -40,10 +40,12 @@ contract HoneyQueenV4 is UUPSUpgradeable, OwnableUpgradeable {
     uint256                                             public      protocolFees;
     ICUB                                                public      badges;
 
+    address                                             internal    BGM;
+
     address                                             public      infrared;
     address                                             public      infraredBGT;
 
-    uint256[38] __gap;
+    uint256[37] __gap;
     /*###############################################################
                             CONSTRUCTOR
     ###############################################################*/
